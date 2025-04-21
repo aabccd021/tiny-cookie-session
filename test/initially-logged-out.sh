@@ -12,3 +12,15 @@ submit "//form" \
   --data 'deviceName=deviceName.txt'
 assert_response_code_equal 200
 assert_query_returns_equal "//p" "User: alice, Device: iphone"
+
+goto --url "http://localhost:8080/"
+assert_response_code_equal 200
+assert_query_returns_equal "//p" "User: alice, Device: iphone"
+
+goto --url "http://localhost:8080/logout"
+assert_response_code_equal 200
+assert_query_returns_equal "//p" "Logged out"
+
+goto --url "http://localhost:8080/"
+assert_response_code_equal 200
+assert_query_returns_equal "//p" "Logged out"
