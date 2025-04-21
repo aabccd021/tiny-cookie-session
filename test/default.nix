@@ -68,5 +68,9 @@ rec {
     "assert-has-session-false"
   ];
 
+  s0003 = mkTest "s0003" s0001 [
+    "goto-home"
+    "assert-logged-out"
+  ];
 }
 
