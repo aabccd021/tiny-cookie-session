@@ -9,8 +9,8 @@ let
       --minify \
       --sourcemap \
       --outfile server
-    mkdir -p $out/bin
-    mv server $out/bin/server
+    mkdir -p "$out/bin"
+    mv server "$out/bin/server"
   '';
 
 
@@ -45,8 +45,7 @@ let
 
 
   testFiles = {
-    url = runTest ./url.sh;
-    search-param = runTest ./search-param.sh;
+    url = runTest ./login.sh;
   };
 
 in

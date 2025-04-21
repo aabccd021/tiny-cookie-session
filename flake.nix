@@ -5,16 +5,20 @@
   inputs.nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   inputs.treefmt-nix.url = "github:numtide/treefmt-nix";
   inputs.bun2nix.url = "github:baileyluTCD/bun2nix";
+  inputs.netero-test.url = "github:aabccd021/netero-test";
 
-  outputs = { self, nixpkgs, treefmt-nix, bun2nix }:
+  outputs = { self, ... }@inputs:
     let
-      pkgs = nixpkgs.legacyPackages.x86_64-linux;
-
-      bun2nixPkgs = bun2nix.defaultPackage.x86_64-linux;
+      pkgs = import inputs.nixpkgs {
+        system = "x86_64-linux";
+        overlays = [
+          inputs.netero-test.overlays.default
+        ];
+      };
 
       nodeModules = (pkgs.callPackage ./bun.nix { }).nodeModules;
 
-      treefmtEval = treefmt-nix.lib.evalModule pkgs {
+      treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs {
         projectRootFile = "flake.nix";
         programs.prettier.enable = true;
         programs.nixpkgs-fmt.enable = true;
@@ -76,18 +80,6 @@
         '';
       };
 
-      postinstall = pkgs.writeShellApplication {
-        name = "postinstall";
-        runtimeInputs = [ bun2nixPkgs.bin ];
-        text = ''
-          repo_root=$(git rev-parse --show-toplevel)
-
-          bun2nix \
-            --output-file "$repo_root/bun.nix" \
-            --lock-file "$repo_root/bun.lock"
-        '';
-      };
-
       devShell = pkgs.mkShellNoCC {
         buildInputs = [
           pkgs.bun
@@ -101,7 +93,6 @@
 
       scripts = {
         publish = publish;
-        postinstall = postinstall;
       };
 
       packages = scripts // {
@@ -110,6 +101,7 @@
         biome = biome;
         nodeModules = nodeModules;
         tests = tests;
+        bun2nix = inputs.bun2nix.defaultPackage.x86_64-linux.bin;
       };
 
     in
