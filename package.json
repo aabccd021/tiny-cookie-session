@@ -15,7 +15,7 @@
     "url": "https://github.com/aabccd021/bun-cookie-session/issues"
   },
   "scripts": {
-    "postinstall": "nix run .#bun2nix -- --output-file $(dirname $npm_package_json)/bun.nix --lock-file $(dirname $npm_package_json)/bun.lock"
+    "postinstall": "cd $(dirname $npm_package_json) && nix run .#bun2nix -- --output-file ./bun.nix"
   },
   "homepage": "https://github.com/aabccd021/bun-cookie-session#readme",
   "files": ["index.ts"],
