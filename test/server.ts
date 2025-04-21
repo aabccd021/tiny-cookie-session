@@ -1,0 +1,127 @@
+import { mkdirSync } from "node:fs";
+import {
+  type Config,
+  consumeSession,
+  defaultConfig,
+  hasSessionId,
+  login,
+  logout,
+} from "../index.ts";
+
+const rootDir = "./received";
+
+mkdirSync(rootDir, { recursive: true });
+
+type Session = {
+  expiresAt: number;
+  username: string;
+  deviceName: string;
+};
+
+const sessions = new Map<string, Session>();
+
+const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
+  ...defaultConfig,
+  getExpiresAt: (session) => session.expiresAt,
+  selectSession: (sessionId) => sessions.get(sessionId),
+  insertSession: (sessionId, expiresAt, { username, deviceName }) => {
+    sessions.set(sessionId, { expiresAt, username, deviceName });
+  },
+  deleteSession: (sessionId) => {
+    sessions.delete(sessionId);
+  },
+  updateSession: (sessionId, expiresAt) => {
+    const oldSession = sessions.get(sessionId);
+    if (oldSession === undefined) {
+      throw new Error("Session not found. Something went wrong.");
+    }
+    sessions.set(sessionId, {
+      ...oldSession,
+      expiresAt,
+    });
+  },
+};
+
+const server = Bun.serve({
+  port: 8080,
+  routes: {
+    "/": {
+      GET: (req): Response => {
+        const [sessionCookie, session] = consumeSession(config, req);
+        const message =
+          session !== undefined
+            ? `User: ${session.username}, Device: ${session.deviceName}`
+            : "No session";
+        return new Response(message, {
+          status: 200,
+          headers: {
+            "Set-Cookie": sessionCookie ?? "",
+            "Content-Type": "application/json",
+          },
+        });
+      },
+    },
+    "/login": {
+      GET: (req): Response => {
+        const [sessionCookie, session] = consumeSession(config, req);
+        if (session) {
+          return new Response("Already logged in", {
+            status: 400,
+            headers: {
+              "Set-Cookie": sessionCookie ?? "",
+              "Content-Type": "text/plain",
+            },
+          });
+        }
+        return new Response(
+          `<form method="POST">
+            <input name="username" placeholder="username" />
+            <input name="deviceName" placeholder="deviceName" />
+            <button type="submit">Login</button>
+          </form>`,
+          {
+            status: 200,
+            headers: { "Content-Type": "text/html" },
+          },
+        );
+      },
+      POST: async (req): Promise<Response> => {
+        const formData = await req.formData();
+        const username = formData.get("username");
+        if (typeof username !== "string") {
+          return new Response("Invalid username", { status: 400 });
+        }
+        const deviceName = formData.get("deviceName");
+        if (typeof deviceName !== "string") {
+          return new Response("Invalid device name", { status: 400 });
+        }
+        const [loginCookie] = login(config, { username, deviceName });
+        return new Response(undefined, {
+          status: 303,
+          headers: { Location: "/", "Set-Cookie": loginCookie },
+        });
+      },
+    },
+    "/logout": {
+      GET: (req): Response => {
+        const [logoutCookie] = logout(config, req);
+        return new Response(undefined, {
+          status: 303,
+          headers: { Location: "/", "Set-Cookie": logoutCookie },
+        });
+      },
+    },
+    "/has-session": {
+      GET: (req): Response => {
+        return new Response(hasSessionId(config, req).toString());
+      },
+    },
+  },
+});
+
+await Bun.write("./run/netero/ready.fifo", "");
+
+await Bun.file("./run/netero/exit.fifo").text();
+
+await server.stop();
+process.exit(0);

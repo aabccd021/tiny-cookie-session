@@ -42,7 +42,8 @@
         "noSecrets": "off"
       },
       "style": {
-        "all": true
+        "all": true,
+        "useNamingConvention": "off"
       }
     }
   }

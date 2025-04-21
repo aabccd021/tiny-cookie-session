@@ -27,8 +27,8 @@
 
       tsc = pkgs.runCommand "tsc" { } ''
         cp -L ${./index.ts} ./index.ts
-        cp -L ${./index.test.ts} ./index.test.ts
         cp -L ${./tsconfig.json} ./tsconfig.json
+        cp -Lr ${./test} ./test
         cp -Lr ${nodeModules}/node_modules ./node_modules
         ${pkgs.typescript}/bin/tsc
         touch $out
@@ -37,7 +37,7 @@
       biome = pkgs.runCommand "biome" { } ''
         cp -L ${./biome.jsonc} ./biome.jsonc
         cp -L ${./index.ts} ./index.ts
-        cp -L ${./index.test.ts} ./index.test.ts
+        cp -Lr ${./test} ./test
         cp -L ${./package.json} ./package.json
         cp -L ${./tsconfig.json} ./tsconfig.json
         cp -Lr ${nodeModules}/node_modules ./node_modules
@@ -47,7 +47,7 @@
 
       tests = pkgs.runCommand "tests" { } ''
         cp -L ${./index.ts} ./index.ts
-        cp -L ${./index.test.ts} ./index.test.ts
+        cp -Lr ${./test} ./test
         cp -L ${./package.json} ./package.json
         cp -L ${./tsconfig.json} ./tsconfig.json
         cp -Lr ${nodeModules}/node_modules ./node_modules

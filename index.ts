@@ -6,8 +6,10 @@ import {
 } from "@tinyhttp/cookie";
 
 export interface Config<S, I> {
-  readonly cookieOption: SerializeOptions;
+  readonly cookieOption?: SerializeOptions;
   readonly sessionCookieName: string;
+  readonly dateNow: () => number;
+  readonly expiresIn: number;
   readonly getExpiresAt: (session: S) => number;
   readonly selectSession: (sessionId: string) => NonNullable<S> | undefined;
   readonly insertSession: (
@@ -17,15 +19,17 @@ export interface Config<S, I> {
   ) => void;
   readonly deleteSession: (sessionId: string) => void;
   readonly updateSession: (sessionId: string, expiresAt: number) => void;
-  readonly dateNow?: () => number;
-  readonly expiresIn?: number;
   readonly getRefreshDate?: (session: S) => number;
 }
 
-interface SessionIdAndSetCookie<S> {
-  readonly session: NonNullable<S> | undefined;
-  readonly setCookieHeader: string | undefined;
-}
+export const defaultConfig: Pick<
+  Config<unknown, unknown>,
+  "sessionCookieName" | "dateNow" | "expiresIn"
+> = {
+  sessionCookieName: "session_id",
+  dateNow: () => Date.now(),
+  expiresIn: 30 * 24 * 60 * 60 * 1000,
+};
 
 const defaultCookieOption: SerializeOptions = {
   httpOnly: true,
@@ -60,13 +64,13 @@ function parsesessionIdFromReq<S, I>(
 export function logout<S, I>(
   config: Config<S, I>,
   req: Request,
-): { readonly cookie: string } {
+): readonly [string] {
   const sessionId = parsesessionIdFromReq(config, req);
   const cookie = createLogoutCookie(config);
   if (sessionId !== undefined) {
     config.deleteSession(sessionId);
   }
-  return { cookie };
+  return [cookie];
 }
 
 const defaultExpiresIn = 30 * 24 * 60 * 60 * 1000;
@@ -92,7 +96,7 @@ function createLoginCookie<S, I>(
 export function login<S, I>(
   config: Config<S, I>,
   insertData: I,
-): { readonly cookie: string } {
+): readonly [string] {
   // remix uses 8 bytes (64 bits) of entropy
   // https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L45
 
@@ -121,7 +125,7 @@ export function login<S, I>(
 
   const { cookie, expiresAt } = createLoginCookie(config, sessionId);
   config.insertSession(sessionId, expiresAt, insertData);
-  return { cookie };
+  return [cookie];
 }
 
 export function hasSessionId<S, I>(
@@ -142,20 +146,20 @@ function defaultRefreshDate<S, I>(config: Config<S, I>, session: S): number {
   return config.getExpiresAt(session) - expiresIn / 2;
 }
 
-function sessionIdFromReq<S, I>(
+export function consumeSession<S, I>(
   config: Config<S, I>,
   req: Request,
-): SessionIdAndSetCookie<S> {
+): readonly [string | undefined, NonNullable<S> | undefined] {
   const sessionId = parsesessionIdFromReq(config, req);
   if (sessionId === undefined) {
     // no session cookie, do nothing
-    return { session: undefined, setCookieHeader: undefined };
+    return [undefined, undefined];
   }
 
   const session = config.selectSession(sessionId);
   if (session === undefined) {
     // session not found, set logout cookie
-    return { session: undefined, setCookieHeader: createLogoutCookie(config) };
+    return [createLogoutCookie(config), undefined];
   }
 
   const nowMs = config.dateNow?.() ?? Date.now();
@@ -163,7 +167,7 @@ function sessionIdFromReq<S, I>(
   if (sessionExpiresAt < nowMs) {
     // session expired, set logout cookie
     config.deleteSession(sessionId);
-    return { session: undefined, setCookieHeader: createLogoutCookie(config) };
+    return [createLogoutCookie(config), undefined];
   }
 
   const refreshDate =
@@ -173,35 +177,9 @@ function sessionIdFromReq<S, I>(
     const { cookie, expiresAt } = createLoginCookie(config, sessionId);
     config.updateSession(sessionId, expiresAt);
 
-    return { session, setCookieHeader: cookie };
+    return [cookie, session];
   }
 
   // session exists, not expired, and not extended
-  return { session, setCookieHeader: undefined };
-}
-
-export async function withSession<S, I>(
-  config: Config<S, I>,
-  req: Request,
-  handler: (session: S | undefined) => Promise<Response>,
-): Promise<Response> {
-  const { session, setCookieHeader } = sessionIdFromReq<S, I>(config, req);
-  const response = await handler(session);
-  if (setCookieHeader !== undefined) {
-    response.headers.set("Set-Cookie", setCookieHeader);
-  }
-  return response;
-}
-
-export function withSessionSync<S, I>(
-  config: Config<S, I>,
-  req: Request,
-  handler: (session: S | undefined) => Response,
-): Response {
-  const { session, setCookieHeader } = sessionIdFromReq<S, I>(config, req);
-  const response = handler(session);
-  if (setCookieHeader !== undefined) {
-    response.headers.set("Set-Cookie", setCookieHeader);
-  }
-  return response;
+  return [undefined, session];
 }
