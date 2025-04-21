@@ -23,10 +23,10 @@ const sessions = new Map<string, Session>(sessionsJson);
 
 const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
   ...defaultConfig,
-  //   dateNow: (): number => {
-  //   const epochNowStr = fs.readFileSync("./var/now_iso.txt", "utf8");
-  //   return new Date(epochNowStr).getTime();
-  // },
+  dateNow: (): number => {
+    const epochNowStr = fs.readFileSync("./var/now.txt", "utf8");
+    return new Date(epochNowStr).getTime();
+  },
   getExpiresAt: (session) => session.expiresAt,
   selectSession: (sessionId) => sessions.get(sessionId),
   insertSession: (sessionId, expiresAt, { username, deviceName }) => {

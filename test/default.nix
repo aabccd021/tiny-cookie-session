@@ -57,6 +57,7 @@ rec {
   s0000 = pkgs.runCommand "s0000" { } ''
     mkdir -p "$out/var"
     printf "[]" > "$out/var/sessions.json"
+    printf "%sZ" "$(date --iso-8601=minutes)" > "$out/var/now.txt"
 
   '';
 
