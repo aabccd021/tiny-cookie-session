@@ -52,10 +52,10 @@ const server = Bun.serve({
           session !== undefined
             ? `User: ${session.username}, Device: ${session.deviceName}`
             : "Logged out";
-        return new Response(message, {
+        return new Response(`<p>${message}</p>`, {
           headers: {
             "Set-Cookie": sessionCookie ?? "",
-            "Content-Type": "text/plain",
+            "Content-Type": "text/html",
           },
         });
       },
@@ -67,7 +67,7 @@ const server = Bun.serve({
           return new Response("Already logged in", {
             headers: {
               "Set-Cookie": sessionCookie ?? "",
-              "Content-Type": "text/plain",
+              "Content-Type": "text/html",
             },
           });
         }
@@ -112,7 +112,7 @@ const server = Bun.serve({
       GET: (req): Response => {
         return new Response(hasSessionId(config, req).toString(), {
           headers: {
-            "Content-Type": "text/plain",
+            "Content-Type": "text/html",
           },
         });
       },

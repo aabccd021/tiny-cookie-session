@@ -24,6 +24,7 @@ let
     } ''
     export NETERO_DIR="$PWD/var/lib/netero"
     mkdir -p "$NETERO_DIR"
+
     mkdir -p ./run/netero
     mkfifo ./run/netero/ready.fifo
     mkfifo ./run/netero/exit.fifo
@@ -43,13 +44,13 @@ let
     done
 
     echo >./run/netero/exit.fifo
-    wait $server_pid
+    wait "$server_pid"
     mkdir $out
   '';
 
 
   testFiles = {
-    url = runTest ./login.sh;
+    initially-logged-out = runTest ./initially-logged-out.sh;
   };
 
 in
