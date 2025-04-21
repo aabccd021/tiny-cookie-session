@@ -111,6 +111,22 @@ rec {
     "assert-logged-in-bob-desktop"
   ];
 
+  s0011 = mkTest "s0011" s0010 [
+    "goto-logout"
+    "assert-logged-out"
+  ];
+
+  s0012 = mkTest "s0012" s0011 [
+    "goto-login"
+    "submit-login-alice-iphone"
+    "assert-logged-in-alice-iphone"
+  ];
+
+  s0013 = mkTest "s0013" s0012 [
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
 
 }
 
