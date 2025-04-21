@@ -1,8 +1,6 @@
 { pkgs, nodeModules }:
 let
 
-  lib = pkgs.lib;
-
   server = pkgs.runCommandLocal "server" { } ''
     mkdir ./test
     cp -Lr ${nodeModules}/node_modules ./node_modules
@@ -17,11 +15,11 @@ let
     mv server "$out/bin/server"
   '';
 
+  mkTest = name: prev: actions: pkgs.runCommand "${name}-test"
+    { buildInputs = [ pkgs.netero-test server ]; } ''
+    cp -Lr ${prev}/* ./var
+    chmod -R u=rwX,g=,o= ./var
 
-  runTest = testFile: pkgs.runCommandLocal ""
-    {
-      buildInputs = [ pkgs.netero-test server ];
-    } ''
     export NETERO_DIR="$PWD/var/lib/netero"
     mkdir -p "$NETERO_DIR"
 
@@ -38,27 +36,31 @@ let
 
     echo "http://localhost:8080/" > "$NETERO_DIR/url.txt"
 
-    test_script=$(cat ${testFile})
-    bash -euo pipefail -c "$test_script" 2>&1 | while IFS= read -r line; do
-      printf '\033[33m[client]\033[0m %s\n' "$line"
+    counter=0
+    for actionName in ${builtins.concatStringsSep " " actions}; do
+      bash -euo pipefail ${./actions}/"$actionName.sh" 2>&1 | while IFS= read -r line; do
+        printf '\033[35mclient > %02d-%s\033[0m> %s\n' "$counter" "$actionName" "$line"
+      done
+      counter=$((counter + 1))
     done
 
     echo >./run/netero/exit.fifo
     wait "$server_pid"
-    mkdir $out
+
+    mkdir "$out"
+    mv ./var "$out/var"
   '';
 
-
-  testFiles = {
-    initially-logged-out = runTest ./initially-logged-out.sh;
-  };
-
 in
-lib.mapAttrs'
-  (name: value: {
-    name = "test-" + name;
-    value = value.overrideAttrs (oldAttrs: {
-      name = "test-" + name;
-    });
-  })
-  testFiles
+rec {
+
+  s0000 = pkgs.runCommand "s0000" { } ''
+    mkdir -p "$out/var"
+  '';
+
+  s0001 = mkTest "s0001" s0000 [
+    "goto-home"
+    "assert-logged-out"
+  ];
+}
+
