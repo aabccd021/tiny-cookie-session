@@ -15,8 +15,24 @@ let
     mv server "$out/bin/server"
   '';
 
+  advance_time = pkgs.writeShellApplication {
+    name = "advance_time";
+    runtimeInputs = [ pkgs.netero-test ];
+    text = ''
+      time_now=$(cat "./var/now.txt")
+      time_advanced=$(date --utc --date "$time_now +$1" +"%Y-%m-%dT%H:%M:%SZ")
+      printf "%s" "$time_advanced" >"./var/now.txt"
+    '';
+  };
+
   mkTest = name: prev: actions: pkgs.runCommand "${name}-test"
-    { buildInputs = [ pkgs.netero-test server ]; } ''
+    {
+      buildInputs = [
+        pkgs.netero-test
+        server
+        advance_time
+      ];
+    } ''
     cp -Lr ${prev}/* ./var
     chmod -R u=rwX,g=,o= ./var
 
