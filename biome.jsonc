@@ -43,7 +43,8 @@
       },
       "style": {
         "all": true,
-        "useNamingConvention": "off"
+        "useNamingConvention": "off",
+        "noNamespaceImport": "off"
       }
     }
   }

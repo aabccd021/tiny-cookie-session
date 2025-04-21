@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import * as fs from "node:fs";
 import {
   type Config,
   consumeSession,
@@ -10,7 +10,7 @@ import {
 
 const rootDir = "./received";
 
-mkdirSync(rootDir, { recursive: true });
+fs.mkdirSync(rootDir, { recursive: true });
 
 type Session = {
   expiresAt: number;
@@ -23,6 +23,10 @@ const sessions = new Map<string, Session>(sessionsJson);
 
 const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
   ...defaultConfig,
+  //   dateNow: (): number => {
+  //   const epochNowStr = fs.readFileSync("./var/now_iso.txt", "utf8");
+  //   return new Date(epochNowStr).getTime();
+  // },
   getExpiresAt: (session) => session.expiresAt,
   selectSession: (sessionId) => sessions.get(sessionId),
   insertSession: (sessionId, expiresAt, { username, deviceName }) => {
@@ -119,11 +123,17 @@ const server = Bun.serve({
   },
 });
 
-await Bun.write("./run/netero/ready.fifo", "");
+// await Bun.write("./run/netero/ready.fifo", "");
+fs.writeFileSync("./run/netero/ready.fifo", "");
 
-await Bun.file("./run/netero/exit.fifo").text();
+// await Bun.file("./run/netero/exit.fifo").text();
+await fs.promises.readFile("./run/netero/exit.fifo");
 
-await Bun.write(
+// await Bun.write(
+//   "./var/sessions.json",
+//   JSON.stringify(Array.from(sessions.entries())),
+// );
+fs.writeFileSync(
   "./var/sessions.json",
   JSON.stringify(Array.from(sessions.entries())),
 );

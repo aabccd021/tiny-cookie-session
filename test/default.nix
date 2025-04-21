@@ -57,6 +57,7 @@ rec {
   s0000 = pkgs.runCommand "s0000" { } ''
     mkdir -p "$out/var"
     printf "[]" > "$out/var/sessions.json"
+
   '';
 
   s0001 = mkTest "s0001" s0000 [
