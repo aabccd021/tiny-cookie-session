@@ -48,7 +48,7 @@ function createLogoutCookie<S, I>(config: Config<S, I>): string {
   });
 }
 
-function parsesessionIdFromReq<S, I>(
+function sessionIdFromReq<S, I>(
   config: Config<S, I>,
   req: Request,
 ): string | undefined {
@@ -65,7 +65,7 @@ export function logout<S, I>(
   config: Config<S, I>,
   req: Request,
 ): readonly [string] {
-  const sessionId = parsesessionIdFromReq(config, req);
+  const sessionId = sessionIdFromReq(config, req);
   const cookie = createLogoutCookie(config);
   if (sessionId !== undefined) {
     config.deleteSession(sessionId);
@@ -150,7 +150,7 @@ export function consumeSession<S, I>(
   config: Config<S, I>,
   req: Request,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
-  const sessionId = parsesessionIdFromReq(config, req);
+  const sessionId = sessionIdFromReq(config, req);
   if (sessionId === undefined) {
     return [undefined, undefined];
   }
