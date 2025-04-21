@@ -100,6 +100,11 @@ rec {
     "assert-logged-out"
   ];
 
+  s0009 = mkTest "s0009" s0007 [
+    "goto-has-session"
+    "assert-has-session-false"
+  ];
+
 
 }
 
