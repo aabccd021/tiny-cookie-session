@@ -73,8 +73,8 @@ const server = Bun.serve({
         }
         return new Response(
           `<form method="POST">
-            <input name="username" placeholder="username" />
-            <input name="deviceName" placeholder="deviceName" />
+            <input type="text" name="username" placeholder="username" />
+            <input type="text" name="deviceName" placeholder="deviceName" />
             <button type="submit">Login</button>
           </form>`,
           {
