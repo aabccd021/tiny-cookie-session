@@ -49,15 +49,10 @@
         touch $out
       '';
 
-      tests = pkgs.runCommand "tests" { } ''
-        cp -L ${./index.ts} ./index.ts
-        cp -Lr ${./test} ./test
-        cp -L ${./package.json} ./package.json
-        cp -L ${./tsconfig.json} ./tsconfig.json
-        cp -Lr ${nodeModules}/node_modules ./node_modules
-        ${pkgs.bun}/bin/bun test
-        touch $out
-      '';
+      tests = import ./test {
+        pkgs = pkgs;
+        nodeModules = nodeModules;
+      };
 
       publish = pkgs.writeShellApplication {
         name = "publish";
@@ -95,12 +90,11 @@
         publish = publish;
       };
 
-      packages = scripts // {
+      packages = tests // scripts // {
         formatting = treefmtEval.config.build.check self;
         tsc = tsc;
         biome = biome;
         nodeModules = nodeModules;
-        tests = tests;
         bun2nix = inputs.bun2nix.defaultPackage.x86_64-linux.bin;
       };
 

@@ -1,10 +1,14 @@
-{ pkgs }:
+{ pkgs, nodeModules }:
 let
 
   lib = pkgs.lib;
 
   server = pkgs.runCommandLocal "server" { } ''
-    ${pkgs.bun}/bin/bun build ${./server.ts} \
+    mkdir ./test
+    cp -Lr ${nodeModules}/node_modules ./node_modules
+    cp -L ${./server.ts} ./test/server.ts
+    cp -L ${../index.ts} ./index.ts
+    ${pkgs.bun}/bin/bun build ./test/server.ts \
       --compile \
       --minify \
       --sourcemap \
@@ -16,7 +20,7 @@ let
 
   runTest = testFile: pkgs.runCommandLocal ""
     {
-      buildInputs = [ pkgs.jq pkgs.netero-test server ];
+      buildInputs = [ pkgs.netero-test server ];
     } ''
     export NETERO_DIR="$PWD/var/lib/netero"
     mkdir -p "$NETERO_DIR"
@@ -51,9 +55,9 @@ let
 in
 lib.mapAttrs'
   (name: value: {
-    name = "goto-test-" + name;
+    name = "test-" + name;
     value = value.overrideAttrs (oldAttrs: {
-      name = "goto-test-" + name;
+      name = "test-" + name;
     });
   })
   testFiles
