@@ -152,20 +152,17 @@ export function consumeSession<S, I>(
 ): readonly [string | undefined, NonNullable<S> | undefined] {
   const sessionId = parsesessionIdFromReq(config, req);
   if (sessionId === undefined) {
-    // no session cookie, do nothing
     return [undefined, undefined];
   }
 
   const session = config.selectSession(sessionId);
   if (session === undefined) {
-    // session not found, set logout cookie
     return [createLogoutCookie(config), undefined];
   }
 
   const nowMs = config.dateNow?.() ?? Date.now();
   const sessionExpiresAt = config.getExpiresAt(session);
   if (sessionExpiresAt < nowMs) {
-    // session expired, set logout cookie
     config.deleteSession(sessionId);
     return [createLogoutCookie(config), undefined];
   }
@@ -176,10 +173,7 @@ export function consumeSession<S, I>(
   if (requireRefresh) {
     const { cookie, expiresAt } = createLoginCookie(config, sessionId);
     config.updateSession(sessionId, expiresAt);
-
     return [cookie, session];
   }
-
-  // session exists, not expired, and not extended
   return [undefined, session];
 }

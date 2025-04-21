@@ -18,12 +18,15 @@ type Session = {
   deviceName: string;
 };
 
-const sessions = new Map<string, Session>();
+const sessionsJson = await Bun.file("./var/sessions.json").json();
+const sessions = new Map<string, Session>(sessionsJson);
 
 const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
   ...defaultConfig,
   getExpiresAt: (session) => session.expiresAt,
-  selectSession: (sessionId) => sessions.get(sessionId),
+  selectSession: (sessionId) => {
+    return sessions.get(sessionId);
+  },
   insertSession: (sessionId, expiresAt, { username, deviceName }) => {
     sessions.set(sessionId, { expiresAt, username, deviceName });
   },
@@ -123,6 +126,11 @@ const server = Bun.serve({
 await Bun.write("./run/netero/ready.fifo", "");
 
 await Bun.file("./run/netero/exit.fifo").text();
+
+await Bun.write(
+  "./var/sessions.json",
+  JSON.stringify(Array.from(sessions.entries())),
+);
 
 await server.stop();
 process.exit(0);

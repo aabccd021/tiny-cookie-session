@@ -56,6 +56,7 @@ rec {
 
   s0000 = pkgs.runCommand "s0000" { } ''
     mkdir -p "$out/var"
+    printf "[]" > "$out/var/sessions.json"
   '';
 
   s0001 = mkTest "s0001" s0000 [
@@ -72,5 +73,17 @@ rec {
     "goto-home"
     "assert-logged-out"
   ];
+
+  s0004 = mkTest "s0004" s0001 [
+    "goto-login"
+    "submit-login-alice-iphone"
+    "assert-logged-in-alice-iphone"
+  ];
+
+  s0005 = mkTest "s0005" s0004 [
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
 }
 
