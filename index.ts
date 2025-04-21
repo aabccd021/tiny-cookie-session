@@ -171,9 +171,12 @@ export function consumeSession<S, I>(
     config.getRefreshDate?.(session) ?? defaultRefreshDate(config, session);
   const requireRefresh = refreshDate < nowMs;
   if (requireRefresh) {
-    const { cookie, expiresAt } = createLoginCookie(config, sessionId);
+    const { cookie: loginCookie, expiresAt } = createLoginCookie(
+      config,
+      sessionId,
+    );
     config.updateSession(sessionId, expiresAt);
-    return [cookie, session];
+    return [loginCookie, session];
   }
   return [undefined, session];
 }
