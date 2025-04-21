@@ -105,6 +105,12 @@ rec {
     "assert-has-session-cookie-false"
   ];
 
+  s0010 = mkTest "s0010" s0007 [
+    "goto-login"
+    "submit-login-bob-desktop"
+    "assert-logged-in-bob-desktop"
+  ];
+
 
 }
 
