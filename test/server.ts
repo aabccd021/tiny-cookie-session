@@ -123,16 +123,10 @@ const server = Bun.serve({
   },
 });
 
-// await Bun.write("./run/netero/ready.fifo", "");
 fs.writeFileSync("./run/netero/ready.fifo", "");
 
-// await Bun.file("./run/netero/exit.fifo").text();
 await fs.promises.readFile("./run/netero/exit.fifo");
 
-// await Bun.write(
-//   "./var/sessions.json",
-//   JSON.stringify(Array.from(sessions.entries())),
-// );
 fs.writeFileSync(
   "./var/sessions.json",
   JSON.stringify(Array.from(sessions.entries())),
