@@ -112,9 +112,7 @@ const server = Bun.serve({
     "/has-session": {
       GET: (req): Response => {
         return new Response(`<p>${hasSessionId(config, req)}</p>`, {
-          headers: {
-            "Content-Type": "text/html",
-          },
+          headers: { "Content-Type": "text/html" },
         });
       },
     },

@@ -85,5 +85,10 @@ rec {
     "assert-logged-in-alice-iphone"
   ];
 
+  s0006 = mkTest "s0006" s0004 [
+    "goto-has-session"
+    "assert-has-session-true"
+  ];
+
 }
 
