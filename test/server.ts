@@ -24,9 +24,7 @@ const sessions = new Map<string, Session>(sessionsJson);
 const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
   ...defaultConfig,
   getExpiresAt: (session) => session.expiresAt,
-  selectSession: (sessionId) => {
-    return sessions.get(sessionId);
-  },
+  selectSession: (sessionId) => sessions.get(sessionId),
   insertSession: (sessionId, expiresAt, { username, deviceName }) => {
     sessions.set(sessionId, { expiresAt, username, deviceName });
   },
