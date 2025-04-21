@@ -3,7 +3,7 @@ import {
   type Config,
   consumeSession,
   defaultConfig,
-  hasSessionId,
+  hasSessionCookie,
   login,
   logout,
 } from "../index.ts";
@@ -109,9 +109,9 @@ const server = Bun.serve({
         });
       },
     },
-    "/has-session": {
+    "/has-session-cookie": {
       GET: (req): Response => {
-        return new Response(`<p>${hasSessionId(config, req)}</p>`, {
+        return new Response(`<p>${hasSessionCookie(config, req)}</p>`, {
           headers: { "Content-Type": "text/html" },
         });
       },

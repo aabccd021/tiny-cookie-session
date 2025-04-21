@@ -65,8 +65,8 @@ rec {
   ];
 
   s0002 = mkTest "s0002" s0000 [
-    "goto-has-session"
-    "assert-has-session-false"
+    "goto-has-session-cookie"
+    "assert-has-session-cookie-false"
   ];
 
   s0003 = mkTest "s0003" s0001 [
@@ -86,8 +86,8 @@ rec {
   ];
 
   s0006 = mkTest "s0006" s0004 [
-    "goto-has-session"
-    "assert-has-session-true"
+    "goto-has-session-cookie"
+    "assert-has-session-cookie-true"
   ];
 
   s0007 = mkTest "s0007" s0004 [
@@ -101,8 +101,8 @@ rec {
   ];
 
   s0009 = mkTest "s0009" s0007 [
-    "goto-has-session"
-    "assert-has-session-false"
+    "goto-has-session-cookie"
+    "assert-has-session-cookie-false"
   ];
 
 

@@ -128,7 +128,7 @@ export function login<S, I>(
   return [cookie];
 }
 
-export function hasSessionId<S, I>(
+export function hasSessionCookie<S, I>(
   config: Config<S, I>,
   req: Request,
 ): boolean {
