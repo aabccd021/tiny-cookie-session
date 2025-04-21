@@ -51,12 +51,11 @@ const server = Bun.serve({
         const message =
           session !== undefined
             ? `User: ${session.username}, Device: ${session.deviceName}`
-            : "No session";
+            : "Logged out";
         return new Response(message, {
-          status: 200,
           headers: {
             "Set-Cookie": sessionCookie ?? "",
-            "Content-Type": "application/json",
+            "Content-Type": "text/plain",
           },
         });
       },
@@ -66,7 +65,6 @@ const server = Bun.serve({
         const [sessionCookie, session] = consumeSession(config, req);
         if (session) {
           return new Response("Already logged in", {
-            status: 400,
             headers: {
               "Set-Cookie": sessionCookie ?? "",
               "Content-Type": "text/plain",
@@ -80,7 +78,6 @@ const server = Bun.serve({
             <button type="submit">Login</button>
           </form>`,
           {
-            status: 200,
             headers: { "Content-Type": "text/html" },
           },
         );
@@ -113,7 +110,11 @@ const server = Bun.serve({
     },
     "/has-session": {
       GET: (req): Response => {
-        return new Response(hasSessionId(config, req).toString());
+        return new Response(hasSessionId(config, req).toString(), {
+          headers: {
+            "Content-Type": "text/plain",
+          },
+        });
       },
     },
   },
