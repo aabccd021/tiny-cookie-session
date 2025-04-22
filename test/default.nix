@@ -73,7 +73,7 @@ rec {
   s0000 = pkgs.runCommand "s0000" { } ''
     mkdir -p "$out/var"
     printf "[]" > "$out/var/sessions.json"
-    printf "%sZ" "$(date +"%Y-%m-%dT%H:%M:%SZ")" > "$out/var/now.txt"
+    date +"%Y-%m-%dT%H:%M:%SZ" > "$out/var/now.txt"
 
   '';
 
@@ -155,6 +155,10 @@ rec {
     "assert-already-logged-in"
   ];
 
-
+  s0016 = mkTest "s0016" s0004 [
+    "advance-time-4h"
+    "goto-home"
+    "assert-logged-out"
+  ];
 }
 
