@@ -287,8 +287,14 @@ rec {
 
   s0038 = mkTest "s0038" s0037 [
     "advance-time-5h"
-    "goto-logout"
+    "goto-home"
     "assert-logged-out"
+  ];
+
+  s0039 = mkTest "s0039" s0037 [
+    "advance-time-3h"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
   ];
 
 }
