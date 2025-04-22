@@ -160,8 +160,7 @@ export function consumeSession<S, I>(
     return [createLogoutCookie(config), undefined];
   }
 
-  const expiresIn = config.expiresIn;
-  const refreshDate = config.getExpiresAt(session) - expiresIn / 2;
+  const refreshDate = config.getExpiresAt(session) - config.expiresIn / 2;
   if (refreshDate < nowMs) {
     const { cookie: loginCookie, expiresAt } = createLoginCookie(
       config,
