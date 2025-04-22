@@ -27,7 +27,7 @@ const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
     const epochNowStr = fs.readFileSync("./var/now.txt", "utf8");
     return new Date(epochNowStr).getTime();
   },
-  expiresIn: 4 * 60 * 60 * 1000,
+  expiresIn: 5 * 60 * 60 * 1000,
   getExpiresAt: (session) => session.expiresAt,
   selectSession: (sessionId) => sessions.get(sessionId),
   insertSession: (sessionId, expiresAt, { username, deviceName }) => {
