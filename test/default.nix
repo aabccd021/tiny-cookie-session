@@ -52,7 +52,7 @@ let
 
     echo "http://localhost:8080/" > "$NETERO_DIR/url.txt"
 
-    counter=0
+    counter=1
     for actionName in ${builtins.concatStringsSep " " actions}; do
       bash -euo pipefail ${./actions}/"$actionName.sh" 2>&1 | while IFS= read -r line; do
         printf '\033[35mclient > %02d-%s\033[0m> %s\n' "$counter" "$actionName" "$line"
@@ -73,7 +73,7 @@ rec {
   s0000 = pkgs.runCommand "s0000" { } ''
     mkdir -p "$out/var"
     printf "[]" > "$out/var/sessions.json"
-    date +"%Y-%m-%dT%H:%M:%SZ" > "$out/var/now.txt"
+    printf "%s" "$(date +"%Y-%m-%dT%H:%M:%SZ")" > "$out/var/now.txt"
 
   '';
 
@@ -156,9 +156,18 @@ rec {
   ];
 
   s0016 = mkTest "s0016" s0004 [
-    "advance-time-4h"
+    "advance-time-5h"
     "goto-home"
     "assert-logged-out"
   ];
+
+  s0017 = mkTest "s0017" s0004 [
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+    "advance-time-1h"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
 }
 
