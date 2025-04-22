@@ -141,11 +141,6 @@ export function hasSessionCookie<S, I>(
   return config.sessionCookieName in cookies;
 }
 
-function defaultRefreshDate<S, I>(config: Config<S, I>, session: S): number {
-  const expiresIn = config.expiresIn ?? defaultExpiresIn;
-  return config.getExpiresAt(session) - expiresIn / 2;
-}
-
 export function consumeSession<S, I>(
   config: Config<S, I>,
   req: Request,
@@ -167,10 +162,9 @@ export function consumeSession<S, I>(
     return [createLogoutCookie(config), undefined];
   }
 
-  const refreshDate =
-    config.getRefreshDate?.(session) ?? defaultRefreshDate(config, session);
-  const requireRefresh = refreshDate < nowMs;
-  if (requireRefresh) {
+  const expiresIn = config.expiresIn ?? defaultExpiresIn;
+  const refreshDate = config.getExpiresAt(session) - expiresIn / 2;
+  if (refreshDate < nowMs) {
     const { cookie: loginCookie, expiresAt } = createLoginCookie(
       config,
       sessionId,
