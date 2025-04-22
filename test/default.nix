@@ -232,5 +232,11 @@ rec {
     "assert-logged-in-alice-iphone"
   ];
 
+  s0029 = mkTest "s0029" s0028 [
+    "advance-time-2h"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
 }
 
