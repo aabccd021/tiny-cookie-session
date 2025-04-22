@@ -73,14 +73,12 @@ export function logout<S, I>(
   return [cookie];
 }
 
-const defaultExpiresIn = 30 * 24 * 60 * 60 * 1000;
-
 function createLoginCookie<S, I>(
   config: Config<S, I>,
   sessionId: string,
 ): { readonly expiresAt: number; readonly cookie: string } {
   const now = config.dateNow?.() ?? Date.now();
-  const expiresIn = config.expiresIn ?? defaultExpiresIn;
+  const expiresIn = config.expiresIn;
   const expiresAt = now + expiresIn;
 
   const encodedSessionId = encodeURIComponent(sessionId);
@@ -162,7 +160,7 @@ export function consumeSession<S, I>(
     return [createLogoutCookie(config), undefined];
   }
 
-  const expiresIn = config.expiresIn ?? defaultExpiresIn;
+  const expiresIn = config.expiresIn;
   const refreshDate = config.getExpiresAt(session) - expiresIn / 2;
   if (refreshDate < nowMs) {
     const { cookie: loginCookie, expiresAt } = createLoginCookie(
