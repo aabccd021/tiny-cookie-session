@@ -88,7 +88,7 @@ function createLoginCookie<S, I>(
   const cookie = serializeCookie(config.sessionCookieName, encodedSessionId, {
     ...config.cookieOption,
     ...defaultCookieOption,
-    maxAge: expiresIn,
+    maxAge: 365 * 24 * 60 * 60 * 1000,
   });
   return { expiresAt, cookie };
 }
@@ -152,7 +152,7 @@ export function consumeSession<S, I>(
 ): readonly [string | undefined, NonNullable<S> | undefined] {
   const sessionId = sessionIdFromReq(config, req);
   if (sessionId === undefined) {
-    return [undefined, undefined];
+    return [createLogoutCookie(config), undefined];
   }
 
   const session = config.selectSession(sessionId);
