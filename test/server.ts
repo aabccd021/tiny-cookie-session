@@ -62,7 +62,7 @@ const config: Config<
       .sort(([, a], [, b]) => b.expirationDate - a.expirationDate)
       .map(([key, value]) => ({ value: key, ...value }));
     if (token1 === undefined) {
-      throw new Error("Token not found. Something went wrong.");
+      throw new Error(`No token found for session with id: ${id}`);
     }
     return {
       session: { ...session, id },
@@ -100,10 +100,12 @@ const config: Config<
     delete sessions[sessionId];
   },
   setTokenUsed: (token) => {
-    const [_, session] = getSessionByToken(token);
+    const [sessionId, session] = getSessionByToken(token);
     const tokenData = session.tokens[token];
     if (tokenData === undefined) {
-      throw new Error("Token not found. Something went wrong.");
+      throw new Error(
+        `Token not found for session id ${sessionId} and token ${token}`,
+      );
     }
     tokenData.used = true;
   },
