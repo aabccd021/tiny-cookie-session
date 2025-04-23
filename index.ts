@@ -237,6 +237,7 @@ export function consumeSession<I, S extends Session = Session>(
       "Potential security threat: Older token is used after newer one",
     );
     config.deleteSession(tokenValue);
+    return [logoutCookie(config), undefined];
   }
 
   if (!requestToken.value.used) {
