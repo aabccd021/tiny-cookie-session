@@ -121,11 +121,11 @@ export function login<I, S extends Session = Session>(
   // https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
   const id = Buffer.from(randomArray).toString("hex");
 
-  const nowMs = config.dateNow?.() ?? Date.now();
-  const sessionExpirationDate = nowMs + config.expiresIn;
+  const now = config.dateNow?.() ?? Date.now();
+  const expirationDate = now + config.expiresIn;
   const cookie = createLoginCookie(config, id);
 
-  config.insertSession(id, sessionExpirationDate, insertData);
+  config.insertSession(id, expirationDate, insertData);
   return [cookie];
 }
 
@@ -156,15 +156,15 @@ export function consumeSession<I, S extends Session = Session>(
     return [createLogoutCookie(config), undefined];
   }
 
-  const nowMs = config.dateNow?.() ?? Date.now();
-  if (session.expirationDate < nowMs) {
+  const now = config.dateNow?.() ?? Date.now();
+  if (session.expirationDate < now) {
     config.deleteSession(id);
     return [createLogoutCookie(config), undefined];
   }
 
   const refreshDate = session.expirationDate - config.expiresIn / 2;
-  if (refreshDate < nowMs) {
-    const sessionExpirationDate = nowMs + config.expiresIn;
+  if (refreshDate < now) {
+    const sessionExpirationDate = now + config.expiresIn;
     config.updateSession(id, sessionExpirationDate);
     return [undefined, session];
   }
