@@ -50,24 +50,16 @@ const config: Config<
   sessionExpiresIn: 5 * 60 * 60 * 1000,
   selectSession: (token) => {
     const [id, session] = getSessionByToken(token);
-    const [token1, token2] = Object.entries(session.tokens).sort(
-      ([, a], [, b]) => b.expirationDate - a.expirationDate,
-    );
-
+    const [token1, token2] = Object.entries(session.tokens)
+      .sort(([, a], [, b]) => b.expirationDate - a.expirationDate)
+      .map(([key, value]) => ({ value: key, ...value }));
     if (token1 === undefined) {
-      return undefined;
+      throw new Error("Token not found. Something went wrong.");
     }
-    const [token1Value, token1Data] = token1;
     return {
       session: { ...session, id },
-      token1: { ...token1Data, value: token1Value },
-      token2:
-        token2 === undefined
-          ? undefined
-          : {
-              ...token2[1],
-              value: token2[0],
-            },
+      token1,
+      token2,
     };
   },
   createSession: ({
