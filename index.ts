@@ -49,7 +49,7 @@ function logoutCookie<I, S extends Session = Session>(
   });
 }
 
-function idFromReq<I, S extends Session = Session>(
+export function getSessionId<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): string | undefined {
@@ -66,7 +66,7 @@ export function logout<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): readonly [string] {
-  const id = idFromReq(config, req);
+  const id = getSessionId(config, req);
   if (id !== undefined) {
     config.deleteSession(id);
   }
@@ -136,7 +136,7 @@ export function consumeSession<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
-  const id = idFromReq(config, req);
+  const id = getSessionId(config, req);
   if (id === undefined) {
     return [logoutCookie(config), undefined];
   }
