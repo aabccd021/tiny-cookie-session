@@ -105,18 +105,12 @@ const config: Config<
     if (sessionEntry === undefined) {
       throw new Error("Session not found. Something went wrong.");
     }
-    const [id, session] = sessionEntry;
-    const tokenDate = session.tokens[token];
-    if (tokenDate === undefined) {
+    const [_, session] = sessionEntry;
+    const tokenData = session.tokens[token];
+    if (tokenData === undefined) {
       throw new Error("Token not found. Something went wrong.");
     }
-    sessions[id] = {
-      ...session,
-      tokens: {
-        ...session.tokens,
-        [token]: { ...tokenDate, used: true },
-      },
-    };
+    tokenData.used = true;
   },
   deleteSessionByToken: (token) => {
     const sessionEntry = getSessionByToken(token);
