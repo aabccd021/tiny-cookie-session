@@ -76,11 +76,7 @@ export function logout<S, I>(
 function createLoginCookie<S, I>(
   config: Config<S, I>,
   sessionId: string,
-): { readonly expiresAt: number; readonly cookie: string } {
-  const now = config.dateNow?.() ?? Date.now();
-  const expiresIn = config.expiresIn;
-  const expiresAt = now + expiresIn;
-
+): string {
   const encodedSessionId = encodeURIComponent(sessionId);
 
   const cookie = serializeCookie(config.sessionCookieName, encodedSessionId, {
@@ -88,7 +84,7 @@ function createLoginCookie<S, I>(
     ...defaultCookieOption,
     maxAge: 365 * 24 * 60 * 60 * 1000,
   });
-  return { expiresAt, cookie };
+  return cookie;
 }
 
 export function login<S, I>(
@@ -121,7 +117,10 @@ export function login<S, I>(
   // https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
   const sessionId = Buffer.from(randomArray).toString("hex");
 
-  const { cookie, expiresAt } = createLoginCookie(config, sessionId);
+  const nowMs = config.dateNow?.() ?? Date.now();
+  const expiresAt = nowMs + config.expiresIn;
+  const cookie = createLoginCookie(config, sessionId);
+
   config.insertSession(sessionId, expiresAt, insertData);
   return [cookie];
 }
@@ -162,9 +161,9 @@ export function consumeSession<S, I>(
 
   const refreshDate = sessionExpiresAt - config.expiresIn / 2;
   if (refreshDate < nowMs) {
-    const { cookie, expiresAt } = createLoginCookie(config, sessionId);
+    const expiresAt = nowMs + config.expiresIn;
     config.updateSession(sessionId, expiresAt);
-    return [cookie, session];
+    return [undefined, session];
   }
 
   return [undefined, session];
