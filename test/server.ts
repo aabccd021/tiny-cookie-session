@@ -31,7 +31,7 @@ const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
   getExpirationDate: (session) => session.expirationDate,
   selectSession: (id) => sessions.get(id),
   insertSession: (id, expirationDate, { username, deviceName }) => {
-    sessions.set(id, { expirationDate: expirationDate, username, deviceName });
+    sessions.set(id, { expirationDate, username, deviceName });
   },
   deleteSession: (id) => {
     sessions.delete(id);
@@ -41,10 +41,7 @@ const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
     if (oldSession === undefined) {
       throw new Error("Session not found. Something went wrong.");
     }
-    sessions.set(id, {
-      ...oldSession,
-      expirationDate: expirationDate,
-    });
+    sessions.set(id, { ...oldSession, expirationDate });
   },
 };
 
