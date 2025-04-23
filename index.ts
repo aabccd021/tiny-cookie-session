@@ -166,5 +166,6 @@ export function consumeSession<S, I>(
     config.updateSession(sessionId, expiresAt);
     return [cookie, session];
   }
+
   return [undefined, session];
 }
