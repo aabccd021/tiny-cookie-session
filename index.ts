@@ -233,9 +233,10 @@ export function consumeSession<I, S extends Session = Session>(
   }
 
   if (requestToken.index === 2 && newestToken.used) {
-    throw new Error(
+    console.error(
       "Potential security threat: Older token is used after newer one",
     );
+    config.deleteSession(tokenValue);
   }
 
   if (!requestToken.value.used) {
