@@ -17,16 +17,6 @@ export type Token = {
   expirationDate: number;
 };
 
-function tokenValue(
-  entry: [value: string, token: Token] | undefined,
-): (Token & { readonly value: string }) | undefined {
-  if (entry === undefined) {
-    return undefined;
-  }
-  const [value, token] = entry;
-  return { ...token, value };
-}
-
 type Session = {
   tokens: Record<string, Token>;
   expirationDate: number;
@@ -71,7 +61,13 @@ const config: Config<
     return {
       session: { ...session, id },
       token1: { ...token1Data, value: token1Value },
-      token2: tokenValue(token2),
+      token2:
+        token2 === undefined
+          ? undefined
+          : {
+              ...token2[1],
+              value: token2[0],
+            },
     };
   },
   createSession: ({
