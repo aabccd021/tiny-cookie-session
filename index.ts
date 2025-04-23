@@ -177,11 +177,6 @@ export function hasSessionCookie<I, S extends Session = Session>(
   return config.tokenCookieName in cookies;
 }
 
-// token2 used, token1     used, token2 req -> logout
-// token2 used, token1 not used, token2 req -> normal
-// token2 used, token1     used, token1 req -> normal
-// token2 used, token1 not used, token1 req -> normal
-
 function getRequestToken(
   token1: Token,
   token2: Token | undefined,

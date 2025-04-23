@@ -38,6 +38,14 @@ function getSessionByToken(token: string): [string, Session] {
   return entry;
 }
 
+function getSessionById(id: string): Session {
+  const session = sessions[id];
+  if (session === undefined) {
+    throw new Error(`Session not found with id: ${id}`);
+  }
+  return session;
+}
+
 const config: Config<
   Pick<Session, "username" | "deviceName">,
   Session & { readonly id: string }
@@ -67,22 +75,18 @@ const config: Config<
     sessionExpirationDate,
     token,
     tokenExpirationDate,
-    insertData: { username, deviceName },
+    insertData,
   }) => {
     sessions[sessionId] = {
+      ...insertData,
       expirationDate: sessionExpirationDate,
-      username,
-      deviceName,
       tokens: {
         [token]: { used: false, expirationDate: tokenExpirationDate },
       },
     };
   },
   createToken: ({ sessionId, token, tokenExpirationDate }) => {
-    const session = sessions[sessionId];
-    if (session === undefined) {
-      throw new Error("Session not found. Something went wrong.");
-    }
+    const session = getSessionById(sessionId);
     session.tokens[token] = {
       used: false,
       expirationDate: tokenExpirationDate,
@@ -104,10 +108,7 @@ const config: Config<
     tokenData.used = true;
   },
   setSessionExpirationDate: ({ sessionId, sessionExpirationDate }) => {
-    const session = sessions[sessionId];
-    if (session === undefined) {
-      throw new Error("Session not found. Something went wrong.");
-    }
+    const session = getSessionById(sessionId);
     session.expirationDate = sessionExpirationDate;
   },
 };
