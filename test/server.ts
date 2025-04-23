@@ -13,7 +13,7 @@ const rootDir = "./received";
 fs.mkdirSync(rootDir, { recursive: true });
 
 type Session = {
-  expiresAt: number;
+  expirationDate: number;
   username: string;
   deviceName: string;
 };
@@ -28,22 +28,22 @@ const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
     return new Date(epochNowStr).getTime();
   },
   expiresIn: 5 * 60 * 60 * 1000,
-  getExpiresAt: (session) => session.expiresAt,
-  selectSession: (sessionId) => sessions.get(sessionId),
-  insertSession: (sessionId, expiresAt, { username, deviceName }) => {
-    sessions.set(sessionId, { expiresAt, username, deviceName });
+  getExpirationDate: (session) => session.expirationDate,
+  selectSession: (id) => sessions.get(id),
+  insertSession: (id, expirationDate, { username, deviceName }) => {
+    sessions.set(id, { expirationDate: expirationDate, username, deviceName });
   },
-  deleteSession: (sessionId) => {
-    sessions.delete(sessionId);
+  deleteSession: (id) => {
+    sessions.delete(id);
   },
-  updateSession: (sessionId, expiresAt) => {
-    const oldSession = sessions.get(sessionId);
+  updateSession: (id, expirationDate) => {
+    const oldSession = sessions.get(id);
     if (oldSession === undefined) {
       throw new Error("Session not found. Something went wrong.");
     }
-    sessions.set(sessionId, {
+    sessions.set(id, {
       ...oldSession,
-      expiresAt,
+      expirationDate: expirationDate,
     });
   },
 };

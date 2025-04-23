@@ -10,15 +10,15 @@ export interface Config<S, I> {
   readonly sessionCookieName: string;
   readonly dateNow: () => number;
   readonly expiresIn: number;
-  readonly getExpiresAt: (session: S) => number;
-  readonly selectSession: (sessionId: string) => NonNullable<S> | undefined;
+  readonly getExpirationDate: (session: S) => number;
+  readonly selectSession: (id: string) => NonNullable<S> | undefined;
   readonly insertSession: (
-    sessionId: string,
-    expiresAt: number,
+    id: string,
+    expirationDate: number,
     insertData: I,
   ) => void;
-  readonly deleteSession: (sessionId: string) => void;
-  readonly updateSession: (sessionId: string, expiresAt: number) => void;
+  readonly deleteSession: (id: string) => void;
+  readonly updateSession: (id: string, expirationDate: number) => void;
   readonly getRefreshDate?: (session: S) => number;
 }
 
@@ -48,7 +48,7 @@ function createLogoutCookie<S, I>(config: Config<S, I>): string {
   });
 }
 
-function sessionIdFromReq<S, I>(
+function idFromReq<S, I>(
   config: Config<S, I>,
   req: Request,
 ): string | undefined {
@@ -65,19 +65,16 @@ export function logout<S, I>(
   config: Config<S, I>,
   req: Request,
 ): readonly [string] {
-  const sessionId = sessionIdFromReq(config, req);
+  const id = idFromReq(config, req);
   const cookie = createLogoutCookie(config);
-  if (sessionId !== undefined) {
-    config.deleteSession(sessionId);
+  if (id !== undefined) {
+    config.deleteSession(id);
   }
   return [cookie];
 }
 
-function createLoginCookie<S, I>(
-  config: Config<S, I>,
-  sessionId: string,
-): string {
-  const encodedSessionId = encodeURIComponent(sessionId);
+function createLoginCookie<S, I>(config: Config<S, I>, id: string): string {
+  const encodedSessionId = encodeURIComponent(id);
 
   const cookie = serializeCookie(config.sessionCookieName, encodedSessionId, {
     ...config.cookieOption,
@@ -115,13 +112,13 @@ export function login<S, I>(
 
   // lucia uses base32 encoding
   // https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
-  const sessionId = Buffer.from(randomArray).toString("hex");
+  const id = Buffer.from(randomArray).toString("hex");
 
   const nowMs = config.dateNow?.() ?? Date.now();
-  const expiresAt = nowMs + config.expiresIn;
-  const cookie = createLoginCookie(config, sessionId);
+  const sessionExpirationDate = nowMs + config.expiresIn;
+  const cookie = createLoginCookie(config, id);
 
-  config.insertSession(sessionId, expiresAt, insertData);
+  config.insertSession(id, sessionExpirationDate, insertData);
   return [cookie];
 }
 
@@ -142,27 +139,27 @@ export function consumeSession<S, I>(
   config: Config<S, I>,
   req: Request,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
-  const sessionId = sessionIdFromReq(config, req);
-  if (sessionId === undefined) {
+  const id = idFromReq(config, req);
+  if (id === undefined) {
     return [createLogoutCookie(config), undefined];
   }
 
-  const session = config.selectSession(sessionId);
+  const session = config.selectSession(id);
   if (session === undefined) {
     return [createLogoutCookie(config), undefined];
   }
 
   const nowMs = config.dateNow?.() ?? Date.now();
-  const sessionExpiresAt = config.getExpiresAt(session);
+  const sessionExpiresAt = config.getExpirationDate(session);
   if (sessionExpiresAt < nowMs) {
-    config.deleteSession(sessionId);
+    config.deleteSession(id);
     return [createLogoutCookie(config), undefined];
   }
 
   const refreshDate = sessionExpiresAt - config.expiresIn / 2;
   if (refreshDate < nowMs) {
-    const expiresAt = nowMs + config.expiresIn;
-    config.updateSession(sessionId, expiresAt);
+    const sessionExpirationDate = nowMs + config.expiresIn;
+    config.updateSession(id, sessionExpirationDate);
     return [undefined, session];
   }
 
