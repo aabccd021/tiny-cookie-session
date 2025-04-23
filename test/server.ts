@@ -100,6 +100,13 @@ const config: Config<
       expirationDate: tokenExpirationDate,
     };
   },
+  deleteSessionByToken: (token) => {
+    const [sessionId] = getSessionByToken(token);
+    delete sessions[sessionId];
+  },
+  deleteSessionById: (sessionId) => {
+    delete sessions[sessionId];
+  },
   setTokenUsed: (token) => {
     const [_, session] = getSessionByToken(token);
     const tokenData = session.tokens[token];
@@ -108,14 +115,7 @@ const config: Config<
     }
     tokenData.used = true;
   },
-  deleteSessionByToken: (token) => {
-    const [sessionId] = getSessionByToken(token);
-    delete sessions[sessionId];
-  },
-  deleteSessionById: (sessionId) => {
-    delete sessions[sessionId];
-  },
-  updateSessionExpirationDate: ({ sessionId, sessionExpirationDate }) => {
+  setSessionExpirationDate: ({ sessionId, sessionExpirationDate }) => {
     const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error("Session not found. Something went wrong.");

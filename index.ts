@@ -44,7 +44,7 @@ export interface Config<I, S extends Session = Session> {
   }) => void;
   readonly deleteSessionByToken: (token: string) => void;
   readonly deleteSessionById: (sessionId: string) => void;
-  readonly updateSessionExpirationDate: (params: {
+  readonly setSessionExpirationDate: (params: {
     readonly sessionId: string;
     readonly sessionExpirationDate: number;
   }) => void;
@@ -253,7 +253,7 @@ export function consumeSession<I, S extends Session = Session>(
   const sessionRefreshDate =
     session.expirationDate - config.sessionExpiresIn / 2;
   if (sessionRefreshDate < now) {
-    config.updateSessionExpirationDate({
+    config.setSessionExpirationDate({
       sessionId: session.id,
       sessionExpirationDate: now + config.sessionExpiresIn,
     });
