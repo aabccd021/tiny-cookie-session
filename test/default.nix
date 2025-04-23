@@ -36,7 +36,7 @@ let
     cp -Lr ${prev}/* ./var
     chmod -R u=rwX,g=,o= ./var
 
-    export NETERO_DIR="$PWD/var/browser_1"
+    export NETERO_DIR="$PWD/var/browser1"
     mkdir -p "$NETERO_DIR"
 
     mkdir -p ./run/netero
