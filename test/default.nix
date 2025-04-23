@@ -72,7 +72,7 @@ rec {
 
   s0000 = pkgs.runCommand "s0000" { } ''
     mkdir -p "$out/var"
-    printf "[]" > "$out/var/sessions.json"
+    printf "{}" > "$out/var/sessions.json"
     printf "%s" "$(date +"%Y-%m-%dT%H:%M:%SZ")" > "$out/var/now.txt"
 
   '';

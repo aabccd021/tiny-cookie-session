@@ -34,11 +34,14 @@ type Session = {
   readonly deviceName: string;
 };
 
-const sessionsJson = await Bun.file("./var/sessions.json").json();
-const sessions = new Map<string, Session>(sessionsJson);
+const sessions: Record<string, Session> = await Bun.file(
+  "./var/sessions.json",
+).json();
 
 function getSessionByToken(token: string): [string, Session] | undefined {
-  return sessions.entries().find(([_, session]) => token in session.tokens);
+  return Object.entries(sessions).find(
+    ([_, session]) => token in session.tokens,
+  );
 }
 
 const config: Config<
@@ -78,27 +81,27 @@ const config: Config<
     tokenExpirationDate,
     insertData: { username, deviceName },
   }) => {
-    sessions.set(sessionId, {
+    sessions[sessionId] = {
       expirationDate: sessionExpirationDate,
       username,
       deviceName,
       tokens: {
         [token]: { used: false, expirationDate: tokenExpirationDate },
       },
-    });
+    };
   },
   createToken: ({ sessionId, token, tokenExpirationDate }) => {
-    const session = sessions.get(sessionId);
+    const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error("Session not found. Something went wrong.");
     }
-    sessions.set(sessionId, {
+    sessions[sessionId] = {
       ...session,
       tokens: {
         ...session.tokens,
         [token]: { used: false, expirationDate: tokenExpirationDate },
       },
-    });
+    };
   },
   setTokenUsed: (token) => {
     const sessionEntry = getSessionByToken(token);
@@ -110,13 +113,13 @@ const config: Config<
     if (tokenDate === undefined) {
       throw new Error("Token not found. Something went wrong.");
     }
-    sessions.set(id, {
+    sessions[id] = {
       ...session,
       tokens: {
         ...session.tokens,
         [token]: { ...tokenDate, used: true },
       },
-    });
+    };
   },
   deleteSession: (token) => {
     const sessionEntry = getSessionByToken(token);
@@ -124,17 +127,17 @@ const config: Config<
       throw new Error("Session not found. Something went wrong.");
     }
     const [id] = sessionEntry;
-    sessions.delete(id);
+    delete sessions[id];
   },
   updateSessionExpirationDate: ({ sessionId, sessionExpirationDate }) => {
-    const session = sessions.get(sessionId);
+    const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error("Session not found. Something went wrong.");
     }
-    sessions.set(sessionId, {
+    sessions[sessionId] = {
       ...session,
       expirationDate: sessionExpirationDate,
-    });
+    };
   },
 };
 
@@ -209,10 +212,7 @@ fs.writeFileSync("./run/netero/ready.fifo", "");
 
 await fs.promises.readFile("./run/netero/exit.fifo");
 
-fs.writeFileSync(
-  "./var/sessions.json",
-  JSON.stringify(Array.from(sessions.entries())),
-);
+fs.writeFileSync("./var/sessions.json", JSON.stringify(sessions));
 
 await server.stop();
 process.exit(0);
