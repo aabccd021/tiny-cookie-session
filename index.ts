@@ -124,22 +124,20 @@ function createNewToken<I, S extends Session = Session>(
 
 export function parseToken<I, S extends Session = Session>(
   config: Config<I, S>,
-  req: Request,
+  cookieHeader: string | null | undefined,
 ): string | undefined {
-  const cookieHeader = req.headers.get("Cookie");
-  if (cookieHeader === null) {
+  if (cookieHeader === null || cookieHeader === undefined) {
     return undefined;
   }
-
   const cookies = parseCookie(cookieHeader);
   return cookies[config.tokenCookieName];
 }
 
 export function logout<I, S extends Session = Session>(
   config: Config<I, S>,
-  req: Request,
+  cookieHeader: string | null | undefined,
 ): readonly [string] {
-  const token = parseToken(config, req);
+  const token = parseToken(config, cookieHeader);
   if (token !== undefined) {
     config.deleteSessionByToken(token);
   }
@@ -166,10 +164,9 @@ export function login<I, S extends Session = Session>(
 
 export function hasSessionCookie<I, S extends Session = Session>(
   config: Config<I, S>,
-  req: Request,
+  cookieHeader: string | null | undefined,
 ): boolean {
-  const cookieHeader = req.headers.get("Cookie");
-  if (cookieHeader === null) {
+  if (cookieHeader === null || cookieHeader === undefined) {
     return false;
   }
 
@@ -198,9 +195,9 @@ function getRequestToken(
 
 export function consumeSession<I, S extends Session = Session>(
   config: Config<I, S>,
-  req: Request,
+  cookieHeader: string | null | undefined,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
-  const tokenValue = parseToken(config, req);
+  const tokenValue = parseToken(config, cookieHeader);
   if (tokenValue === undefined) {
     return [undefined, undefined];
   }
@@ -218,7 +215,10 @@ export function consumeSession<I, S extends Session = Session>(
     return [logoutCookie(config), undefined];
   }
 
-  const requestToken = getRequestToken(token1, token2, tokenValue);
+  const requestToken =
+    token1.value === tokenValue
+      ? { value: token1, index: 1 }
+      : getRequestToken(token1, token2, tokenValue);
   if (requestToken === undefined) {
     throw new Error("Absurd: Token neither newest nor second newest");
   }

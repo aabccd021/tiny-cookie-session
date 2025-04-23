@@ -120,7 +120,8 @@ const server = Bun.serve({
   routes: {
     "/": {
       GET: (req): Response => {
-        const [sessionCookie, session] = consumeSession(config, req);
+        const cookieHeader = req.headers.get("cookie");
+        const [sessionCookie, session] = consumeSession(config, cookieHeader);
         const message =
           session !== undefined
             ? `User: ${session.username}, Device: ${session.deviceName}`
@@ -165,7 +166,8 @@ const server = Bun.serve({
     },
     "/logout": {
       GET: (req): Response => {
-        const [logoutCookie] = logout(config, req);
+        const cookieHeader = req.headers.get("cookie");
+        const [logoutCookie] = logout(config, cookieHeader);
         return new Response(undefined, {
           status: 303,
           headers: { Location: "/", "Set-Cookie": logoutCookie },
@@ -174,9 +176,13 @@ const server = Bun.serve({
     },
     "/has-session-cookie": {
       GET: (req): Response => {
-        return new Response(`<p>${hasSessionCookie(config, req)}</p>`, {
-          headers: { "Content-Type": "text/html" },
-        });
+        const cookieHeader = req.headers.get("cookie");
+        return new Response(
+          `<p>${hasSessionCookie(config, cookieHeader)}</p>`,
+          {
+            headers: { "Content-Type": "text/html" },
+          },
+        );
       },
     },
   },
