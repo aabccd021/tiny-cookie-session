@@ -42,8 +42,8 @@ export interface Config<I, S extends Session = Session> {
     readonly token: string;
     readonly tokenExpirationDate: number;
   }) => void;
-
-  readonly deleteSession: (token: string) => void;
+  readonly deleteSessionByToken: (token: string) => void;
+  readonly deleteSessionById: (sessionId: string) => void;
   readonly updateSessionExpirationDate: (params: {
     readonly sessionId: string;
     readonly sessionExpirationDate: number;
@@ -122,7 +122,7 @@ function loginCookie<I, S extends Session = Session>(
   return [cookie, token];
 }
 
-export function getToken<I, S extends Session = Session>(
+export function parseToken<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): string | undefined {
@@ -139,9 +139,9 @@ export function logout<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): readonly [string] {
-  const token = getToken(config, req);
+  const token = parseToken(config, req);
   if (token !== undefined) {
-    config.deleteSession(token);
+    config.deleteSessionByToken(token);
   }
   return [logoutCookie(config)];
 }
@@ -205,7 +205,7 @@ export function consumeSession<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
-  const tokenValue = getToken(config, req);
+  const tokenValue = parseToken(config, req);
   if (tokenValue === undefined) {
     return [undefined, undefined];
   }
@@ -219,7 +219,7 @@ export function consumeSession<I, S extends Session = Session>(
 
   const { session, newestToken, secondNewestToken } = sessionResult;
   if (session.expirationDate < now) {
-    config.deleteSession(tokenValue);
+    config.deleteSessionById(tokenValue);
     return [logoutCookie(config), undefined];
   }
 
@@ -236,7 +236,7 @@ export function consumeSession<I, S extends Session = Session>(
     console.error(
       "Potential security threat: Older token is used after newer one",
     );
-    config.deleteSession(tokenValue);
+    config.deleteSessionById(tokenValue);
     return [logoutCookie(config), undefined];
   }
 
