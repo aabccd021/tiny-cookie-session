@@ -43,7 +43,7 @@ const logoutCookieOption: SerializeOptions = {
   maxAge: 0,
 };
 
-function createLogoutCookie<I, S extends Session = Session>(
+function logoutCookie<I, S extends Session = Session>(
   config: Config<I, S>,
 ): string {
   return serializeCookie(config.sessionCookieName, "", {
@@ -70,14 +70,13 @@ export function logout<I, S extends Session = Session>(
   req: Request,
 ): readonly [string] {
   const id = idFromReq(config, req);
-  const cookie = createLogoutCookie(config);
   if (id !== undefined) {
     config.deleteSession(id);
   }
-  return [cookie];
+  return [logoutCookie(config)];
 }
 
-function createLoginCookie<I, S extends Session = Session>(
+function loginCookie<I, S extends Session = Session>(
   config: Config<I, S>,
   id: string,
 ): string {
@@ -123,10 +122,9 @@ export function login<I, S extends Session = Session>(
 
   const now = config.dateNow?.() ?? Date.now();
   const expirationDate = now + config.expiresIn;
-  const cookie = createLoginCookie(config, id);
 
   config.insertSession(id, expirationDate, insertData);
-  return [cookie];
+  return [loginCookie(config, id)];
 }
 
 export function hasSessionCookie<I, S extends Session = Session>(
@@ -148,18 +146,18 @@ export function consumeSession<I, S extends Session = Session>(
 ): readonly [string | undefined, NonNullable<S> | undefined] {
   const id = idFromReq(config, req);
   if (id === undefined) {
-    return [createLogoutCookie(config), undefined];
+    return [logoutCookie(config), undefined];
   }
 
   const session = config.selectSession(id);
   if (session === undefined) {
-    return [createLogoutCookie(config), undefined];
+    return [logoutCookie(config), undefined];
   }
 
   const now = config.dateNow?.() ?? Date.now();
   if (session.expirationDate < now) {
     config.deleteSession(id);
-    return [createLogoutCookie(config), undefined];
+    return [logoutCookie(config), undefined];
   }
 
   const refreshDate = session.expirationDate - config.expiresIn / 2;
