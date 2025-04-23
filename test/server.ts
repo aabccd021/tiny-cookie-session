@@ -38,10 +38,14 @@ const sessions: Record<string, Session> = await Bun.file(
   "./var/sessions.json",
 ).json();
 
-function getSessionByToken(token: string): [string, Session] | undefined {
-  return Object.entries(sessions).find(
+function getSessionByToken(token: string): [string, Session] {
+  const entry = Object.entries(sessions).find(
     ([_, session]) => token in session.tokens,
   );
+  if (entry === undefined) {
+    throw new Error(`Session not found with token: ${token}`);
+  }
+  return entry;
 }
 
 const config: Config<
@@ -55,11 +59,7 @@ const config: Config<
   },
   sessionExpiresIn: 5 * 60 * 60 * 1000,
   selectSession: (token) => {
-    const sessionEntry = getSessionByToken(token);
-    if (sessionEntry === undefined) {
-      return undefined;
-    }
-    const [id, session] = sessionEntry;
+    const [id, session] = getSessionByToken(token);
     const [newestToken, secondNewestToken] = Object.entries(
       session.tokens,
     ).sort(([, a], [, b]) => b.expirationDate - a.expirationDate);
@@ -101,11 +101,7 @@ const config: Config<
     };
   },
   setTokenUsed: (token) => {
-    const sessionEntry = getSessionByToken(token);
-    if (sessionEntry === undefined) {
-      throw new Error("Session not found. Something went wrong.");
-    }
-    const [_, session] = sessionEntry;
+    const [_, session] = getSessionByToken(token);
     const tokenData = session.tokens[token];
     if (tokenData === undefined) {
       throw new Error("Token not found. Something went wrong.");
@@ -113,11 +109,7 @@ const config: Config<
     tokenData.used = true;
   },
   deleteSessionByToken: (token) => {
-    const sessionEntry = getSessionByToken(token);
-    if (sessionEntry === undefined) {
-      throw new Error("Session not found. Something went wrong.");
-    }
-    const [sessionId] = sessionEntry;
+    const [sessionId] = getSessionByToken(token);
     delete sessions[sessionId];
   },
   deleteSessionById: (sessionId) => {
