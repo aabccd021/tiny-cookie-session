@@ -28,7 +28,6 @@ const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
     return new Date(epochNowStr).getTime();
   },
   expiresIn: 5 * 60 * 60 * 1000,
-  getExpirationDate: (session) => session.expirationDate,
   selectSession: (id) => sessions.get(id),
   insertSession: (id, expirationDate, { username, deviceName }) => {
     sessions.set(id, { expirationDate, username, deviceName });

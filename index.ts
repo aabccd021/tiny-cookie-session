@@ -5,12 +5,15 @@ import {
   serialize as serializeCookie,
 } from "@tinyhttp/cookie";
 
-export interface Config<S, I> {
+type Session = {
+  readonly expirationDate: number;
+};
+
+export interface Config<S extends Session, I> {
   readonly cookieOption?: SerializeOptions;
   readonly sessionCookieName: string;
   readonly dateNow: () => number;
   readonly expiresIn: number;
-  readonly getExpirationDate: (session: S) => number;
   readonly selectSession: (id: string) => NonNullable<S> | undefined;
   readonly insertSession: (
     id: string,
@@ -22,7 +25,7 @@ export interface Config<S, I> {
 }
 
 export const defaultConfig: Pick<
-  Config<unknown, unknown>,
+  Config<Session, unknown>,
   "sessionCookieName" | "dateNow" | "expiresIn"
 > = {
   sessionCookieName: "session_id",
@@ -40,14 +43,16 @@ const logoutCookieOption: SerializeOptions = {
   maxAge: 0,
 };
 
-function createLogoutCookie<S, I>(config: Config<S, I>): string {
+function createLogoutCookie<S extends Session, I>(
+  config: Config<S, I>,
+): string {
   return serializeCookie(config.sessionCookieName, "", {
     ...config.cookieOption,
     ...logoutCookieOption,
   });
 }
 
-function idFromReq<S, I>(
+function idFromReq<S extends Session, I>(
   config: Config<S, I>,
   req: Request,
 ): string | undefined {
@@ -60,7 +65,7 @@ function idFromReq<S, I>(
   return cookies[config.sessionCookieName];
 }
 
-export function logout<S, I>(
+export function logout<S extends Session, I>(
   config: Config<S, I>,
   req: Request,
 ): readonly [string] {
@@ -72,7 +77,10 @@ export function logout<S, I>(
   return [cookie];
 }
 
-function createLoginCookie<S, I>(config: Config<S, I>, id: string): string {
+function createLoginCookie<S extends Session, I>(
+  config: Config<S, I>,
+  id: string,
+): string {
   const encodedSessionId = encodeURIComponent(id);
 
   const cookie = serializeCookie(config.sessionCookieName, encodedSessionId, {
@@ -83,7 +91,7 @@ function createLoginCookie<S, I>(config: Config<S, I>, id: string): string {
   return cookie;
 }
 
-export function login<S, I>(
+export function login<S extends Session, I>(
   config: Config<S, I>,
   insertData: I,
 ): readonly [string] {
@@ -121,7 +129,7 @@ export function login<S, I>(
   return [cookie];
 }
 
-export function hasSessionCookie<S, I>(
+export function hasSessionCookie<S extends Session, I>(
   config: Config<S, I>,
   req: Request,
 ): boolean {
@@ -134,7 +142,7 @@ export function hasSessionCookie<S, I>(
   return config.sessionCookieName in cookies;
 }
 
-export function consumeSession<S, I>(
+export function consumeSession<S extends Session, I>(
   config: Config<S, I>,
   req: Request,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
@@ -149,13 +157,12 @@ export function consumeSession<S, I>(
   }
 
   const nowMs = config.dateNow?.() ?? Date.now();
-  const sessionExpiresAt = config.getExpirationDate(session);
-  if (sessionExpiresAt < nowMs) {
+  if (session.expirationDate < nowMs) {
     config.deleteSession(id);
     return [createLogoutCookie(config), undefined];
   }
 
-  const refreshDate = sessionExpiresAt - config.expiresIn / 2;
+  const refreshDate = session.expirationDate - config.expiresIn / 2;
   if (refreshDate < nowMs) {
     const sessionExpirationDate = nowMs + config.expiresIn;
     config.updateSession(id, sessionExpirationDate);
