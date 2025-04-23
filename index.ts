@@ -19,7 +19,6 @@ export interface Config<S, I> {
   ) => void;
   readonly deleteSession: (id: string) => void;
   readonly updateSession: (id: string, expirationDate: number) => void;
-  readonly getRefreshDate?: (session: S) => number;
 }
 
 export const defaultConfig: Pick<
