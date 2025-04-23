@@ -13,8 +13,8 @@ const rootDir = "./received";
 fs.mkdirSync(rootDir, { recursive: true });
 
 export type Token = {
-  readonly used: boolean;
-  readonly expirationDate: number;
+  used: boolean;
+  expirationDate: number;
 };
 
 function tokenValue(
@@ -28,10 +28,10 @@ function tokenValue(
 }
 
 type Session = {
-  readonly tokens: Record<string, Token>;
-  readonly expirationDate: number;
-  readonly username: string;
-  readonly deviceName: string;
+  tokens: Record<string, Token>;
+  expirationDate: number;
+  username: string;
+  deviceName: string;
 };
 
 const sessions: Record<string, Session> = await Bun.file(
@@ -134,10 +134,7 @@ const config: Config<
     if (session === undefined) {
       throw new Error("Session not found. Something went wrong.");
     }
-    sessions[sessionId] = {
-      ...session,
-      expirationDate: sessionExpirationDate,
-    };
+    session.expirationDate = sessionExpirationDate;
   },
 };
 
