@@ -145,16 +145,6 @@ rec {
     "assert-logged-in-alice-iphone"
   ];
 
-  s0014 = mkTest "s0014" s0004 [
-    "goto-login"
-    "assert-already-logged-in"
-  ];
-
-  s0015 = mkTest "s0015" s0010 [
-    "goto-login"
-    "assert-already-logged-in"
-  ];
-
   s0016 = mkTest "s0016" s0004 [
     "advance-time-6h"
     "goto-home"

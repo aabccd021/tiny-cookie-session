@@ -63,16 +63,7 @@ const server = Bun.serve({
       },
     },
     "/login": {
-      GET: (req): Response => {
-        const [sessionCookie, session] = consumeSession(config, req);
-        if (session) {
-          return new Response("<p>Already logged in</p>", {
-            headers: {
-              "Set-Cookie": sessionCookie ?? "",
-              "Content-Type": "text/html",
-            },
-          });
-        }
+      GET: (): Response => {
         return new Response(
           `<form method="POST">
             <input type="text" name="username" placeholder="username" />
