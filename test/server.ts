@@ -21,7 +21,7 @@ type Session = {
 const sessionsJson = await Bun.file("./var/sessions.json").json();
 const sessions = new Map<string, Session>(sessionsJson);
 
-const config: Config<Session, Pick<Session, "username" | "deviceName">> = {
+const config: Config<Pick<Session, "username" | "deviceName">, Session> = {
   ...defaultConfig,
   dateNow: (): number => {
     const epochNowStr = fs.readFileSync("./var/now.txt", "utf8");

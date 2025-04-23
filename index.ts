@@ -9,7 +9,7 @@ type Session = {
   readonly expirationDate: number;
 };
 
-export interface Config<S extends Session, I> {
+export interface Config<I, S extends Session = Session> {
   readonly cookieOption?: SerializeOptions;
   readonly sessionCookieName: string;
   readonly dateNow: () => number;
@@ -25,7 +25,7 @@ export interface Config<S extends Session, I> {
 }
 
 export const defaultConfig: Pick<
-  Config<Session, unknown>,
+  Config<unknown>,
   "sessionCookieName" | "dateNow" | "expiresIn"
 > = {
   sessionCookieName: "session_id",
@@ -43,8 +43,8 @@ const logoutCookieOption: SerializeOptions = {
   maxAge: 0,
 };
 
-function createLogoutCookie<S extends Session, I>(
-  config: Config<S, I>,
+function createLogoutCookie<I, S extends Session = Session>(
+  config: Config<I, S>,
 ): string {
   return serializeCookie(config.sessionCookieName, "", {
     ...config.cookieOption,
@@ -52,8 +52,8 @@ function createLogoutCookie<S extends Session, I>(
   });
 }
 
-function idFromReq<S extends Session, I>(
-  config: Config<S, I>,
+function idFromReq<I, S extends Session = Session>(
+  config: Config<I, S>,
   req: Request,
 ): string | undefined {
   const cookieHeader = req.headers.get("Cookie");
@@ -65,8 +65,8 @@ function idFromReq<S extends Session, I>(
   return cookies[config.sessionCookieName];
 }
 
-export function logout<S extends Session, I>(
-  config: Config<S, I>,
+export function logout<I, S extends Session = Session>(
+  config: Config<I, S>,
   req: Request,
 ): readonly [string] {
   const id = idFromReq(config, req);
@@ -77,8 +77,8 @@ export function logout<S extends Session, I>(
   return [cookie];
 }
 
-function createLoginCookie<S extends Session, I>(
-  config: Config<S, I>,
+function createLoginCookie<I, S extends Session = Session>(
+  config: Config<I, S>,
   id: string,
 ): string {
   const encodedSessionId = encodeURIComponent(id);
@@ -91,8 +91,8 @@ function createLoginCookie<S extends Session, I>(
   return cookie;
 }
 
-export function login<S extends Session, I>(
-  config: Config<S, I>,
+export function login<I, S extends Session = Session>(
+  config: Config<I, S>,
   insertData: I,
 ): readonly [string] {
   // remix uses 8 bytes (64 bits) of entropy
@@ -129,8 +129,8 @@ export function login<S extends Session, I>(
   return [cookie];
 }
 
-export function hasSessionCookie<S extends Session, I>(
-  config: Config<S, I>,
+export function hasSessionCookie<I, S extends Session = Session>(
+  config: Config<I, S>,
   req: Request,
 ): boolean {
   const cookieHeader = req.headers.get("Cookie");
@@ -142,8 +142,8 @@ export function hasSessionCookie<S extends Session, I>(
   return config.sessionCookieName in cookies;
 }
 
-export function consumeSession<S extends Session, I>(
-  config: Config<S, I>,
+export function consumeSession<I, S extends Session = Session>(
+  config: Config<I, S>,
   req: Request,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
   const id = idFromReq(config, req);
