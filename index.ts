@@ -38,17 +38,14 @@ const defaultCookieOption: SerializeOptions = {
   sameSite: "Lax",
   path: "/",
 };
-const logoutCookieOption: SerializeOptions = {
-  ...defaultCookieOption,
-  maxAge: 0,
-};
 
 function logoutCookie<I, S extends Session = Session>(
   config: Config<I, S>,
 ): string {
   return serializeCookie(config.sessionCookieName, "", {
     ...config.cookieOption,
-    ...logoutCookieOption,
+    ...defaultCookieOption,
+    maxAge: 0,
   });
 }
 
@@ -74,20 +71,6 @@ export function logout<I, S extends Session = Session>(
     config.deleteSession(id);
   }
   return [logoutCookie(config)];
-}
-
-function loginCookie<I, S extends Session = Session>(
-  config: Config<I, S>,
-  id: string,
-): string {
-  const encodedSessionId = encodeURIComponent(id);
-
-  const cookie = serializeCookie(config.sessionCookieName, encodedSessionId, {
-    ...config.cookieOption,
-    ...defaultCookieOption,
-    maxAge: 365 * 24 * 60 * 60 * 1000,
-  });
-  return cookie;
 }
 
 export function login<I, S extends Session = Session>(
@@ -120,11 +103,20 @@ export function login<I, S extends Session = Session>(
   // https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
   const id = Buffer.from(randomArray).toString("hex");
 
+  const cookie = serializeCookie(
+    config.sessionCookieName,
+    encodeURIComponent(id),
+    {
+      ...config.cookieOption,
+      ...defaultCookieOption,
+      maxAge: 365 * 24 * 60 * 60 * 1000,
+    },
+  );
+
   const now = config.dateNow?.() ?? Date.now();
   const expirationDate = now + config.expiresIn;
-
   config.insertSession(id, expirationDate, insertData);
-  return [loginCookie(config, id)];
+  return [cookie];
 }
 
 export function hasSessionCookie<I, S extends Session = Session>(
