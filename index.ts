@@ -104,7 +104,7 @@ function getRandom32bytes(): string {
   return Buffer.from(randomArray).toString("hex");
 }
 
-function loginCookie<I, S extends Session = Session>(
+function createNewToken<I, S extends Session = Session>(
   config: Config<I, S>,
 ): [string, string] {
   const token = getRandom32bytes();
@@ -151,7 +151,7 @@ export function login<I, S extends Session = Session>(
   insertData: I,
 ): readonly [string] {
   const sessionId = getRandom32bytes();
-  const [cookie, token] = loginCookie(config);
+  const [cookie, token] = createNewToken(config);
 
   const now = config.dateNow?.() ?? Date.now();
   config.createSession({
@@ -251,7 +251,7 @@ export function consumeSession<I, S extends Session = Session>(
   }
 
   if (requestToken.value.expirationDate < now) {
-    const [cookie, newToken] = loginCookie(config);
+    const [cookie, newToken] = createNewToken(config);
     config.createToken({
       sessionId: session.id,
       token: newToken,
