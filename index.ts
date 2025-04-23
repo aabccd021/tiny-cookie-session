@@ -9,26 +9,35 @@ type Session = {
   readonly expirationDate: number;
 };
 
+export type AccessToken = {
+  value: string;
+  used: boolean;
+};
+
 export interface Config<I, S extends Session = Session> {
   readonly cookieOption?: SerializeOptions;
-  readonly sessionCookieName: string;
+  readonly accessTokenCookieName: string;
   readonly dateNow: () => number;
   readonly expiresIn: number;
   readonly selectSession: (id: string) => NonNullable<S> | undefined;
   readonly insertSession: (
     id: string,
     expirationDate: number,
+    accessToken: AccessToken,
     insertData: I,
   ) => void;
   readonly deleteSession: (id: string) => void;
-  readonly updateSession: (id: string, expirationDate: number) => void;
+  readonly updateSessionExpirationDate: (
+    id: string,
+    expirationDate: number,
+  ) => void;
 }
 
 export const defaultConfig: Pick<
   Config<unknown>,
-  "sessionCookieName" | "dateNow" | "expiresIn"
+  "accessTokenCookieName" | "dateNow" | "expiresIn"
 > = {
-  sessionCookieName: "session_id",
+  accessTokenCookieName: "session_id",
   dateNow: () => Date.now(),
   expiresIn: 30 * 24 * 60 * 60 * 1000,
 };
@@ -42,14 +51,14 @@ const defaultCookieOption: SerializeOptions = {
 function logoutCookie<I, S extends Session = Session>(
   config: Config<I, S>,
 ): string {
-  return serializeCookie(config.sessionCookieName, "", {
+  return serializeCookie(config.accessTokenCookieName, "", {
     ...config.cookieOption,
     ...defaultCookieOption,
     maxAge: 0,
   });
 }
 
-export function getSessionId<I, S extends Session = Session>(
+export function getAccessToken<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): string | undefined {
@@ -59,16 +68,16 @@ export function getSessionId<I, S extends Session = Session>(
   }
 
   const cookies = parseCookie(cookieHeader);
-  return cookies[config.sessionCookieName];
+  return cookies[config.accessTokenCookieName];
 }
 
 export function logout<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): readonly [string] {
-  const id = getSessionId(config, req);
-  if (id !== undefined) {
-    config.deleteSession(id);
+  const accessToken = getAccessToken(config, req);
+  if (accessToken !== undefined) {
+    config.deleteSession(accessToken);
   }
   return [logoutCookie(config)];
 }
@@ -103,9 +112,13 @@ export function login<I, S extends Session = Session>(
   // https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
   const id = Buffer.from(randomArray).toString("hex");
 
+  const accessTokenValue = Buffer.from(
+    getRandomValues(new Uint8Array(32)),
+  ).toString("hex");
+
   const cookie = serializeCookie(
-    config.sessionCookieName,
-    encodeURIComponent(id),
+    config.accessTokenCookieName,
+    encodeURIComponent(accessTokenValue),
     {
       ...config.cookieOption,
       ...defaultCookieOption,
@@ -115,7 +128,11 @@ export function login<I, S extends Session = Session>(
 
   const now = config.dateNow?.() ?? Date.now();
   const expirationDate = now + config.expiresIn;
-  config.insertSession(id, expirationDate, insertData);
+  const accessToken: AccessToken = {
+    value: accessTokenValue,
+    used: false,
+  };
+  config.insertSession(id, expirationDate, accessToken, insertData);
   return [cookie];
 }
 
@@ -129,33 +146,33 @@ export function hasSessionCookie<I, S extends Session = Session>(
   }
 
   const cookies = parseCookie(cookieHeader);
-  return config.sessionCookieName in cookies;
+  return config.accessTokenCookieName in cookies;
 }
 
 export function consumeSession<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
-  const id = getSessionId(config, req);
-  if (id === undefined) {
+  const accessToken = getAccessToken(config, req);
+  if (accessToken === undefined) {
     return [undefined, undefined];
   }
 
-  const session = config.selectSession(id);
+  const session = config.selectSession(accessToken);
   if (session === undefined) {
     return [undefined, undefined];
   }
 
   const now = config.dateNow?.() ?? Date.now();
   if (session.expirationDate < now) {
-    config.deleteSession(id);
+    config.deleteSession(accessToken);
     return [logoutCookie(config), undefined];
   }
 
   const refreshDate = session.expirationDate - config.expiresIn / 2;
   if (refreshDate < now) {
     const sessionExpirationDate = now + config.expiresIn;
-    config.updateSession(id, sessionExpirationDate);
+    config.updateSessionExpirationDate(accessToken, sessionExpirationDate);
   }
 
   return [undefined, session];

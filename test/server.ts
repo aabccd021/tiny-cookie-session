@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import {
+  type AccessToken,
   type Config,
   consumeSession,
   defaultConfig,
@@ -13,6 +14,7 @@ const rootDir = "./received";
 fs.mkdirSync(rootDir, { recursive: true });
 
 type Session = {
+  accessTokens: AccessToken[];
   expirationDate: number;
   username: string;
   deviceName: string;
@@ -21,6 +23,16 @@ type Session = {
 const sessionsJson = await Bun.file("./var/sessions.json").json();
 const sessions = new Map<string, Session>(sessionsJson);
 
+function getSessionByAccessToken(
+  accessToken: string,
+): [string, Session] | undefined {
+  return sessions
+    .entries()
+    .find(([_, session]) =>
+      session.accessTokens.map((token) => token.value).includes(accessToken),
+    );
+}
+
 const config: Config<Pick<Session, "username" | "deviceName">, Session> = {
   ...defaultConfig,
   dateNow: (): number => {
@@ -28,19 +40,46 @@ const config: Config<Pick<Session, "username" | "deviceName">, Session> = {
     return new Date(epochNowStr).getTime();
   },
   expiresIn: 5 * 60 * 60 * 1000,
-  selectSession: (id) => sessions.get(id),
-  insertSession: (id, expirationDate, { username, deviceName }) => {
-    sessions.set(id, { expirationDate, username, deviceName });
+  selectSession: (accessToken) => {
+    const sessionEntry = sessions
+      .entries()
+      .find(([_, session]) =>
+        session.accessTokens.map((token) => token.value).includes(accessToken),
+      );
+    if (sessionEntry === undefined) {
+      return undefined;
+    }
+    const [_, session] = sessionEntry;
+    return session;
   },
-  deleteSession: (id) => {
-    sessions.delete(id);
+  insertSession: (
+    id,
+    expirationDate,
+    accessToken,
+    { username, deviceName },
+  ) => {
+    sessions.set(id, {
+      expirationDate,
+      username,
+      deviceName,
+      accessTokens: [accessToken],
+    });
   },
-  updateSession: (id, expirationDate) => {
-    const oldSession = sessions.get(id);
-    if (oldSession === undefined) {
+  deleteSession: (accessToken) => {
+    const sessionEntry = getSessionByAccessToken(accessToken);
+    if (sessionEntry === undefined) {
       throw new Error("Session not found. Something went wrong.");
     }
-    sessions.set(id, { ...oldSession, expirationDate });
+    const [id] = sessionEntry;
+    sessions.delete(id);
+  },
+  updateSessionExpirationDate: (accessToken, expirationDate) => {
+    const sessionEntry = getSessionByAccessToken(accessToken);
+    if (sessionEntry === undefined) {
+      throw new Error("Session not found. Something went wrong.");
+    }
+    const [id, session] = sessionEntry;
+    sessions.set(id, { ...session, expirationDate });
   },
 };
 
