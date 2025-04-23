@@ -60,18 +60,18 @@ const config: Config<
   sessionExpiresIn: 5 * 60 * 60 * 1000,
   selectSession: (token) => {
     const [id, session] = getSessionByToken(token);
-    const [newestToken, secondNewestToken] = Object.entries(
-      session.tokens,
-    ).sort(([, a], [, b]) => b.expirationDate - a.expirationDate);
+    const [token1, token2] = Object.entries(session.tokens).sort(
+      ([, a], [, b]) => b.expirationDate - a.expirationDate,
+    );
 
-    if (newestToken === undefined) {
+    if (token1 === undefined) {
       return undefined;
     }
-    const [newestTokenValue, newestTokenData] = newestToken;
+    const [token1Value, token1Data] = token1;
     return {
       session: { ...session, id },
-      newestToken: { ...newestTokenData, value: newestTokenValue },
-      secondNewestToken: tokenValue(secondNewestToken),
+      token1: { ...token1Data, value: token1Value },
+      token2: tokenValue(token2),
     };
   },
   createSession: ({

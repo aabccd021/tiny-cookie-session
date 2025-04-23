@@ -24,8 +24,8 @@ export interface Config<I, S extends Session = Session> {
   readonly tokenExpiresIn: number;
   readonly selectSession: (token: string) =>
     | {
-        readonly newestToken: Token;
-        readonly secondNewestToken: Token | undefined;
+        readonly token1: Token;
+        readonly token2: Token | undefined;
         readonly session: NonNullable<S>;
       }
     | undefined;
@@ -183,8 +183,8 @@ export function hasSessionCookie<I, S extends Session = Session>(
 // token2 used, token1 not used, token1 req -> normal
 
 function getRequestToken(
-  newestToken: Token,
-  secondNewestToken: Token | undefined,
+  token1: Token,
+  token2: Token | undefined,
   value: string,
 ):
   | {
@@ -192,11 +192,11 @@ function getRequestToken(
       readonly index: 1 | 2;
     }
   | undefined {
-  if (newestToken.value === value) {
-    return { value: newestToken, index: 1 };
+  if (token1.value === value) {
+    return { value: token1, index: 1 };
   }
-  if (secondNewestToken?.value === value) {
-    return { value: secondNewestToken, index: 2 };
+  if (token2?.value === value) {
+    return { value: token2, index: 2 };
   }
   return undefined;
 }
@@ -217,22 +217,18 @@ export function consumeSession<I, S extends Session = Session>(
 
   const now = config.dateNow?.() ?? Date.now();
 
-  const { session, newestToken, secondNewestToken } = sessionResult;
+  const { session, token1, token2 } = sessionResult;
   if (session.expirationDate < now) {
     config.deleteSessionById(tokenValue);
     return [logoutCookie(config), undefined];
   }
 
-  const requestToken = getRequestToken(
-    newestToken,
-    secondNewestToken,
-    tokenValue,
-  );
+  const requestToken = getRequestToken(token1, token2, tokenValue);
   if (requestToken === undefined) {
     throw new Error("Absurd: Token neither newest nor second newest");
   }
 
-  if (requestToken.index === 2 && newestToken.used) {
+  if (requestToken.index === 2 && token1.used) {
     console.error(
       "Potential security threat: Older token is used after newer one",
     );
