@@ -149,14 +149,17 @@ const server = Bun.serve({
       },
       POST: async (req): Promise<Response> => {
         const formData = await req.formData();
+
         const username = formData.get("username");
         if (typeof username !== "string") {
           return new Response("Invalid username", { status: 400 });
         }
+
         const deviceName = formData.get("deviceName");
         if (typeof deviceName !== "string") {
           return new Response("Invalid device name", { status: 400 });
         }
+
         const [loginCookie] = login(config, { username, deviceName });
         return new Response(undefined, {
           status: 303,
