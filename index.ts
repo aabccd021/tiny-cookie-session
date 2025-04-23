@@ -6,40 +6,58 @@ import {
 } from "@tinyhttp/cookie";
 
 type Session = {
+  readonly id: string;
   readonly expirationDate: number;
 };
 
-export type AccessToken = {
-  value: string;
-  used: boolean;
+export type Token = {
+  readonly value: string;
+  readonly used: boolean;
+  readonly expirationDate: number;
 };
 
 export interface Config<I, S extends Session = Session> {
   readonly cookieOption?: SerializeOptions;
-  readonly accessTokenCookieName: string;
+  readonly tokenCookieName: string;
   readonly dateNow: () => number;
-  readonly expiresIn: number;
-  readonly selectSession: (id: string) => NonNullable<S> | undefined;
-  readonly insertSession: (
-    id: string,
-    expirationDate: number,
-    accessToken: AccessToken,
-    insertData: I,
-  ) => void;
-  readonly deleteSession: (id: string) => void;
-  readonly updateSessionExpirationDate: (
-    id: string,
-    expirationDate: number,
-  ) => void;
+  readonly sessionExpiresIn: number;
+  readonly tokenExpiresIn: number;
+  readonly selectSession: (token: string) =>
+    | {
+        readonly newestToken: Token;
+        readonly secondNewestToken: Token | undefined;
+        readonly session: NonNullable<S>;
+      }
+    | undefined;
+  readonly setTokenUsed: (token: string) => void;
+  readonly createSession: (params: {
+    readonly sessionId: string;
+    readonly sessionExpirationDate: number;
+    readonly token: string;
+    readonly tokenExpirationDate: number;
+    readonly insertData: I;
+  }) => void;
+  readonly createToken: (params: {
+    readonly sessionId: string;
+    readonly token: string;
+    readonly tokenExpirationDate: number;
+  }) => void;
+
+  readonly deleteSession: (token: string) => void;
+  readonly updateSessionExpirationDate: (params: {
+    readonly sessionId: string;
+    readonly sessionExpirationDate: number;
+  }) => void;
 }
 
 export const defaultConfig: Pick<
   Config<unknown>,
-  "accessTokenCookieName" | "dateNow" | "expiresIn"
+  "tokenCookieName" | "dateNow" | "sessionExpiresIn" | "tokenExpiresIn"
 > = {
-  accessTokenCookieName: "session_id",
+  tokenCookieName: "session_id",
   dateNow: () => Date.now(),
-  expiresIn: 30 * 24 * 60 * 60 * 1000,
+  sessionExpiresIn: 30 * 24 * 60 * 60 * 1000,
+  tokenExpiresIn: 10 * 60 * 1000,
 };
 
 const defaultCookieOption: SerializeOptions = {
@@ -51,41 +69,14 @@ const defaultCookieOption: SerializeOptions = {
 function logoutCookie<I, S extends Session = Session>(
   config: Config<I, S>,
 ): string {
-  return serializeCookie(config.accessTokenCookieName, "", {
+  return serializeCookie(config.tokenCookieName, "", {
     ...config.cookieOption,
     ...defaultCookieOption,
     maxAge: 0,
   });
 }
 
-export function getAccessToken<I, S extends Session = Session>(
-  config: Config<I, S>,
-  req: Request,
-): string | undefined {
-  const cookieHeader = req.headers.get("Cookie");
-  if (cookieHeader === null) {
-    return undefined;
-  }
-
-  const cookies = parseCookie(cookieHeader);
-  return cookies[config.accessTokenCookieName];
-}
-
-export function logout<I, S extends Session = Session>(
-  config: Config<I, S>,
-  req: Request,
-): readonly [string] {
-  const accessToken = getAccessToken(config, req);
-  if (accessToken !== undefined) {
-    config.deleteSession(accessToken);
-  }
-  return [logoutCookie(config)];
-}
-
-export function login<I, S extends Session = Session>(
-  config: Config<I, S>,
-  insertData: I,
-): readonly [string] {
+function getRandom32bytes(): string {
   // remix uses 8 bytes (64 bits) of entropy
   // https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L45
 
@@ -110,15 +101,17 @@ export function login<I, S extends Session = Session>(
 
   // lucia uses base32 encoding
   // https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
-  const id = Buffer.from(randomArray).toString("hex");
+  return Buffer.from(randomArray).toString("hex");
+}
 
-  const accessTokenValue = Buffer.from(
-    getRandomValues(new Uint8Array(32)),
-  ).toString("hex");
+function loginCookie<I, S extends Session = Session>(
+  config: Config<I, S>,
+): [string, string] {
+  const token = getRandom32bytes();
 
   const cookie = serializeCookie(
-    config.accessTokenCookieName,
-    encodeURIComponent(accessTokenValue),
+    config.tokenCookieName,
+    encodeURIComponent(token),
     {
       ...config.cookieOption,
       ...defaultCookieOption,
@@ -126,13 +119,48 @@ export function login<I, S extends Session = Session>(
     },
   );
 
+  return [cookie, token];
+}
+
+export function getToken<I, S extends Session = Session>(
+  config: Config<I, S>,
+  req: Request,
+): string | undefined {
+  const cookieHeader = req.headers.get("Cookie");
+  if (cookieHeader === null) {
+    return undefined;
+  }
+
+  const cookies = parseCookie(cookieHeader);
+  return cookies[config.tokenCookieName];
+}
+
+export function logout<I, S extends Session = Session>(
+  config: Config<I, S>,
+  req: Request,
+): readonly [string] {
+  const token = getToken(config, req);
+  if (token !== undefined) {
+    config.deleteSession(token);
+  }
+  return [logoutCookie(config)];
+}
+
+export function login<I, S extends Session = Session>(
+  config: Config<I, S>,
+  insertData: I,
+): readonly [string] {
+  const sessionId = getRandom32bytes();
+  const [cookie, token] = loginCookie(config);
+
   const now = config.dateNow?.() ?? Date.now();
-  const expirationDate = now + config.expiresIn;
-  const accessToken: AccessToken = {
-    value: accessTokenValue,
-    used: false,
-  };
-  config.insertSession(id, expirationDate, accessToken, insertData);
+  config.createSession({
+    sessionId,
+    sessionExpirationDate: now + config.sessionExpiresIn,
+    token,
+    tokenExpirationDate: now + config.tokenExpiresIn,
+    insertData,
+  });
   return [cookie];
 }
 
@@ -146,34 +174,97 @@ export function hasSessionCookie<I, S extends Session = Session>(
   }
 
   const cookies = parseCookie(cookieHeader);
-  return config.accessTokenCookieName in cookies;
+  return config.tokenCookieName in cookies;
+}
+
+// token2 used, token1     used, token2 req -> logout
+// token2 used, token1 not used, token2 req -> normal
+// token2 used, token1     used, token1 req -> normal
+// token2 used, token1 not used, token1 req -> normal
+
+function getRequestToken(
+  newestToken: Token,
+  secondNewestToken: Token | undefined,
+  value: string,
+):
+  | {
+      readonly value: Token;
+      readonly index: 1 | 2;
+    }
+  | undefined {
+  if (newestToken.value === value) {
+    return { value: newestToken, index: 1 };
+  }
+  if (secondNewestToken?.value === value) {
+    return { value: secondNewestToken, index: 2 };
+  }
+  return undefined;
 }
 
 export function consumeSession<I, S extends Session = Session>(
   config: Config<I, S>,
   req: Request,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
-  const accessToken = getAccessToken(config, req);
-  if (accessToken === undefined) {
+  const tokenValue = getToken(config, req);
+  if (tokenValue === undefined) {
     return [undefined, undefined];
   }
 
-  const session = config.selectSession(accessToken);
-  if (session === undefined) {
+  const sessionResult = config.selectSession(tokenValue);
+  if (sessionResult === undefined) {
     return [undefined, undefined];
   }
 
   const now = config.dateNow?.() ?? Date.now();
+
+  const { session, newestToken, secondNewestToken } = sessionResult;
   if (session.expirationDate < now) {
-    config.deleteSession(accessToken);
+    config.deleteSession(tokenValue);
     return [logoutCookie(config), undefined];
   }
 
-  const refreshDate = session.expirationDate - config.expiresIn / 2;
-  if (refreshDate < now) {
-    const sessionExpirationDate = now + config.expiresIn;
-    config.updateSessionExpirationDate(accessToken, sessionExpirationDate);
+  const requestToken = getRequestToken(
+    newestToken,
+    secondNewestToken,
+    tokenValue,
+  );
+  if (requestToken === undefined) {
+    throw new Error("Absurd: Token neither newest nor second newest");
   }
 
+  if (requestToken.index === 2 && newestToken.used) {
+    throw new Error(
+      "Potential security threat: Older token is used after newer one",
+    );
+  }
+
+  if (!requestToken.value.used) {
+    if (requestToken.index === 1) {
+      config.setTokenUsed(tokenValue);
+    }
+
+    if (requestToken.index === 2) {
+      throw new Error("Absurd: second newest token never used");
+    }
+  }
+
+  const sessionRefreshDate =
+    session.expirationDate - config.sessionExpiresIn / 2;
+  if (sessionRefreshDate < now) {
+    config.updateSessionExpirationDate({
+      sessionId: session.id,
+      sessionExpirationDate: now + config.sessionExpiresIn,
+    });
+  }
+
+  if (requestToken.value.expirationDate < now) {
+    const [cookie, newToken] = loginCookie(config);
+    config.createToken({
+      sessionId: session.id,
+      token: newToken,
+      tokenExpirationDate: now + config.tokenExpiresIn,
+    });
+    return [cookie, session];
+  }
   return [undefined, session];
 }

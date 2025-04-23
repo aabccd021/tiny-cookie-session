@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import {
-  type AccessToken,
   type Config,
   consumeSession,
   defaultConfig,
@@ -13,73 +12,129 @@ const rootDir = "./received";
 
 fs.mkdirSync(rootDir, { recursive: true });
 
+export type Token = {
+  readonly used: boolean;
+  readonly expirationDate: number;
+};
+
+function tokenValue(
+  entry: [value: string, token: Token] | undefined,
+): (Token & { readonly value: string }) | undefined {
+  if (entry === undefined) {
+    return undefined;
+  }
+  const [value, token] = entry;
+  return { ...token, value };
+}
+
 type Session = {
-  accessTokens: AccessToken[];
-  expirationDate: number;
-  username: string;
-  deviceName: string;
+  readonly tokens: Record<string, Token>;
+  readonly expirationDate: number;
+  readonly username: string;
+  readonly deviceName: string;
 };
 
 const sessionsJson = await Bun.file("./var/sessions.json").json();
 const sessions = new Map<string, Session>(sessionsJson);
 
-function getSessionByAccessToken(
-  accessToken: string,
-): [string, Session] | undefined {
-  return sessions
-    .entries()
-    .find(([_, session]) =>
-      session.accessTokens.map((token) => token.value).includes(accessToken),
-    );
+function getSessionByToken(token: string): [string, Session] | undefined {
+  return sessions.entries().find(([_, session]) => token in session.tokens);
 }
 
-const config: Config<Pick<Session, "username" | "deviceName">, Session> = {
+const config: Config<
+  Pick<Session, "username" | "deviceName">,
+  Session & { readonly id: string }
+> = {
   ...defaultConfig,
   dateNow: (): number => {
     const epochNowStr = fs.readFileSync("./var/now.txt", "utf8");
     return new Date(epochNowStr).getTime();
   },
-  expiresIn: 5 * 60 * 60 * 1000,
-  selectSession: (accessToken) => {
-    const sessionEntry = sessions
-      .entries()
-      .find(([_, session]) =>
-        session.accessTokens.map((token) => token.value).includes(accessToken),
-      );
+  sessionExpiresIn: 5 * 60 * 60 * 1000,
+  selectSession: (token) => {
+    const sessionEntry = getSessionByToken(token);
     if (sessionEntry === undefined) {
       return undefined;
     }
-    const [_, session] = sessionEntry;
-    return session;
+    const [id, session] = sessionEntry;
+    const [newestToken, secondNewestToken] = Object.entries(
+      session.tokens,
+    ).sort(([, a], [, b]) => b.expirationDate - a.expirationDate);
+
+    if (newestToken === undefined) {
+      return undefined;
+    }
+    const [newestTokenValue, newestTokenData] = newestToken;
+    return {
+      session: { ...session, id },
+      newestToken: { ...newestTokenData, value: newestTokenValue },
+      secondNewestToken: tokenValue(secondNewestToken),
+    };
   },
-  insertSession: (
-    id,
-    expirationDate,
-    accessToken,
-    { username, deviceName },
-  ) => {
-    sessions.set(id, {
-      expirationDate,
+  createSession: ({
+    sessionId,
+    sessionExpirationDate,
+    token,
+    tokenExpirationDate,
+    insertData: { username, deviceName },
+  }) => {
+    sessions.set(sessionId, {
+      expirationDate: sessionExpirationDate,
       username,
       deviceName,
-      accessTokens: [accessToken],
+      tokens: {
+        [token]: { used: false, expirationDate: tokenExpirationDate },
+      },
     });
   },
-  deleteSession: (accessToken) => {
-    const sessionEntry = getSessionByAccessToken(accessToken);
+  createToken: ({ sessionId, token, tokenExpirationDate }) => {
+    const session = sessions.get(sessionId);
+    if (session === undefined) {
+      throw new Error("Session not found. Something went wrong.");
+    }
+    sessions.set(sessionId, {
+      ...session,
+      tokens: {
+        ...session.tokens,
+        [token]: { used: false, expirationDate: tokenExpirationDate },
+      },
+    });
+  },
+  setTokenUsed: (token) => {
+    const sessionEntry = getSessionByToken(token);
+    if (sessionEntry === undefined) {
+      throw new Error("Session not found. Something went wrong.");
+    }
+    const [id, session] = sessionEntry;
+    const tokenDate = session.tokens[token];
+    if (tokenDate === undefined) {
+      throw new Error("Token not found. Something went wrong.");
+    }
+    sessions.set(id, {
+      ...session,
+      tokens: {
+        ...session.tokens,
+        [token]: { ...tokenDate, used: true },
+      },
+    });
+  },
+  deleteSession: (token) => {
+    const sessionEntry = getSessionByToken(token);
     if (sessionEntry === undefined) {
       throw new Error("Session not found. Something went wrong.");
     }
     const [id] = sessionEntry;
     sessions.delete(id);
   },
-  updateSessionExpirationDate: (accessToken, expirationDate) => {
-    const sessionEntry = getSessionByAccessToken(accessToken);
-    if (sessionEntry === undefined) {
+  updateSessionExpirationDate: ({ sessionId, sessionExpirationDate }) => {
+    const session = sessions.get(sessionId);
+    if (session === undefined) {
       throw new Error("Session not found. Something went wrong.");
     }
-    const [id, session] = sessionEntry;
-    sessions.set(id, { ...session, expirationDate });
+    sessions.set(sessionId, {
+      ...session,
+      expirationDate: sessionExpirationDate,
+    });
   },
 };
 
