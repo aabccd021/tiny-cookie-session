@@ -91,6 +91,7 @@
       };
 
       packages = tests // scripts // {
+        devShell = devShell;
         formatting = treefmtEval.config.build.check self;
         tsc = tsc;
         biome = biome;
