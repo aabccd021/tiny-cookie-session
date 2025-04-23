@@ -156,7 +156,6 @@ export function consumeSession<I, S extends Session = Session>(
   if (refreshDate < now) {
     const sessionExpirationDate = now + config.expiresIn;
     config.updateSession(id, sessionExpirationDate);
-    return [undefined, session];
   }
 
   return [undefined, session];
