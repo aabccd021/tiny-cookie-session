@@ -138,12 +138,12 @@ export function consumeSession<I, S extends Session = Session>(
 ): readonly [string | undefined, NonNullable<S> | undefined] {
   const id = getSessionId(config, req);
   if (id === undefined) {
-    return [logoutCookie(config), undefined];
+    return [undefined, undefined];
   }
 
   const session = config.selectSession(id);
   if (session === undefined) {
-    return [logoutCookie(config), undefined];
+    return [undefined, undefined];
   }
 
   const now = config.dateNow?.() ?? Date.now();
