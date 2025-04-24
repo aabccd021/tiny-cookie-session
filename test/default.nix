@@ -309,9 +309,7 @@ rec {
   ];
 
   s0044 = mkTest "s0044" s0043 [
-    "advance-time-4m"
-    "advance-time-4m"
-    "advance-time-4m"
+    "advance-time-11m"
     "goto-home"
     "assert-logged-in-alice-iphone"
 
@@ -331,9 +329,7 @@ rec {
   ];
 
   s0048 = mkTest "s0048" s0043 [
-    "advance-time-4m"
-    "advance-time-4m"
-    "advance-time-4m"
+    "advance-time-11m"
     "goto-home"
     "assert-logged-in-alice-iphone"
 
