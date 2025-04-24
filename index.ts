@@ -251,8 +251,6 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     });
   }
 
-  // Make sure only create new token when the latest token is already used.
-  // This case might happen when two concurrent requests are made
   if (token1.expirationDate < now) {
     const [cookie, newToken] = createNewToken(config);
     config.createToken({
