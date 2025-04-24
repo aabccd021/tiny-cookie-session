@@ -91,6 +91,7 @@
       };
 
       packages = tests // scripts // {
+        tests = pkgs.linkFarm "tests" tests;
         devShell = devShell;
         formatting = treefmtEval.config.build.check self;
         tsc = tsc;

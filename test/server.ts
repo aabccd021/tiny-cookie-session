@@ -94,6 +94,16 @@ const config: Config<
   },
   createToken: ({ sessionId, token, tokenExpirationDate }) => {
     const session = getSessionById(sessionId);
+
+    const expDateNotUnique = Object.values(session.tokens).some(
+      (t) => t.expirationDate === tokenExpirationDate,
+    );
+    if (expDateNotUnique) {
+      throw new Error(
+        `Token expiration date not unique: ${tokenExpirationDate}`,
+      );
+    }
+
     session.tokens[token] = {
       used: false,
       expirationDate: tokenExpirationDate,
