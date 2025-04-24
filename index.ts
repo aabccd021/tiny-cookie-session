@@ -70,8 +70,8 @@ function logoutCookie<S extends Session = Session, I = unknown>(
   config: Config<S, I>,
 ): string {
   return serializeCookie(config.tokenCookieName, "", {
-    ...config.cookieOption,
     ...defaultCookieOption,
+    ...config.cookieOption,
     maxAge: 0,
   });
 }
@@ -113,8 +113,8 @@ function createNewToken<S extends Session = Session, I = unknown>(
     config.tokenCookieName,
     encodeURIComponent(token),
     {
-      ...config.cookieOption,
       ...defaultCookieOption,
+      ...config.cookieOption,
       maxAge: 365 * 24 * 60 * 60 * 1000,
     },
   );
