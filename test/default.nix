@@ -370,36 +370,36 @@ rec {
     "assert-logged-out"
   ];
 
-  # s0047 = mkTest "s0047" s0043 [
-  #   "main-browser2"
-  #   "goto-home"
-  #   "assert-logged-in-alice-iphone"
-  #
-  #   "advance-time-1m"
-  #   "main-browser1"
-  #   "goto-home"
-  #   "assert-logged-out"
-  #
-  #   "advance-time-1m"
-  #   "main-browser2"
-  #   "goto-home"
-  #   "assert-logged-out"
-  # ];
+  s0047 = mkTest "s0047" s0043 [
+    "main-browser2"
+    "goto-redirect-home"
+    "assert-logged-in-alice-iphone"
 
-  # s0048 = mkTest "s0048" s0043 [
-  #   "goto-home"
-  #   "assert-logged-in-alice-iphone"
-  #
-  #   "advance-time-1m"
-  #   "main-browser2"
-  #   "goto-home"
-  #   "assert-logged-out"
-  #
-  #   "advance-time-1m"
-  #   "main-browser1"
-  #   "goto-home"
-  #   "assert-logged-out"
-  # ];
+    "advance-time-1m"
+    "main-browser1"
+    "goto-redirect-home"
+    "assert-logged-out"
+
+    "advance-time-1m"
+    "main-browser2"
+    "goto-redirect-home"
+    "assert-logged-out"
+  ];
+
+  s0048 = mkTest "s0048" s0043 [
+    "goto-redirect-home"
+    "assert-logged-in-alice-iphone"
+
+    "advance-time-1m"
+    "main-browser2"
+    "goto-redirect-home"
+    "assert-logged-out"
+
+    "advance-time-1m"
+    "main-browser1"
+    "goto-redirect-home"
+    "assert-logged-out"
+  ];
 
 }
 

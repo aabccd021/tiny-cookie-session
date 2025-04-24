@@ -141,6 +141,28 @@ const server = Bun.serve({
         });
       },
     },
+    "/redirect-home": {
+      GET: (req): Response => {
+        const cookieHeader = req.headers.get("cookie");
+        const [sessionCookie, session] = consumeSession(config, cookieHeader);
+        const message =
+          session !== undefined
+            ? `User: ${session.username}, Device: ${session.deviceName}`
+            : "Logged out";
+        if (sessionCookie !== undefined) {
+          return new Response(undefined, {
+            status: 303,
+            headers: {
+              Location: req.url,
+              "Set-Cookie": sessionCookie,
+            },
+          });
+        }
+        return new Response(`<p>${message}</p>`, {
+          headers: { "Content-Type": "text/html" },
+        });
+      },
+    },
     "/login": {
       GET: (): Response => {
         return new Response(
