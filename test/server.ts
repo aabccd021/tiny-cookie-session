@@ -57,12 +57,19 @@ const config: Config<
   },
   sessionExpiresIn: 5 * 60 * 60 * 1000,
   selectSession: (token) => {
-    const [id, session] = getSessionByToken(token);
+    const sessionEntry = Object.entries(sessions).find(
+      ([_, session]) => token in session.tokens,
+    );
+    if (sessionEntry === undefined) {
+      return undefined;
+    }
+    const [id, session] = sessionEntry;
+
     const [token1, token2] = Object.entries(session.tokens)
       .sort(([, a], [, b]) => b.expirationDate - a.expirationDate)
       .map(([key, value]) => ({ value: key, ...value }));
     if (token1 === undefined) {
-      throw new Error(`No token found for session with id: ${id}`);
+      return undefined;
     }
     return {
       session: { ...session, id },

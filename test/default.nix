@@ -52,6 +52,7 @@ let
 
     counter=1
     for actionName in ${builtins.concatStringsSep " " actions}; do
+      printf '\033[35mclient > %02d-%s\033[0m>\n' "$counter" "$actionName"
       bash -euo pipefail ${./actions}/"$actionName.sh" 2>&1 | while IFS= read -r line; do
         printf '\033[35mclient > %02d-%s\033[0m> %s\n' "$counter" "$actionName" "$line"
       done
@@ -303,16 +304,26 @@ rec {
     "assert-logged-out"
   ];
 
-  # s0043 = mkTest "s0043" s0017 [
-  #   "copy-browser1-browser2"
-  #   "advance-time-15m"
-  #   "main-browser2"
-  #   "goto-home"
-  #   "assert-logged-out"
-  #   "main-browser1"
-  #   "goto-home"
-  #   "assert-logged-out"
-  # ];
+  s0043 = mkTest "s0043" s0004 [
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+    "advance-time-4m"
+    "advance-time-4m"
+    "advance-time-4m" # 5
+    "copy-browser1-browser2"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+    "advance-time-4m"
+    "goto-home" # 10
+    "assert-logged-in-alice-iphone"
+    "advance-time-4m"
+    "main-browser2"
+    "goto-home"
+    "assert-logged-out" # 15
+    "main-browser1"
+    "goto-home"
+    "assert-logged-out"
+  ];
 
 }
 

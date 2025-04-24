@@ -211,7 +211,7 @@ export function consumeSession<I, S extends Session = Session>(
 
   const { session, token1, token2 } = sessionResult;
   if (session.expirationDate < now) {
-    config.deleteSessionById(tokenValue);
+    config.deleteSessionById(session.id);
     return [logoutCookie(config), undefined];
   }
 
@@ -227,7 +227,7 @@ export function consumeSession<I, S extends Session = Session>(
     console.error(
       "Potential security threat: Older token is used after newer one",
     );
-    config.deleteSessionById(tokenValue);
+    config.deleteSessionById(session.id);
     return [logoutCookie(config), undefined];
   }
 
