@@ -4,4 +4,5 @@ Cookie session management for Bun
 
 # To Do
 
-- Test logout when old token was used
+- test concurrent request from multiple tabs
+- require refresh after set-token
