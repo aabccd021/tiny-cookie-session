@@ -226,7 +226,8 @@ export function consumeSession<S extends Session = Session, I = unknown>(
   }
 
   if (requestToken.index === 2 && !requestToken.value.used) {
-    throw new Error("Absurd: second latest token is not used");
+    console.error("Potential cookie theft: second latest token is not used");
+    return [logoutCookie(config), undefined];
   }
 
   if (requestToken.index === 2 && token1.used) {
