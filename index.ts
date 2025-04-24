@@ -226,9 +226,7 @@ export function consumeSession<S extends Session = Session, I = unknown>(
   }
 
   if (!requestToken.value.used && requestToken.index === 2) {
-    console.error("Potential cookie theft: There are two unused tokens");
-    config.deleteSessionById(session.id);
-    return [logoutCookie(config), undefined];
+    throw new Error("Absurd: second latest token is not used");
   }
 
   if (requestToken.index === 2 && token1.used) {
@@ -239,7 +237,7 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     return [logoutCookie(config), undefined];
   }
 
-  if (!requestToken.value.used && requestToken.index === 1) {
+  if (requestToken.index === 1 && !requestToken.value.used) {
     config.setTokenUsed(tokenValue);
   }
 
