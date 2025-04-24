@@ -503,11 +503,11 @@ rec {
   s0059 = mkTest "s0059" s0043 [
     "goto-home"
 
-    "advance-time-11m"
+    "advance-time-10m"
     "main-browser2"
     "goto-home"
 
-    "advance-time-11m"
+    "advance-time-10m"
     "main-browser1"
     "goto-home"
     "assert-logged-out"
