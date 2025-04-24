@@ -317,23 +317,46 @@ rec {
   ];
 
   s0045 = mkTest "s0045" s0044 [
-    "advance-time-4m"
+    "advance-time-1m"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0046 = mkTest "s0046" s0045 [
-    "advance-time-4m"
+    "advance-time-1m"
     "main-browser2"
     "goto-home"
     "assert-logged-out"
   ];
 
   s0047 = mkTest "s0047" s0046 [
+    "advance-time-1m"
     "main-browser1"
     "goto-home"
     "assert-logged-out"
   ];
+
+  # s0048 = mkTest "s0048" s0044 [
+  #   "advance-time-4m"
+  #   "main-browser2"
+  #   "goto-home"
+  #   "assert-logged-in-alice-iphone"
+  # ];
+  #
+  # s0049 = mkTest "s0049" s0048 [
+  #   "advance-time-4m"
+  #   "main-browser1"
+  #   "goto-home"
+  #   "assert-logged-out"
+  # ];
+  #
+  # s0050 = mkTest "s0050" s0049 [
+  #   "advance-time-4m"
+  #   "main-browser2"
+  #   "goto-home"
+  #   "assert-logged-in-alice-iphone"
+  # ];
+
 
 }
 
