@@ -36,8 +36,8 @@ let
     cp -Lr ${prev}/* ./var
     chmod -R u=rwX,g=,o= ./var
 
-    export NETERO_DIR="$PWD/var/browser1"
-    mkdir -p "$NETERO_DIR"
+    export NETERO_BROWSER_STATE_FILE="$PWD/var/browser-state.txt"
+    printf "$PWD/var/browser1" > "$PWD/var/browser-state.txt"
 
     mkdir -p ./run/netero
     mkfifo ./run/netero/ready.fifo
@@ -49,8 +49,6 @@ let
     server_pid=$!
 
     cat ./run/netero/ready.fifo >/dev/null
-
-    echo "http://localhost:8080/" > "$NETERO_DIR/url.txt"
 
     counter=1
     for actionName in ${builtins.concatStringsSep " " actions}; do
@@ -71,10 +69,10 @@ in
 rec {
 
   s0000 = pkgs.runCommand "s0000" { } ''
-    mkdir -p "$out/var"
+    mkdir -p "$out/var/browser1"
     printf "{}" > "$out/var/sessions.json"
     printf "%s" "$(date +"%Y-%m-%dT%H:%M:%SZ")" > "$out/var/now.txt"
-
+    echo "http://localhost:8080/" > "$out/var/browser1/url.txt"
   '';
 
   s0001 = mkTest "s0001" s0000 [
@@ -304,6 +302,17 @@ rec {
     "goto-home"
     "assert-logged-out"
   ];
+
+  # s0043 = mkTest "s0043" s0017 [
+  #   "copy-browser1-browser2"
+  #   "advance-time-15m"
+  #   "main-browser2"
+  #   "goto-home"
+  #   "assert-logged-out"
+  #   "main-browser1"
+  #   "goto-home"
+  #   "assert-logged-out"
+  # ];
 
 }
 
