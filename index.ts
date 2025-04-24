@@ -237,12 +237,8 @@ export function consumeSession<I, S extends Session = Session>(
     return [logoutCookie(config), undefined];
   }
 
-  if (!requestToken.value.used) {
-    if (requestToken.index === 1) {
-      config.setTokenUsed(tokenValue);
-    } else if (requestToken.index === 2) {
-      throw new Error("Absurd: second newest token never used");
-    }
+  if (!requestToken.value.used && requestToken.index === 1) {
+    config.setTokenUsed(tokenValue);
   }
 
   const sessionRefreshDate =
