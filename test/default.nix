@@ -347,5 +347,42 @@ rec {
     "goto-home"
     "assert-logged-out"
   ];
+
+  s0049 = mkTest "s0049" s0043 [
+    "main-browser2"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+
+    "advance-time-1m"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+
+    "advance-time-1m"
+    "main-browser1"
+    "goto-home"
+    "assert-logged-out"
+
+    "advance-time-1m"
+    "main-browser2"
+    "goto-home"
+    "assert-logged-out"
+  ];
+
+  # s0050 = mkTest "s0050" s0043 [
+  #   "main-browser2"
+  #   "goto-home"
+  #   "assert-logged-in-alice-iphone"
+  #
+  #   "advance-time-1m"
+  #   "main-browser2"
+  #   "goto-home"
+  #   "assert-logged-out"
+  #
+  #   "advance-time-1m"
+  #   "main-browser1"
+  #   "goto-home"
+  #   "assert-logged-out"
+  # ];
+
 }
 
