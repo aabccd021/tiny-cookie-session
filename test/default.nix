@@ -501,17 +501,14 @@ rec {
 
   # assert everyone is logged out after the victim consumed the session twice
   s0059 = mkTest "s0059" s0043 [
-    "debug-cookie"
     "goto-home"
 
     "advance-time-11m"
     "main-browser2"
-    "debug-cookie"
     "goto-home"
 
     "advance-time-11m"
     "main-browser1"
-    "debug-cookie"
     "goto-home"
     "assert-logged-out"
 
