@@ -216,11 +216,7 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     return [logoutCookie(config), undefined];
   }
 
-  const requestToken =
-    token1.value === tokenValue
-      ? { value: token1, index: 1 }
-      : getRequestToken(token1, token2, tokenValue);
-
+  const requestToken = getRequestToken(token1, token2, tokenValue);
   if (
     requestToken === undefined ||
     (!requestToken.value.used && requestToken.index === 2)
