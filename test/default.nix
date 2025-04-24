@@ -305,10 +305,10 @@ rec {
   ];
 
   s0043 = mkTest "s0043" s0004 [
+    "copy-browser1-browser2"
     "advance-time-4m"
     "advance-time-4m"
     "advance-time-4m" # 5
-    "copy-browser1-browser2"
     "goto-home"
     "assert-logged-in-alice-iphone"
     "advance-time-4m"
