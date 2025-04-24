@@ -54,7 +54,7 @@ export const defaultConfig: Pick<
   Config<unknown>,
   "tokenCookieName" | "dateNow" | "sessionExpiresIn" | "tokenExpiresIn"
 > = {
-  tokenCookieName: "session_id",
+  tokenCookieName: "access_token",
   dateNow: () => Date.now(),
   sessionExpiresIn: 30 * 24 * 60 * 60 * 1000,
   tokenExpiresIn: 10 * 60 * 1000,
