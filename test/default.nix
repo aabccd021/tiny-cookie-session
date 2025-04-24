@@ -496,5 +496,16 @@ rec {
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
+
+  s0057 = mkTest "s0057" s0004 [
+    "advance-time-11m"
+    "concurrent-goto-home"
+  ];
+
+  s0058 = mkTest "s0058" s0057 [
+    "advance-time-1m"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
 }
 
