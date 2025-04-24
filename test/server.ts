@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import {
   type Config,
+  type Token,
   consumeSession,
   defaultConfig,
   hasSessionCookie,
@@ -12,13 +13,12 @@ const rootDir = "./received";
 
 fs.mkdirSync(rootDir, { recursive: true });
 
-export type Token = {
-  used: boolean;
-  expirationDate: number;
+type Mutable<T> = {
+  -readonly [K in keyof T]: T[K];
 };
 
 type Session = {
-  tokens: Record<string, Token>;
+  tokens: Record<string, Mutable<Pick<Token, "used" | "expirationDate">>>;
   expirationDate: number;
   username: string;
   deviceName: string;
@@ -47,7 +47,11 @@ function getSessionById(id: string): Session {
 }
 
 const config: Config<
-  Session & { readonly id: string },
+  Session & {
+    readonly id: string;
+    readonly token1: Token;
+    readonly token2: Token | undefined;
+  },
   Pick<Session, "username" | "deviceName">
 > = {
   ...defaultConfig,
@@ -71,11 +75,7 @@ const config: Config<
     if (token1 === undefined) {
       return undefined;
     }
-    return {
-      session: { ...session, id },
-      token1,
-      token2,
-    };
+    return { ...session, id, token1, token2 };
   },
   createSession: ({
     sessionId,

@@ -8,6 +8,8 @@ import {
 type Session = {
   readonly id: string;
   readonly expirationDate: number;
+  readonly token1: Token;
+  readonly token2: Token | undefined;
 };
 
 export type Token = {
@@ -22,13 +24,7 @@ export interface Config<S extends Session = Session, I = unknown> {
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
-  readonly selectSession: (token: string) =>
-    | {
-        readonly token1: Token;
-        readonly token2: Token | undefined;
-        readonly session: NonNullable<S>;
-      }
-    | undefined;
+  readonly selectSession: (token: string) => NonNullable<S> | undefined;
   readonly setTokenUsed: (token: string) => void;
   readonly createSession: (params: {
     readonly sessionId: string;
@@ -175,8 +171,7 @@ export function hasSessionCookie<S extends Session = Session, I = unknown>(
 }
 
 function getRequestToken(
-  token1: Token,
-  token2: Token | undefined,
+  { token1, token2 }: Session,
   value: string,
 ):
   | {
@@ -202,21 +197,19 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     return [undefined, undefined];
   }
 
-  const sessionResult = config.selectSession(tokenValue);
-  if (sessionResult === undefined) {
+  const session = config.selectSession(tokenValue);
+  if (session === undefined) {
     return [undefined, undefined];
   }
 
   const now = config.dateNow?.() ?? Date.now();
-
-  const { session, token1, token2 } = sessionResult;
 
   if (session.expirationDate < now) {
     config.deleteSessionById(session.id);
     return [logoutCookie(config), undefined];
   }
 
-  const requestToken = getRequestToken(token1, token2, tokenValue);
+  const requestToken = getRequestToken(session, tokenValue);
   if (requestToken === undefined) {
     console.error(
       "Potential cookie theft: the token used is neither latest nor second latest",
@@ -230,7 +223,7 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     return [logoutCookie(config), undefined];
   }
 
-  if (requestToken.index === 2 && token1.used) {
+  if (requestToken.index === 2 && session.token1.used) {
     console.error(
       "Potential cookie theft: Older token is used after newer one",
     );
@@ -251,7 +244,7 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     });
   }
 
-  if (token1.expirationDate < now) {
+  if (session.token1.expirationDate < now) {
     const [cookie, newToken] = createNewToken(config);
     config.createToken({
       sessionId: session.id,
