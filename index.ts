@@ -210,6 +210,7 @@ export function consumeSession<I, S extends Session = Session>(
   const now = config.dateNow?.() ?? Date.now();
 
   const { session, token1, token2 } = sessionResult;
+
   if (session.expirationDate < now) {
     config.deleteSessionById(session.id);
     return [logoutCookie(config), undefined];
@@ -222,6 +223,7 @@ export function consumeSession<I, S extends Session = Session>(
   if (requestToken === undefined) {
     throw new Error("Absurd: Token neither newest nor second newest");
   }
+  // console.log({ requestToken: requestToken.index, token1, token2 });
 
   if (!requestToken.value.used && requestToken.index === 2) {
     console.error("Potential cookie theft: There are two unused tokens");

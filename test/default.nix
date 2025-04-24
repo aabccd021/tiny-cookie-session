@@ -368,8 +368,23 @@ rec {
     "assert-logged-out"
   ];
 
-  # s0050 = mkTest "s0050" s0043 [
+  # s0047 = mkTest "s0047" s0043 [
   #   "main-browser2"
+  #   "goto-home"
+  #   "assert-logged-in-alice-iphone"
+  #
+  #   "advance-time-1m"
+  #   "main-browser1"
+  #   "goto-home"
+  #   "assert-logged-out"
+  #
+  #   "advance-time-1m"
+  #   "main-browser2"
+  #   "goto-home"
+  #   "assert-logged-out"
+  # ];
+
+  # s0048 = mkTest "s0048" s0043 [
   #   "goto-home"
   #   "assert-logged-in-alice-iphone"
   #
