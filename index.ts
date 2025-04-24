@@ -16,7 +16,7 @@ export type Token = {
   readonly expirationDate: number;
 };
 
-export interface Config<I, S extends Session = Session> {
+export interface Config<I = unknown, S extends Session = Session> {
   readonly cookieOption?: SerializeOptions;
   readonly tokenCookieName: string;
   readonly dateNow: () => number;
