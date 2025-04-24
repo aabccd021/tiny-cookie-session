@@ -496,29 +496,5 @@ rec {
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
-
-  # s0045 = mkTest "s0045" s0043 [
-  #   "goto-home"
-  #   "goto-home"
-  #
-  #   "advance-time-1m"
-  #   "main-browser2"
-  #   "debug-cookie"
-  #   "goto-home"
-  #   "debug-cookie"
-  #   "assert-logged-in-alice-iphone"
-  #
-  #   "advance-time-1m"
-  #   "main-browser1"
-  #   "goto-home"
-  #   "debug-cookie"
-  #   "assert-logged-out"
-  #
-  #   "advance-time-1m"
-  #   "main-browser2"
-  #   "goto-home"
-  #   "assert-logged-out"
-  # ];
-
 }
 
