@@ -225,7 +225,7 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     return [logoutCookie(config), undefined];
   }
 
-  if (!requestToken.value.used && requestToken.index === 2) {
+  if (requestToken.index === 2 && !requestToken.value.used) {
     throw new Error("Absurd: second latest token is not used");
   }
 
