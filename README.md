@@ -7,3 +7,4 @@ Cookie session management for Bun
 - copy browser
 - open new tab
 - debug cookie
+- redirect-home -> strict-home
