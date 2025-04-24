@@ -511,7 +511,6 @@ rec {
     "main-browser1"
     "goto-home"
     "assert-logged-out"
-
   ];
 
 }
