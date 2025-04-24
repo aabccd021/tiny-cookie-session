@@ -325,6 +325,42 @@ rec {
     "assert-logged-out"
   ];
 
+  # assert everyone is logged out after the victim consumed the session twice 10 minutes apart (access token expiration time)
+  s0053 = mkTest "s0053" s0043 [
+    "goto-home"
+    "advance-time-10m"
+    "goto-home"
+
+    "main-browser2"
+    "goto-home"
+    "assert-logged-out"
+
+    "main-browser1"
+    "goto-home"
+    "assert-logged-out"
+  ];
+
+  # assert everyone is logged out after the victim consumed the session twice, with attacker consuming the session in between
+  s0055 = mkTest "s0055" s0043 [
+    "goto-home"
+
+    "advance-time-1m"
+    "main-browser2"
+    "goto-home"
+
+    "advance-time-1m"
+    "main-browser1"
+    "goto-home"
+
+    "main-browser2"
+    "goto-home"
+    "assert-logged-out"
+
+    "main-browser1"
+    "goto-home"
+    "assert-logged-out"
+  ];
+
   # assert everyone is logged out after the attacker consumed the session twice
   s0046 = mkTest "s0046" s0043 [
     "main-browser2"
@@ -340,28 +376,43 @@ rec {
     "assert-logged-out"
   ];
 
-  # s0045 = mkTest "s0045" s0043 [
-  #   "goto-home"
-  #   "goto-home"
-  #
-  #   "advance-time-1m"
-  #   "main-browser2"
-  #   "debug-cookie"
-  #   "goto-home"
-  #   "debug-cookie"
-  #   "assert-logged-in-alice-iphone"
-  #
-  #   "advance-time-1m"
-  #   "main-browser1"
-  #   "goto-home"
-  #   "debug-cookie"
-  #   "assert-logged-out"
-  #
-  #   "advance-time-1m"
-  #   "main-browser2"
-  #   "goto-home"
-  #   "assert-logged-out"
-  # ];
+  # assert everyone is logged out after the attacker consumed the session twice 10 minutes apart (access token expiration time)
+  s0054 = mkTest "s0054" s0043 [
+    "main-browser2"
+    "goto-home"
+    "advance-time-10m"
+    "goto-home"
+
+    "main-browser1"
+    "goto-home"
+    "assert-logged-out"
+
+    "main-browser2"
+    "goto-home"
+    "assert-logged-out"
+  ];
+
+  # assert everyone is logged out after the attacker consumed the session twice, with victim consuming the session in between
+  s0056 = mkTest "s0056" s0043 [
+    "main-browser2"
+    "goto-home"
+
+    "advance-time-1m"
+    "main-browser1"
+    "goto-home"
+
+    "advance-time-1m"
+    "main-browser2"
+    "goto-home"
+
+    "main-browser1"
+    "goto-home"
+    "assert-logged-out"
+
+    "main-browser2"
+    "goto-home"
+    "assert-logged-out"
+  ];
 
   # assert everyone is logged out after the attacker consumed the session once on redirect-home
   s0047 = mkTest "s0047" s0043 [
@@ -446,6 +497,28 @@ rec {
     "assert-logged-in-alice-iphone"
   ];
 
+  # s0045 = mkTest "s0045" s0043 [
+  #   "goto-home"
+  #   "goto-home"
+  #
+  #   "advance-time-1m"
+  #   "main-browser2"
+  #   "debug-cookie"
+  #   "goto-home"
+  #   "debug-cookie"
+  #   "assert-logged-in-alice-iphone"
+  #
+  #   "advance-time-1m"
+  #   "main-browser1"
+  #   "goto-home"
+  #   "debug-cookie"
+  #   "assert-logged-out"
+  #
+  #   "advance-time-1m"
+  #   "main-browser2"
+  #   "goto-home"
+  #   "assert-logged-out"
+  # ];
 
 }
 
