@@ -51,7 +51,7 @@ export interface Config<I = unknown, S extends Session = Session> {
 }
 
 export const defaultConfig: Pick<
-  Config<unknown>,
+  Config,
   "tokenCookieName" | "dateNow" | "sessionExpiresIn" | "tokenExpiresIn"
 > = {
   tokenCookieName: "access_token",
@@ -66,7 +66,7 @@ const defaultCookieOption: SerializeOptions = {
   path: "/",
 };
 
-function logoutCookie<I, S extends Session = Session>(
+function logoutCookie<I = unknown, S extends Session = Session>(
   config: Config<I, S>,
 ): string {
   return serializeCookie(config.tokenCookieName, "", {
@@ -104,7 +104,7 @@ function getRandom32bytes(): string {
   return Buffer.from(randomArray).toString("hex");
 }
 
-function createNewToken<I, S extends Session = Session>(
+function createNewToken<I = unknown, S extends Session = Session>(
   config: Config<I, S>,
 ): [string, string] {
   const token = getRandom32bytes();
@@ -122,7 +122,7 @@ function createNewToken<I, S extends Session = Session>(
   return [cookie, token];
 }
 
-export function parseToken<I, S extends Session = Session>(
+export function parseToken<I = unknown, S extends Session = Session>(
   config: Config<I, S>,
   cookieHeader: string | null | undefined,
 ): string | undefined {
@@ -133,7 +133,7 @@ export function parseToken<I, S extends Session = Session>(
   return cookies[config.tokenCookieName];
 }
 
-export function logout<I, S extends Session = Session>(
+export function logout<I = unknown, S extends Session = Session>(
   config: Config<I, S>,
   cookieHeader: string | null | undefined,
 ): readonly [string] {
@@ -144,7 +144,7 @@ export function logout<I, S extends Session = Session>(
   return [logoutCookie(config)];
 }
 
-export function login<I, S extends Session = Session>(
+export function login<I = unknown, S extends Session = Session>(
   config: Config<I, S>,
   insertData: I,
 ): readonly [string] {
@@ -162,7 +162,7 @@ export function login<I, S extends Session = Session>(
   return [cookie];
 }
 
-export function hasSessionCookie<I, S extends Session = Session>(
+export function hasSessionCookie<I = unknown, S extends Session = Session>(
   config: Config<I, S>,
   cookieHeader: string | null | undefined,
 ): boolean {
@@ -193,7 +193,7 @@ function getRequestToken(
   return undefined;
 }
 
-export function consumeSession<I, S extends Session = Session>(
+export function consumeSession<I = unknown, S extends Session = Session>(
   config: Config<I, S>,
   cookieHeader: string | null | undefined,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
