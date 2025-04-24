@@ -223,9 +223,15 @@ export function consumeSession<I, S extends Session = Session>(
     throw new Error("Absurd: Token neither newest nor second newest");
   }
 
+  if (!requestToken.value.used && requestToken.index === 2) {
+    console.error("Potential cookie theft: There are two unused tokens");
+    config.deleteSessionById(session.id);
+    return [logoutCookie(config), undefined];
+  }
+
   if (requestToken.index === 2 && token1.used) {
     console.error(
-      "Potential security threat: Older token is used after newer one",
+      "Potential cookie theft: Older token is used after newer one",
     );
     config.deleteSessionById(session.id);
     return [logoutCookie(config), undefined];
