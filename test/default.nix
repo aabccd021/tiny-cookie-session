@@ -306,22 +306,37 @@ rec {
 
   s0043 = mkTest "s0043" s0004 [
     "copy-browser1-browser2"
+  ];
+
+  s0044 = mkTest "s0044" s0043 [
     "advance-time-4m"
     "advance-time-4m"
-    "advance-time-4m" # 5
+    "advance-time-4m"
     "goto-home"
     "assert-logged-in-alice-iphone"
+  ];
+
+  s0045 = mkTest "s0045" s0044 [
     "advance-time-4m"
-    "goto-home" # 10
+    "goto-home"
     "assert-logged-in-alice-iphone"
+  ];
+
+  s0046 = mkTest "s0046" s0045 [
     "advance-time-4m"
     "main-browser2"
     "goto-home"
-    "assert-logged-out" # 15
+    "assert-logged-out"
+  ];
+
+  s0047 = mkTest "s0047" s0046 [
     "main-browser1"
     "goto-home"
     "assert-logged-out"
   ];
+
+
+
 
 }
 
