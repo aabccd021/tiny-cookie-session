@@ -1,1 +1,1 @@
-printf "$PWD/var/browser2" >"$PWD/var/browser-state.txt"
+printf "2" >./var/netero/active-browser.txt

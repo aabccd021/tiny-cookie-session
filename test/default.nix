@@ -36,8 +36,10 @@ let
     cp -Lr ${prev}/* ./var
     chmod -R u=rwX,g=,o= ./var
 
-    export NETERO_BROWSER_STATE_FILE="$PWD/var/browser-state.txt"
-    printf "$PWD/var/browser1" > "$PWD/var/browser-state.txt"
+    export NETERO_STATE="$PWD/var/netero"
+    mkdir -p ./var/netero/browser/1/tab/1
+    printf "1" > ./var/netero/active-browser.txt
+    printf "1" > ./var/netero/active-tab.txt
 
     mkdir -p ./run/netero
     mkfifo ./run/netero/ready.fifo
