@@ -1,3 +1,15 @@
-goto --url "http://localhost:8080/?sleep=1000" &
+cp -r ./var/netero/browser/1/tab/1 ./var/netero/browser/1/tab/2
+
+goto --url "http://localhost:8080/?sleep=2000" &
+
+printf "2" >./var/netero/active-tab.txt
+
+goto --url "http://localhost:8080/"
+assert_response_code_equal 200
+assert_query_returns_equal "//p" "User: alice, Device: iphone"
+
+printf "1" >./var/netero/active-tab.txt
+
 wait
 assert_response_code_equal 200
+assert_query_returns_equal "//p" "User: alice, Device: iphone"

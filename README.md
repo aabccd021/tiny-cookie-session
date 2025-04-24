@@ -5,3 +5,5 @@ Cookie session management for Bun
 # To Do
 
 - test concurrent request from multiple tabs
+- copy brwser
+- open new tab
