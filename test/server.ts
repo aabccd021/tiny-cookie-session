@@ -47,8 +47,8 @@ function getSessionById(id: string): Session {
 }
 
 const config: Config<
-  Pick<Session, "username" | "deviceName">,
-  Session & { readonly id: string }
+  Session & { readonly id: string },
+  Pick<Session, "username" | "deviceName">
 > = {
   ...defaultConfig,
   dateNow: (): number => {

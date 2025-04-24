@@ -16,7 +16,7 @@ export type Token = {
   readonly expirationDate: number;
 };
 
-export interface Config<I = unknown, S extends Session = Session> {
+export interface Config<S extends Session = Session, I = unknown> {
   readonly cookieOption?: SerializeOptions;
   readonly tokenCookieName: string;
   readonly dateNow: () => number;
@@ -66,8 +66,8 @@ const defaultCookieOption: SerializeOptions = {
   path: "/",
 };
 
-function logoutCookie<I = unknown, S extends Session = Session>(
-  config: Config<I, S>,
+function logoutCookie<S extends Session = Session, I = unknown>(
+  config: Config<S, I>,
 ): string {
   return serializeCookie(config.tokenCookieName, "", {
     ...config.cookieOption,
@@ -104,8 +104,8 @@ function getRandom32bytes(): string {
   return Buffer.from(randomArray).toString("hex");
 }
 
-function createNewToken<I = unknown, S extends Session = Session>(
-  config: Config<I, S>,
+function createNewToken<S extends Session = Session, I = unknown>(
+  config: Config<S, I>,
 ): [string, string] {
   const token = getRandom32bytes();
 
@@ -122,8 +122,8 @@ function createNewToken<I = unknown, S extends Session = Session>(
   return [cookie, token];
 }
 
-export function parseToken<I = unknown, S extends Session = Session>(
-  config: Config<I, S>,
+export function parseToken<S extends Session = Session, I = unknown>(
+  config: Config<S, I>,
   cookieHeader: string | null | undefined,
 ): string | undefined {
   if (cookieHeader === null || cookieHeader === undefined) {
@@ -133,8 +133,8 @@ export function parseToken<I = unknown, S extends Session = Session>(
   return cookies[config.tokenCookieName];
 }
 
-export function logout<I = unknown, S extends Session = Session>(
-  config: Config<I, S>,
+export function logout<S extends Session = Session, I = unknown>(
+  config: Config<S, I>,
   cookieHeader: string | null | undefined,
 ): readonly [string] {
   const token = parseToken(config, cookieHeader);
@@ -144,8 +144,8 @@ export function logout<I = unknown, S extends Session = Session>(
   return [logoutCookie(config)];
 }
 
-export function login<I = unknown, S extends Session = Session>(
-  config: Config<I, S>,
+export function login<S extends Session = Session, I = unknown>(
+  config: Config<S, I>,
   insertData: I,
 ): readonly [string] {
   const sessionId = getRandom32bytes();
@@ -162,8 +162,8 @@ export function login<I = unknown, S extends Session = Session>(
   return [cookie];
 }
 
-export function hasSessionCookie<I = unknown, S extends Session = Session>(
-  config: Config<I, S>,
+export function hasSessionCookie<S extends Session = Session, I = unknown>(
+  config: Config<S, I>,
   cookieHeader: string | null | undefined,
 ): boolean {
   if (cookieHeader === null || cookieHeader === undefined) {
@@ -193,8 +193,8 @@ function getRequestToken(
   return undefined;
 }
 
-export function consumeSession<I = unknown, S extends Session = Session>(
-  config: Config<I, S>,
+export function consumeSession<S extends Session = Session, I = unknown>(
+  config: Config<S, I>,
   cookieHeader: string | null | undefined,
 ): readonly [string | undefined, NonNullable<S> | undefined] {
   const tokenValue = parseToken(config, cookieHeader);
