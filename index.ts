@@ -217,10 +217,15 @@ export function consumeSession<S extends Session = Session, I = unknown>(
   }
 
   const requestToken = getRequestToken(token1, token2, tokenValue);
-  if (
-    requestToken === undefined ||
-    (!requestToken.value.used && requestToken.index === 2)
-  ) {
+  if (requestToken === undefined) {
+    console.error(
+      "Potential cookie theft: the token used is neither latest nor second latest",
+    );
+    config.deleteSessionById(session.id);
+    return [logoutCookie(config), undefined];
+  }
+
+  if (!requestToken.value.used && requestToken.index === 2) {
     console.error("Potential cookie theft: There are two unused tokens");
     config.deleteSessionById(session.id);
     return [logoutCookie(config), undefined];
