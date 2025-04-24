@@ -126,9 +126,15 @@ const server = Bun.serve({
   port: 8080,
   routes: {
     "/": {
-      GET: (req): Response => {
+      GET: async (req: Request): Promise<Response> => {
         const cookieHeader = req.headers.get("cookie");
         const [sessionCookie, session] = consumeSession(config, cookieHeader);
+        const sleepMs = new URL(req.url).searchParams.get("sleep");
+        if (sleepMs !== null) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, Number.parseInt(sleepMs)),
+          );
+        }
         const message =
           session !== undefined
             ? `User: ${session.username}, Device: ${session.deviceName}`

@@ -424,6 +424,9 @@ rec {
     "assert-logged-out"
   ];
 
-
+  s0050 = mkTest "s0050" s0004 [
+    "advance-time-11m"
+    "concurrent-goto-home"
+  ];
 }
 
