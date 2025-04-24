@@ -234,9 +234,7 @@ export function consumeSession<I, S extends Session = Session>(
   if (!requestToken.value.used) {
     if (requestToken.index === 1) {
       config.setTokenUsed(tokenValue);
-    }
-
-    if (requestToken.index === 2) {
+    } else if (requestToken.index === 2) {
       throw new Error("Absurd: second newest token never used");
     }
   }
