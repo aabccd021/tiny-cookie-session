@@ -3,6 +3,8 @@ cat ./var/netero/browser/1/cookie.txt
 
 goto --url "http://localhost:8080/?sleep=5000" &
 
+sleep 1
+
 printf "2" >./var/netero/active-tab.txt
 cat ./var/netero/browser/1/cookie.txt
 goto --url "http://localhost:8080/"
