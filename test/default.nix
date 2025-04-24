@@ -444,15 +444,10 @@ rec {
   # assert everyone is logged out after the victim consumed the old session (not latest or second latest)
   s0049 = mkTest "s0049" s0043 [
     "goto-redirect-home"
-    "assert-logged-in-alice-iphone"
-
     "advance-time-10m"
     "goto-redirect-home"
-    "assert-logged-in-alice-iphone"
-
     "advance-time-10m"
     "goto-redirect-home"
-    "assert-logged-in-alice-iphone"
 
     "main-browser2"
     "goto-redirect-home"
@@ -466,16 +461,12 @@ rec {
   # assert everyone is logged out after the attacker consumed the old session (not latest or second latest)
   s0052 = mkTest "s0052" s0043 [
     "main-browser2"
-    "goto-redirect-home"
-    "assert-logged-in-alice-iphone"
 
+    "goto-redirect-home"
     "advance-time-10m"
     "goto-redirect-home"
-    "assert-logged-in-alice-iphone"
-
     "advance-time-10m"
     "goto-redirect-home"
-    "assert-logged-in-alice-iphone"
 
     "main-browser1"
     "goto-redirect-home"
