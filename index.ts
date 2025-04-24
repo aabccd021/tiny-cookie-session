@@ -220,12 +220,11 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     token1.value === tokenValue
       ? { value: token1, index: 1 }
       : getRequestToken(token1, token2, tokenValue);
-  if (requestToken === undefined) {
-    throw new Error("Absurd: Token neither newest nor second newest");
-  }
-  // console.log({ requestToken: requestToken.index, token1, token2 });
 
-  if (!requestToken.value.used && requestToken.index === 2) {
+  if (
+    requestToken === undefined ||
+    (!requestToken.value.used && requestToken.index === 2)
+  ) {
     console.error("Potential cookie theft: There are two unused tokens");
     config.deleteSessionById(session.id);
     return [logoutCookie(config), undefined];
