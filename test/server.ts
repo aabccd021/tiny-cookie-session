@@ -95,12 +95,12 @@ const config: Config<
   createToken: ({ sessionId, token, tokenExpirationDate }) => {
     const session = getSessionById(sessionId);
 
-    const expDateNotUnique = Object.values(session.tokens).some(
-      (t) => t.expirationDate === tokenExpirationDate,
+    const expDateNotLatest = Object.values(session.tokens).some(
+      (t) => t.expirationDate >= tokenExpirationDate,
     );
-    if (expDateNotUnique) {
+    if (expDateNotLatest) {
       throw new Error(
-        `Token expiration date not unique: ${tokenExpirationDate}`,
+        `Token expiration date not latest: ${tokenExpirationDate}`,
       );
     }
 
