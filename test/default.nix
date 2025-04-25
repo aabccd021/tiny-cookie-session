@@ -488,12 +488,57 @@ rec {
     "assert-logged-in-alice-iphone"
   ];
 
+  s0050b = mkTest "s0050b" s0004 [
+    "advance-time-11m"
+    "concurrent-goto-home-5-1-0"
+  ];
+
+  s0051b = mkTest "s0051b" s0050b [
+    "advance-time-1m"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
+  s0050c = mkTest "s0050c" s0004 [
+    "advance-time-11m"
+    "concurrent-goto-home-5-1-0"
+  ];
+
+  s0051c = mkTest "s0051c" s0050c [
+    "advance-time-1m"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
+
   s0057 = mkTest "s0057" s0004 [
     "advance-time-11m"
     "concurrent-goto-home-5-0-0"
   ];
 
   s0058 = mkTest "s0058" s0057 [
+    "advance-time-1m"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
+  s0057b = mkTest "s0057b" s0004 [
+    "advance-time-11m"
+    "concurrent-goto-home-5-0-0"
+  ];
+
+  s0058b = mkTest "s0058b" s0057b [
+    "advance-time-1m"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
+  s0057c = mkTest "s0057c" s0004 [
+    "advance-time-11m"
+    "concurrent-goto-home-5-0-0"
+  ];
+
+  s0058c = mkTest "s0058c" s0057c [
     "advance-time-1m"
     "goto-home"
     "assert-logged-in-alice-iphone"
@@ -516,6 +561,34 @@ rec {
   s0060 = mkTest "s0060" s0004 [
     "advance-time-11m"
     "concurrent-goto-home-5-1-5"
+  ];
+
+  s0061 = mkTest "s0061" s0060 [
+    "advance-time-1m"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
+  s0060b = mkTest "s0060b" s0004 [
+    "advance-time-11m"
+    "concurrent-goto-home-5-1-5"
+  ];
+
+  s0061b = mkTest "s0061b" s0060b [
+    "advance-time-1m"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
+  ];
+
+  s0060c = mkTest "s0060c" s0004 [
+    "advance-time-11m"
+    "concurrent-goto-home-5-1-5"
+  ];
+
+  s0061c = mkTest "s0061c" s0060c [
+    "advance-time-1m"
+    "goto-home"
+    "assert-logged-in-alice-iphone"
   ];
 
 }

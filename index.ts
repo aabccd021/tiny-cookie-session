@@ -7,15 +7,13 @@ import {
 
 type Session = {
   readonly id: string;
-  readonly expirationDate: number;
-  readonly token1: Token;
-  readonly token2: Token | undefined;
+  readonly exp: number;
 };
 
-export type Token = {
-  readonly value: string;
-  readonly used: boolean;
-  readonly expirationDate: number;
+export type TokenData<S extends Session = Session> = {
+  readonly session: NonNullable<S>;
+  readonly isLastToken: boolean;
+  readonly exp: number;
 };
 
 export interface Config<S extends Session = Session, I = unknown> {
@@ -24,25 +22,24 @@ export interface Config<S extends Session = Session, I = unknown> {
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
-  readonly selectSession: (token: string) => NonNullable<S> | undefined;
-  readonly setTokenUsed: (token: string) => void;
+  readonly getTokenDetails: (token: string) => TokenData<S> | undefined;
   readonly createSession: (params: {
     readonly sessionId: string;
-    readonly sessionExpirationDate: number;
+    readonly sessionExp: number;
     readonly token: string;
-    readonly tokenExpirationDate: number;
+    readonly tokenExp: number;
     readonly insertData: I;
   }) => void;
-  readonly createToken: (params: {
+  readonly insertOrReplaceToken: (params: {
     readonly sessionId: string;
     readonly token: string;
-    readonly tokenExpirationDate: number;
+    readonly tokenExp: number;
   }) => void;
   readonly deleteSessionByToken: (token: string) => void;
   readonly deleteSessionById: (sessionId: string) => void;
-  readonly setSessionExpirationDate: (params: {
+  readonly setSessionExp: (params: {
     readonly sessionId: string;
-    readonly sessionExpirationDate: number;
+    readonly sessionExp: number;
   }) => void;
 }
 
@@ -150,9 +147,9 @@ export function login<S extends Session = Session, I = unknown>(
   const now = config.dateNow?.() ?? Date.now();
   config.createSession({
     sessionId,
-    sessionExpirationDate: now + config.sessionExpiresIn,
+    sessionExp: now + config.sessionExpiresIn,
     token,
-    tokenExpirationDate: now + config.tokenExpiresIn,
+    tokenExp: now + config.tokenExpiresIn,
     insertData,
   });
   return [cookie];
@@ -170,47 +167,30 @@ export function hasSessionCookie<S extends Session = Session, I = unknown>(
   return config.tokenCookieName in cookies;
 }
 
-function getRequestToken(
-  { token1, token2 }: Session,
-  value: string,
-):
-  | {
-      readonly value: Token;
-      readonly index: 1 | 2;
-    }
-  | undefined {
-  if (token1.value === value) {
-    return { value: token1, index: 1 };
-  }
-  if (token2?.value === value) {
-    return { value: token2, index: 2 };
-  }
-  return undefined;
-}
-
 export function consumeSession<S extends Session = Session, I = unknown>(
   config: Config<S, I>,
   cookieHeader: string | null | undefined,
-): readonly [string | undefined, NonNullable<S> | undefined] {
+): readonly [string | undefined, TokenData<S> | undefined] {
   const tokenValue = parseToken(config, cookieHeader);
   if (tokenValue === undefined) {
     return [undefined, undefined];
   }
 
-  const session = config.selectSession(tokenValue);
-  if (session === undefined) {
+  const tokenData = config.getTokenDetails(tokenValue);
+  if (tokenData === undefined) {
     return [undefined, undefined];
   }
 
+  const { session, isLastToken } = tokenData;
+
   const now = config.dateNow?.() ?? Date.now();
 
-  if (session.expirationDate < now) {
+  if (session.exp < now) {
     config.deleteSessionById(session.id);
     return [logoutCookie(config), undefined];
   }
 
-  const requestToken = getRequestToken(session, tokenValue);
-  if (requestToken === undefined) {
+  if (!isLastToken) {
     console.error(
       "Potential cookie theft: the token used is neither latest nor second latest",
     );
@@ -218,40 +198,31 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     return [logoutCookie(config), undefined];
   }
 
-  if (requestToken.index === 2 && !requestToken.value.used) {
-    console.error("Potential cookie theft: second latest token is not used");
-    return [logoutCookie(config), undefined];
-  }
-
-  if (requestToken.index === 2 && session.token1.used) {
-    console.error(
-      "Potential cookie theft: Older token is used after newer one",
-    );
-    config.deleteSessionById(session.id);
-    return [logoutCookie(config), undefined];
-  }
-
-  if (requestToken.index === 1 && !requestToken.value.used) {
-    config.setTokenUsed(tokenValue);
-  }
-
-  const sessionRefreshDate =
-    session.expirationDate - config.sessionExpiresIn / 2;
+  const sessionRefreshDate = session.exp - config.sessionExpiresIn / 2;
   if (sessionRefreshDate < now) {
-    config.setSessionExpirationDate({
+    config.setSessionExp({
       sessionId: session.id,
-      sessionExpirationDate: now + config.sessionExpiresIn,
+      sessionExp: now + config.sessionExpiresIn,
     });
   }
 
-  if (session.token1.expirationDate < now) {
-    const [cookie, newToken] = createNewToken(config);
-    config.createToken({
-      sessionId: session.id,
-      token: newToken,
-      tokenExpirationDate: now + config.tokenExpiresIn,
-    });
-    return [cookie, session];
+  return [undefined, tokenData];
+}
+
+export function extendToken<S extends Session = Session, I = unknown>(
+  config: Config<S, I>,
+  token: TokenData<S>,
+): readonly [string | undefined] {
+  const now = config.dateNow?.() ?? Date.now();
+  if (token.exp >= now) {
+    return [undefined];
   }
-  return [undefined, session];
+
+  const [cookie, newToken] = createNewToken(config);
+  config.insertOrReplaceToken({
+    sessionId: token.session.id,
+    token: newToken,
+    tokenExp: now + config.tokenExpiresIn,
+  });
+  return [cookie];
 }
