@@ -479,7 +479,7 @@ rec {
 
   s0050 = mkTest "s0050" s0004 [
     "advance-time-11m"
-    "concurrent-goto-home-delay-1s"
+    "concurrent-goto-home-5-1-0"
   ];
 
   s0051 = mkTest "s0051" s0050 [
@@ -490,7 +490,7 @@ rec {
 
   s0057 = mkTest "s0057" s0004 [
     "advance-time-11m"
-    "concurrent-goto-home"
+    "concurrent-goto-home-5-0-0"
   ];
 
   s0058 = mkTest "s0058" s0057 [
