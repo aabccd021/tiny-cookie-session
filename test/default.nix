@@ -74,6 +74,7 @@ rec {
   s0000 = pkgs.runCommand "s0000" { } ''
     mkdir -p "$out/var/browser1"
     printf "{}" > "$out/var/sessions.json"
+    touch "$out/var/logs.txt"
     printf "%s" "$(date +"%Y-%m-%dT%H:%M:%SZ")" > "$out/var/now.txt"
     echo "http://localhost:8080/" > "$out/var/browser1/url.txt"
   '';
@@ -323,6 +324,8 @@ rec {
     "main-browser1"
     "goto-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the victim consumed the session twice 10 minutes apart (access token expiration time)
@@ -338,6 +341,8 @@ rec {
     "main-browser1"
     "goto-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the victim consumed the session twice, with attacker consuming the session in between
@@ -359,6 +364,8 @@ rec {
     "main-browser1"
     "goto-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the session twice
@@ -374,6 +381,8 @@ rec {
     "main-browser2"
     "goto-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the session twice 10 minutes apart (access token expiration time)
@@ -390,6 +399,8 @@ rec {
     "main-browser2"
     "goto-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the session twice, with victim consuming the session in between
@@ -412,6 +423,8 @@ rec {
     "main-browser2"
     "goto-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the session once on redirect-home
@@ -426,6 +439,8 @@ rec {
     "main-browser2"
     "goto-redirect-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the victim consumed the session once on redirect-home
@@ -439,6 +454,8 @@ rec {
     "main-browser1"
     "goto-redirect-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the victim consumed the old session (not latest or second latest)
@@ -456,6 +473,8 @@ rec {
     "main-browser1"
     "goto-redirect-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the old session (not latest or second latest)
@@ -475,6 +494,8 @@ rec {
     "main-browser2"
     "goto-redirect-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   s0050 = mkTest "s0050" s0004 [
@@ -511,6 +532,8 @@ rec {
     "main-browser1"
     "goto-home"
     "assert-logged-out"
+
+    "assert-cookie-theft-detected"
   ];
 
   s0060 = mkTest "s0060" s0004 [

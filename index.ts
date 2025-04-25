@@ -191,36 +191,32 @@ function getRequestToken(
 export function consumeSession<S extends Session = Session, I = unknown>(
   config: Config<S, I>,
   cookieHeader: string | null | undefined,
-): readonly [string | undefined, NonNullable<S> | undefined] {
+): readonly [string | undefined, boolean, NonNullable<S> | undefined] {
   const tokenValue = parseToken(config, cookieHeader);
   if (tokenValue === undefined) {
-    return [undefined, undefined];
+    return [undefined, false, undefined];
   }
 
   const session = config.selectSession(tokenValue);
   if (session === undefined) {
-    return [undefined, undefined];
+    return [undefined, false, undefined];
   }
 
   const now = config.dateNow?.() ?? Date.now();
 
   if (session.expirationDate < now) {
     config.deleteSessionById(session.id);
-    return [logoutCookie(config), undefined];
+    return [logoutCookie(config), false, undefined];
   }
 
   const requestToken = getRequestToken(session, tokenValue);
   if (requestToken === undefined) {
-    console.error(
-      "Potential cookie theft: the token used is neither latest nor second latest",
-    );
     config.deleteSessionById(session.id);
-    return [logoutCookie(config), undefined];
+    return [logoutCookie(config), true, undefined];
   }
 
   if (requestToken.index === 2 && !requestToken.value.used) {
-    console.error("Potential cookie theft: second latest token is not used");
-    return [logoutCookie(config), undefined];
+    return [logoutCookie(config), true, undefined];
   }
 
   if (requestToken.index === 2 && session.token1.used) {
@@ -228,7 +224,7 @@ export function consumeSession<S extends Session = Session, I = unknown>(
       "Potential cookie theft: Older token is used after newer one",
     );
     config.deleteSessionById(session.id);
-    return [logoutCookie(config), undefined];
+    return [logoutCookie(config), true, undefined];
   }
 
   if (requestToken.index === 1 && !requestToken.value.used) {
@@ -251,7 +247,7 @@ export function consumeSession<S extends Session = Session, I = unknown>(
       token: newToken,
       tokenExpirationDate: now + config.tokenExpiresIn,
     });
-    return [cookie, session];
+    return [cookie, false, session];
   }
-  return [undefined, session];
+  return [undefined, false, session];
 }

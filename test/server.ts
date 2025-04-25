@@ -138,7 +138,13 @@ const server = Bun.serve({
     "/": {
       GET: async (req: Request): Promise<Response> => {
         const cookieHeader = req.headers.get("cookie");
-        const [sessionCookie, session] = consumeSession(config, cookieHeader);
+        const [sessionCookie, isCookieTheft, session] = consumeSession(
+          config,
+          cookieHeader,
+        );
+        if (isCookieTheft) {
+          fs.appendFileSync("./var/logs.txt", "cookie-theft");
+        }
         const sleepMs = new URL(req.url).searchParams.get("sleep");
         if (sleepMs !== null) {
           await new Promise((resolve) =>
@@ -160,7 +166,13 @@ const server = Bun.serve({
     "/redirect-home": {
       GET: (req): Response => {
         const cookieHeader = req.headers.get("cookie");
-        const [sessionCookie, session] = consumeSession(config, cookieHeader);
+        const [sessionCookie, isCookieTheft, session] = consumeSession(
+          config,
+          cookieHeader,
+        );
+        if (isCookieTheft) {
+          fs.appendFileSync("./var/logs.txt", "cookie-theft");
+        }
         const message =
           session !== undefined
             ? `User: ${session.username}, Device: ${session.deviceName}`
