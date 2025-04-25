@@ -546,5 +546,12 @@ rec {
     "assert-logs-is-empty"
   ];
 
+
+  s0062 = mkTest "s0062" s0004 [
+    "concurrent-goto-home-rand"
+    "assert-logs-is-empty"
+  ];
+
+
 }
 
