@@ -8,14 +8,15 @@ import {
 type Session = {
   readonly id: string;
   readonly expirationDate: number;
-  readonly token1: Token;
-  readonly token2: Token | undefined;
+  readonly latestToken: {
+    readonly value: string;
+    readonly expDate: number;
+  };
 };
 
-export type Token = {
-  readonly value: string;
-  readonly used: boolean;
+type Token<S extends Session = Session> = {
   readonly expirationDate: number;
+  readonly session: S;
 };
 
 export interface Config<S extends Session = Session, I = unknown> {
@@ -24,8 +25,7 @@ export interface Config<S extends Session = Session, I = unknown> {
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
-  readonly selectSession: (token: string) => NonNullable<S> | undefined;
-  readonly setTokenUsed: (token: string) => void;
+  readonly selectSession: (token: string) => Token<S> | undefined;
   readonly createSession: (params: {
     readonly sessionId: string;
     readonly sessionExpirationDate: number;
@@ -170,81 +170,51 @@ export function hasSessionCookie<S extends Session = Session, I = unknown>(
   return config.tokenCookieName in cookies;
 }
 
-function getRequestToken(
-  { token1, token2 }: Session,
-  value: string,
-):
-  | {
-      readonly value: Token;
-      readonly index: 1 | 2;
-    }
-  | undefined {
-  if (token1.value === value) {
-    return { value: token1, index: 1 };
-  }
-  if (token2?.value === value) {
-    return { value: token2, index: 2 };
-  }
-  return undefined;
-}
-
 export function consumeSession<S extends Session = Session, I = unknown>(
   config: Config<S, I>,
   cookieHeader: string | null | undefined,
-): readonly [string | undefined, boolean, NonNullable<S> | undefined] {
+): readonly [string | undefined, NonNullable<S> | undefined] {
   const tokenValue = parseToken(config, cookieHeader);
   if (tokenValue === undefined) {
-    return [undefined, false, undefined];
+    return [undefined, undefined];
   }
 
-  const session = config.selectSession(tokenValue);
-  if (session === undefined) {
-    return [undefined, false, undefined];
+  const token = config.selectSession(tokenValue);
+  if (token === undefined) {
+    return [undefined, undefined];
   }
 
   const now = config.dateNow?.() ?? Date.now();
 
-  if (session.expirationDate < now) {
-    config.deleteSessionById(session.id);
-    return [logoutCookie(config), false, undefined];
+  if (token.session.expirationDate < now) {
+    config.deleteSessionById(token.session.id);
+    return [logoutCookie(config), undefined];
   }
 
-  const requestToken = getRequestToken(session, tokenValue);
-  if (requestToken === undefined) {
-    config.deleteSessionById(session.id);
-    return [logoutCookie(config), true, undefined];
-  }
-
-  if (requestToken.index === 2 && !requestToken.value.used) {
-    return [logoutCookie(config), true, undefined];
-  }
-
-  if (requestToken.index === 2 && session.token1.used) {
-    config.deleteSessionById(session.id);
-    return [logoutCookie(config), true, undefined];
-  }
-
-  if (requestToken.index === 1 && !requestToken.value.used) {
-    config.setTokenUsed(tokenValue);
+  if (
+    tokenValue !== token.session.latestToken.value &&
+    token.expirationDate >= now
+  ) {
+    return [undefined, undefined];
   }
 
   const sessionRefreshDate =
-    session.expirationDate - config.sessionExpiresIn / 2;
+    token.session.expirationDate - config.sessionExpiresIn / 2;
   if (sessionRefreshDate < now) {
     config.setSessionExpirationDate({
-      sessionId: session.id,
+      sessionId: token.session.id,
       sessionExpirationDate: now + config.sessionExpiresIn,
     });
   }
 
-  if (session.token1.expirationDate < now) {
+  if (token.session.latestToken.expDate < now) {
     const [cookie, newToken] = createNewToken(config);
     config.createToken({
-      sessionId: session.id,
+      sessionId: token.session.id,
       token: newToken,
       tokenExpirationDate: now + config.tokenExpiresIn,
     });
-    return [cookie, false, session];
+    return [cookie, token.session];
   }
-  return [undefined, false, session];
+  return [undefined, token.session];
 }
