@@ -220,9 +220,6 @@ export function consumeSession<S extends Session = Session, I = unknown>(
   }
 
   if (requestToken.index === 2 && session.token1.used) {
-    console.error(
-      "Potential cookie theft: Older token is used after newer one",
-    );
     config.deleteSessionById(session.id);
     return [logoutCookie(config), true, undefined];
   }

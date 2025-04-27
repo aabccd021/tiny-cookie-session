@@ -548,8 +548,39 @@ rec {
 
 
   s0062 = mkTest "s0062" s0004 [
+    "copy-browser1-browser2"
+    "advance-time-11m"
+
     "concurrent-goto-home-rand"
     "assert-logs-is-empty"
+
+    "main-browser2"
+    "goto-home"
+    "assert-logged-out"
+
+    "main-browser1"
+    "goto-home"
+    "assert-logged-out"
+
+    "assert-cookie-theft-detected"
+  ];
+
+  s0063 = mkTest "s0061" s0004 [
+    # "copy-browser1-browser2"
+    "advance-time-11m"
+
+    "concurrent-goto-home-100"
+    "assert-logs-is-empty"
+
+    # "main-browser2"
+    # "goto-home"
+    # "assert-logged-out"
+    #
+    # "main-browser1"
+    # "goto-home"
+    # "assert-logged-out"
+    #
+    # "assert-cookie-theft-detected"
   ];
 
 
