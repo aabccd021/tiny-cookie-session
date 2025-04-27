@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import {
   type Config,
+  type Token,
   consumeSession,
   defaultConfig,
   hasSessionCookie,
@@ -12,8 +13,12 @@ const rootDir = "./received";
 
 fs.mkdirSync(rootDir, { recursive: true });
 
+type Mutable<T> = {
+  -readonly [K in keyof T]: T[K];
+};
+
 type Session = {
-  tokens: Record<string, number>;
+  tokens: Record<string, Mutable<Pick<Token, "used" | "expirationDate">>>;
   expirationDate: number;
   username: string;
   deviceName: string;
@@ -41,29 +46,11 @@ function getSessionById(id: string): Session {
   return session;
 }
 
-function findToken(tokenValue: string):
-  | {
-      readonly sessionId: string;
-      readonly session: Session;
-      readonly tokenExpDate: number;
-    }
-  | undefined {
-  for (const [sessionId, session] of Object.entries(sessions)) {
-    const tokenExpDate = session.tokens[tokenValue];
-    if (tokenExpDate !== undefined) {
-      return { sessionId, session, tokenExpDate };
-    }
-  }
-  return undefined;
-}
-
 const config: Config<
   Session & {
     readonly id: string;
-    readonly latestToken: {
-      readonly value: string;
-      readonly expDate: number;
-    };
+    readonly token1: Token;
+    readonly token2: Token | undefined;
   },
   Pick<Session, "username" | "deviceName">
 > = {
@@ -73,33 +60,22 @@ const config: Config<
     return new Date(epochNowStr).getTime();
   },
   sessionExpiresIn: 5 * 60 * 60 * 1000,
-  selectSession: (tokenValue) => {
-    const foundToken = findToken(tokenValue);
-    if (foundToken === undefined) {
+  selectSession: (token) => {
+    const sessionEntry = Object.entries(sessions).find(
+      ([_, session]) => token in session.tokens,
+    );
+    if (sessionEntry === undefined) {
       return undefined;
     }
+    const [id, session] = sessionEntry;
 
-    const { sessionId, session, tokenExpDate } = foundToken;
-
-    const latestToken = Object.entries(session.tokens)
-      .sort(([, a], [, b]) => b - a)
-      .map(([key, value]) => ({ value: key, expDate: value }))
-      .at(0);
-
-    if (latestToken === undefined) {
-      throw new Error("Absurd state: no latest token found");
+    const [token1, token2] = Object.entries(session.tokens)
+      .sort(([, a], [, b]) => b.expirationDate - a.expirationDate)
+      .map(([key, value]) => ({ value: key, ...value }));
+    if (token1 === undefined) {
+      return undefined;
     }
-
-    const token = {
-      expirationDate: tokenExpDate,
-      session: {
-        ...session,
-        id: sessionId,
-        latestToken,
-      },
-    };
-
-    return token;
+    return { ...session, id, token1, token2 };
   },
   createSession: ({
     sessionId,
@@ -112,7 +88,7 @@ const config: Config<
       ...insertData,
       expirationDate: sessionExpirationDate,
       tokens: {
-        [token]: tokenExpirationDate,
+        [token]: { used: false, expirationDate: tokenExpirationDate },
       },
     };
   },
@@ -120,7 +96,7 @@ const config: Config<
     const session = getSessionById(sessionId);
 
     const expDateNotLatest = Object.values(session.tokens).some(
-      (t) => t >= tokenExpirationDate,
+      (t) => t.expirationDate >= tokenExpirationDate,
     );
     if (expDateNotLatest) {
       throw new Error(
@@ -128,7 +104,10 @@ const config: Config<
       );
     }
 
-    session.tokens[token] = tokenExpirationDate;
+    session.tokens[token] = {
+      used: false,
+      expirationDate: tokenExpirationDate,
+    };
   },
   deleteSessionByToken: (token) => {
     const [sessionId] = getSessionByToken(token);
@@ -136,6 +115,16 @@ const config: Config<
   },
   deleteSessionById: (sessionId) => {
     delete sessions[sessionId];
+  },
+  setTokenUsed: (token) => {
+    const [sessionId, session] = getSessionByToken(token);
+    const tokenData = session.tokens[token];
+    if (tokenData === undefined) {
+      throw new Error(
+        `Token not found for session id ${sessionId} and token ${token}`,
+      );
+    }
+    tokenData.used = true;
   },
   setSessionExpirationDate: ({ sessionId, sessionExpirationDate }) => {
     const session = getSessionById(sessionId);
@@ -149,7 +138,13 @@ const server = Bun.serve({
     "/": {
       GET: async (req: Request): Promise<Response> => {
         const cookieHeader = req.headers.get("cookie");
-        const [sessionCookie, session] = consumeSession(config, cookieHeader);
+        const [sessionCookie, isCookieTheft, session] = consumeSession(
+          config,
+          cookieHeader,
+        );
+        if (isCookieTheft) {
+          fs.appendFileSync("./var/logs.txt", "cookie-theft");
+        }
         const sleepMs = new URL(req.url).searchParams.get("sleep");
         if (sleepMs !== null) {
           await new Promise((resolve) =>
@@ -171,7 +166,13 @@ const server = Bun.serve({
     "/redirect-home": {
       GET: (req): Response => {
         const cookieHeader = req.headers.get("cookie");
-        const [sessionCookie, session] = consumeSession(config, cookieHeader);
+        const [sessionCookie, isCookieTheft, session] = consumeSession(
+          config,
+          cookieHeader,
+        );
+        if (isCookieTheft) {
+          fs.appendFileSync("./var/logs.txt", "cookie-theft");
+        }
         const message =
           session !== undefined
             ? `User: ${session.username}, Device: ${session.deviceName}`
