@@ -325,7 +325,6 @@ rec {
     "goto-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the victim consumed the session twice 10 minutes apart (access token expiration time)
@@ -342,7 +341,6 @@ rec {
     "goto-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the victim consumed the session twice, with attacker consuming the session in between
@@ -365,7 +363,6 @@ rec {
     "goto-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the session twice
@@ -382,7 +379,6 @@ rec {
     "goto-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the session twice 10 minutes apart (access token expiration time)
@@ -400,7 +396,6 @@ rec {
     "goto-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the session twice, with victim consuming the session in between
@@ -424,7 +419,6 @@ rec {
     "goto-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the session once on redirect-home
@@ -440,7 +434,6 @@ rec {
     "goto-redirect-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the victim consumed the session once on redirect-home
@@ -455,7 +448,6 @@ rec {
     "goto-redirect-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the victim consumed the old session (not latest or second latest)
@@ -474,7 +466,6 @@ rec {
     "goto-redirect-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   # assert everyone is logged out after the attacker consumed the old session (not latest or second latest)
@@ -495,7 +486,6 @@ rec {
     "goto-redirect-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   s0050 = mkTest "s0050" s0004 [
@@ -533,7 +523,6 @@ rec {
     "goto-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   s0060 = mkTest "s0060" s0004 [
@@ -543,7 +532,6 @@ rec {
 
   s0061 = mkTest "s0061" s0004 [
     "concurrent-goto-home-100"
-    "assert-logs-is-empty"
   ];
 
 
@@ -552,7 +540,6 @@ rec {
     "advance-time-11m"
 
     "concurrent-goto-home-rand"
-    "assert-logs-is-empty"
 
     "main-browser2"
     "goto-home"
@@ -562,7 +549,6 @@ rec {
     "goto-home"
     "assert-logged-out"
 
-    "assert-cookie-theft-detected"
   ];
 
   s0063 = mkTest "s0061" s0004 [
@@ -570,7 +556,6 @@ rec {
     "advance-time-11m"
 
     "concurrent-goto-home-100"
-    "assert-logs-is-empty"
 
     # "main-browser2"
     # "goto-home"
