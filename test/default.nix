@@ -422,7 +422,7 @@ rec {
   ];
 
 
-  s0062 = mkTest "s0062" s0004 [
+  s0062 = mkTest "s0062" s0043 [
     "copy-browser1-browser2"
     "advance-time-11m"
 
