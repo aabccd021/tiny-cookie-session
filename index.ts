@@ -8,14 +8,9 @@ import {
 type Session = {
   readonly id: string;
   readonly expirationDate: number;
-  readonly token1: Token;
-  readonly token2: Token | undefined;
-};
-
-export type Token = {
-  readonly value: string;
-  readonly used: boolean;
-  readonly expirationDate: number;
+  readonly tokenExpirationDate: number;
+  readonly token1: string;
+  readonly token2: string | undefined;
 };
 
 export interface Config<S extends Session = Session, I = unknown> {
@@ -25,7 +20,6 @@ export interface Config<S extends Session = Session, I = unknown> {
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
   readonly selectSession: (token: string) => NonNullable<S> | undefined;
-  readonly setTokenUsed: (token: string) => void;
   readonly createSession: (params: {
     readonly sessionId: string;
     readonly sessionExpirationDate: number;
@@ -170,62 +164,32 @@ export function hasSessionCookie<S extends Session = Session, I = unknown>(
   return config.tokenCookieName in cookies;
 }
 
-function getRequestToken(
-  { token1, token2 }: Session,
-  value: string,
-):
-  | {
-      readonly value: Token;
-      readonly index: 1 | 2;
-    }
-  | undefined {
-  if (token1.value === value) {
-    return { value: token1, index: 1 };
-  }
-  if (token2?.value === value) {
-    return { value: token2, index: 2 };
-  }
-  return undefined;
-}
-
 export function consumeSession<S extends Session = Session, I = unknown>(
   config: Config<S, I>,
   cookieHeader: string | null | undefined,
-): readonly [string | undefined, boolean, NonNullable<S> | undefined] {
-  const tokenValue = parseToken(config, cookieHeader);
-  if (tokenValue === undefined) {
-    return [undefined, false, undefined];
+): readonly [string | undefined, NonNullable<S> | undefined] {
+  const reqToken = parseToken(config, cookieHeader);
+  if (reqToken === undefined) {
+    return [undefined, undefined];
   }
 
-  const session = config.selectSession(tokenValue);
+  const session = config.selectSession(reqToken);
   if (session === undefined) {
-    return [undefined, false, undefined];
+    // logout the user when the session does not exist
+    // might cause by the session explicitly deleted on the server side
+    return [logoutCookie(config), undefined];
+  }
+
+  if (reqToken !== session.token1 && reqToken !== session.token2) {
+    config.deleteSessionById(session.id);
+    return [logoutCookie(config), undefined];
   }
 
   const now = config.dateNow?.() ?? Date.now();
 
   if (session.expirationDate < now) {
     config.deleteSessionById(session.id);
-    return [logoutCookie(config), false, undefined];
-  }
-
-  const requestToken = getRequestToken(session, tokenValue);
-  if (requestToken === undefined) {
-    config.deleteSessionById(session.id);
-    return [logoutCookie(config), true, undefined];
-  }
-
-  if (requestToken.index === 2 && !requestToken.value.used) {
-    return [logoutCookie(config), true, undefined];
-  }
-
-  if (requestToken.index === 2 && session.token1.used) {
-    config.deleteSessionById(session.id);
-    return [logoutCookie(config), true, undefined];
-  }
-
-  if (requestToken.index === 1 && !requestToken.value.used) {
-    config.setTokenUsed(tokenValue);
+    return [logoutCookie(config), undefined];
   }
 
   const sessionRefreshDate =
@@ -237,14 +201,14 @@ export function consumeSession<S extends Session = Session, I = unknown>(
     });
   }
 
-  if (session.token1.expirationDate < now) {
+  if (session.tokenExpirationDate <= now && session.token1 === reqToken) {
     const [cookie, newToken] = createNewToken(config);
     config.createToken({
       sessionId: session.id,
       token: newToken,
       tokenExpirationDate: now + config.tokenExpiresIn,
     });
-    return [cookie, false, session];
+    return [cookie, session];
   }
-  return [undefined, false, session];
+  return [undefined, session];
 }
