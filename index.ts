@@ -139,7 +139,6 @@ export function login<D = unknown, I = unknown>(
 ): readonly [string] {
   const sessionId = getRandom32bytes();
   const [cookie, token] = createNewToken(config);
-
   const now = config.dateNow?.() ?? Date.now();
   config.createSession({
     sessionId,
@@ -158,7 +157,6 @@ export function hasSessionCookie<D = unknown, I = unknown>(
   if (cookieHeader === null || cookieHeader === undefined) {
     return false;
   }
-
   const cookies = parseCookie(cookieHeader);
   return config.tokenCookieName in cookies;
 }
