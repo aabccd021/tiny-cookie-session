@@ -1,5 +1,12 @@
 import * as fs from "node:fs";
-import * as cookieSession from "../index.ts";
+import {
+  type Config,
+  consume,
+  defaultConfig,
+  hasCookie,
+  login,
+  logout,
+} from "../index.ts";
 
 const rootDir = "./received";
 
@@ -21,8 +28,8 @@ const sessions: Record<string, Session> = await Bun.file(
   "./var/sessions.json",
 ).json();
 
-const config: cookieSession.Config<SessionData> = {
-  ...cookieSession.defaultConfig,
+const config: Config<SessionData> = {
+  ...defaultConfig,
   dateNow: (): number => {
     const epochNowStr = fs.readFileSync("./var/now.txt", "utf8");
     return new Date(epochNowStr).getTime();
@@ -102,7 +109,7 @@ const server = Bun.serve({
     "/": {
       GET: async (req: Request): Promise<Response> => {
         const cookieHeader = req.headers.get("cookie");
-        const session = cookieSession.consume(config, cookieHeader);
+        const session = consume(config, cookieHeader);
         if (session.state === "requireLogout") {
           return new Response(undefined, {
             status: 303,
@@ -160,10 +167,7 @@ const server = Bun.serve({
           return new Response("Invalid device name", { status: 400 });
         }
 
-        const loginCookie = cookieSession.login(config, {
-          username,
-          deviceName,
-        });
+        const loginCookie = login(config, { username, deviceName });
         return new Response(undefined, {
           status: 303,
           headers: { Location: "/", "Set-Cookie": loginCookie },
@@ -173,7 +177,7 @@ const server = Bun.serve({
     "/logout": {
       GET: (req): Response => {
         const cookieHeader = req.headers.get("cookie");
-        const logoutCookie = cookieSession.logout(config, cookieHeader);
+        const logoutCookie = logout(config, cookieHeader);
         return new Response(undefined, {
           status: 303,
           headers: { Location: "/", "Set-Cookie": logoutCookie },
@@ -183,12 +187,9 @@ const server = Bun.serve({
     "/has-session-cookie": {
       GET: (req): Response => {
         const cookieHeader = req.headers.get("cookie");
-        return new Response(
-          `<p>${cookieSession.hasCookie(config, cookieHeader)}</p>`,
-          {
-            headers: { "Content-Type": "text/html" },
-          },
-        );
+        return new Response(`<p>${hasCookie(config, cookieHeader)}</p>`, {
+          headers: { "Content-Type": "text/html" },
+        });
       },
     },
   },
