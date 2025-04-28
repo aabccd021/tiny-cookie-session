@@ -111,7 +111,7 @@ function createNewToken<D = unknown, I = unknown>(
   return [cookie, token];
 }
 
-export function parseToken<D = unknown, I = unknown>(
+function parseToken<D = unknown, I = unknown>(
   config: Config<D, I>,
   cookieHeader: string | null | undefined,
 ): string | undefined {
