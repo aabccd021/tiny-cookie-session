@@ -101,7 +101,6 @@ const config: Config<
     if (session === undefined) {
       throw new Error(`Session not found with id: ${sessionId}`);
     }
-
     session.expirationDate = sessionExpirationDate;
   },
 };
