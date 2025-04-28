@@ -150,7 +150,7 @@ export function login<D = unknown, I = unknown>(
   return cookie;
 }
 
-export function hasSessionCookie<D = unknown, I = unknown>(
+export function hasCookie<D = unknown, I = unknown>(
   config: Config<D, I>,
   cookieHeader: string | null | undefined,
 ): boolean {
@@ -175,7 +175,7 @@ export type SessionConsume<D = unknown> =
       readonly tokenRefreshCookie?: string;
     } & Session<D>);
 
-export function consumeSession<D = unknown, I = unknown>(
+export function consume<D = unknown, I = unknown>(
   config: Config<D, I>,
   cookieHeader: string | null | undefined,
 ): SessionConsume<D> {

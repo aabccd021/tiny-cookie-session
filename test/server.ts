@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import {
   type Config,
-  consumeSession,
+  consume,
   defaultConfig,
-  hasSessionCookie,
+  hasCookie,
   login,
   logout,
 } from "../index.ts";
@@ -111,7 +111,7 @@ const server = Bun.serve({
     "/": {
       GET: async (req: Request): Promise<Response> => {
         const cookieHeader = req.headers.get("cookie");
-        const session = consumeSession(config, cookieHeader);
+        const session = consume(config, cookieHeader);
         if (session.state === "requireLogout") {
           return new Response("<p>Logged out</p>", {
             headers: {
@@ -191,12 +191,9 @@ const server = Bun.serve({
     "/has-session-cookie": {
       GET: (req): Response => {
         const cookieHeader = req.headers.get("cookie");
-        return new Response(
-          `<p>${hasSessionCookie(config, cookieHeader)}</p>`,
-          {
-            headers: { "Content-Type": "text/html" },
-          },
-        );
+        return new Response(`<p>${hasCookie(config, cookieHeader)}</p>`, {
+          headers: { "Content-Type": "text/html" },
+        });
       },
     },
   },
