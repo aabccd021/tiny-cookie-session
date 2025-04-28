@@ -171,7 +171,7 @@ const server = Bun.serve({
           return new Response("Invalid device name", { status: 400 });
         }
 
-        const [loginCookie] = login(config, { username, deviceName });
+        const loginCookie = login(config, { username, deviceName });
         return new Response(undefined, {
           status: 303,
           headers: { Location: "/", "Set-Cookie": loginCookie },
@@ -181,7 +181,7 @@ const server = Bun.serve({
     "/logout": {
       GET: (req): Response => {
         const cookieHeader = req.headers.get("cookie");
-        const [logoutCookie] = logout(config, cookieHeader);
+        const logoutCookie = logout(config, cookieHeader);
         return new Response(undefined, {
           status: 303,
           headers: { Location: "/", "Set-Cookie": logoutCookie },

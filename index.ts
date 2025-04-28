@@ -125,18 +125,18 @@ function parseToken<D = unknown, I = unknown>(
 export function logout<D = unknown, I = unknown>(
   config: Config<D, I>,
   cookieHeader: string | null | undefined,
-): readonly [string] {
+): string {
   const token = parseToken(config, cookieHeader);
   if (token !== undefined) {
     config.deleteSessionByToken(token);
   }
-  return [logoutCookie(config)];
+  return logoutCookie(config);
 }
 
 export function login<D = unknown, I = unknown>(
   config: Config<D, I>,
   insertData: I,
-): readonly [string] {
+): string {
   const sessionId = getRandom32bytes();
   const [cookie, token] = createNewToken(config);
   const now = config.dateNow?.() ?? Date.now();
@@ -147,7 +147,7 @@ export function login<D = unknown, I = unknown>(
     tokenExpirationDate: now + config.tokenExpiresIn,
     insertData,
   });
-  return [cookie];
+  return cookie;
 }
 
 export function hasSessionCookie<D = unknown, I = unknown>(
