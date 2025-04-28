@@ -176,7 +176,7 @@ export function consumeSession<S extends Session = Session, I = unknown>(
   const session = config.selectSession(reqToken);
   if (session === undefined) {
     // logout the user when the session does not exist
-    // might cause by the session explicitly deleted on the server side
+    // the deletion might caused by the session explicitly deleted on the server side
     return [logoutCookie(config), undefined];
   }
 
