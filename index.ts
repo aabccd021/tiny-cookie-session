@@ -180,6 +180,7 @@ export function consumeSession<D = unknown, I = unknown>(
   }
 
   if (reqToken !== session.token1 && reqToken !== session.token2) {
+    // cookie theft
     config.deleteSessionById(session.id);
     return [logoutCookie(config), undefined];
   }
