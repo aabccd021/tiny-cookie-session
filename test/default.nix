@@ -417,15 +417,7 @@ rec {
     "concurrent-goto-home-5-1-5"
   ];
 
-  s0061 = mkTest "s0061" s0004 [
-    "concurrent-goto-home-100"
-  ];
-
-
   s0062 = mkTest "s0062" s0043 [
-    "copy-browser1-browser2"
-    "advance-time-11m"
-
     "concurrent-goto-home-rand"
 
     "advance-time-10m"
@@ -439,23 +431,6 @@ rec {
     "goto-home"
     "assert-logged-out"
 
-  ];
-
-  s0063 = mkTest "s0061" s0004 [
-    # "copy-browser1-browser2"
-    "advance-time-11m"
-
-    "concurrent-goto-home-100"
-
-    # "main-browser2"
-    # "goto-home"
-    # "assert-logged-out"
-    #
-    # "main-browser1"
-    # "goto-home"
-    # "assert-logged-out"
-    #
-    # "assert-cookie-theft-detected"
   ];
 
 
