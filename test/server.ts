@@ -195,9 +195,9 @@ const server = Bun.serve({
   },
 });
 
-fs.writeFileSync("./run/netero/ready.fifo", "");
+fs.writeFileSync("./ready.fifo", "");
 
-await fs.promises.readFile("./run/netero/exit.fifo");
+await fs.promises.readFile("./exit.fifo");
 
 fs.writeFileSync("./var/sessions.json", JSON.stringify(sessions));
 

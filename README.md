@@ -4,7 +4,7 @@ Cookie session management for Bun
 
 # To Do
 
-- copy browser
-- open new tab
-- debug cookie
-- redirect-home -> strict-home
+- netero_init
+- control copy browser
+- control open new tab
+- debug print cookie
