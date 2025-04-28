@@ -12,22 +12,23 @@ const rootDir = "./received";
 
 fs.mkdirSync(rootDir, { recursive: true });
 
+type SessionData = {
+  readonly username: string;
+  readonly deviceName: string;
+};
+
 type Session = {
   tokens: string[];
   tokenExpirationDate: number;
   expirationDate: number;
-  username: string;
-  deviceName: string;
+  data: SessionData;
 };
 
 const sessions: Record<string, Session> = await Bun.file(
   "./var/sessions.json",
 ).json();
 
-const config: Config<
-  Pick<Session, "username" | "deviceName">,
-  Pick<Session, "username" | "deviceName">
-> = {
+const config: Config<SessionData, SessionData> = {
   ...defaultConfig,
   dateNow: (): number => {
     const epochNowStr = fs.readFileSync("./var/now.txt", "utf8");
@@ -51,14 +52,11 @@ const config: Config<
     const token2 = session.tokens.at(-2);
     return {
       id,
-      expirationDate: session.expirationDate,
-      tokenExpirationDate: session.tokenExpirationDate,
       token1,
       token2,
-      data: {
-        username: session.username,
-        deviceName: session.deviceName,
-      },
+      expirationDate: session.expirationDate,
+      tokenExpirationDate: session.tokenExpirationDate,
+      data: session.data,
     };
   },
   createSession: ({
@@ -66,10 +64,10 @@ const config: Config<
     sessionExpirationDate,
     token,
     tokenExpirationDate,
-    insertData,
+    data,
   }) => {
     sessions[sessionId] = {
-      ...insertData,
+      data,
       expirationDate: sessionExpirationDate,
       tokenExpirationDate: tokenExpirationDate,
       tokens: [token],

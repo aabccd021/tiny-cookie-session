@@ -26,7 +26,7 @@ export interface Config<D = unknown, I = unknown> {
     readonly sessionExpirationDate: number;
     readonly token: string;
     readonly tokenExpirationDate: number;
-    readonly insertData: I;
+    readonly data: I;
   }) => void;
   readonly createToken: (params: {
     readonly sessionId: string;
@@ -135,17 +135,17 @@ export function logout<D = unknown, I = unknown>(
 
 export function login<D = unknown, I = unknown>(
   config: Config<D, I>,
-  insertData: I,
+  data: I,
 ): string {
   const sessionId = getRandom32bytes();
   const [cookie, token] = createNewToken(config);
   const now = config.dateNow?.() ?? Date.now();
   config.createSession({
     sessionId,
-    sessionExpirationDate: now + config.sessionExpiresIn,
     token,
+    data,
+    sessionExpirationDate: now + config.sessionExpiresIn,
     tokenExpirationDate: now + config.tokenExpiresIn,
-    insertData,
   });
   return cookie;
 }
