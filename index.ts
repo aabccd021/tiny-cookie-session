@@ -170,13 +170,11 @@ export function consumeSession<S extends Session = Session, I = unknown>(
 ): readonly [string | undefined, NonNullable<S> | undefined] {
   const reqToken = parseToken(config, cookieHeader);
   if (reqToken === undefined) {
-    console.warn("required token not  found in cookie");
     return [undefined, undefined];
   }
 
   const session = config.selectSession(reqToken);
   if (session === undefined) {
-    console.warn("Session not found");
     // logout the user when the session does not exist
     // might cause by the session explicitly deleted on the server side
     return [logoutCookie(config), undefined];
@@ -184,7 +182,6 @@ export function consumeSession<S extends Session = Session, I = unknown>(
 
   if (reqToken !== session.token1 && reqToken !== session.token2) {
     config.deleteSessionById(session.id);
-    console.warn("Old token");
     return [logoutCookie(config), undefined];
   }
 
@@ -192,7 +189,6 @@ export function consumeSession<S extends Session = Session, I = unknown>(
 
   if (session.expirationDate < now) {
     config.deleteSessionById(session.id);
-    console.warn("Session expired");
     return [logoutCookie(config), undefined];
   }
 
