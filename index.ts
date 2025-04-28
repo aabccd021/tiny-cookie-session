@@ -156,7 +156,7 @@ export function hasCookie<D = unknown>(
   return config.tokenCookieName in cookies;
 }
 
-export type SessionConsume<D = unknown> =
+export type SessionState<D = unknown> =
   | {
       readonly state: "requireLogout";
       readonly reason: "session not found" | "old session" | "session expired";
@@ -173,7 +173,7 @@ export type SessionConsume<D = unknown> =
 export function consume<D = unknown>(
   config: Config<D>,
   cookieHeader: string | null | undefined,
-): SessionConsume<D> {
+): SessionState<D> {
   const reqToken = parseToken(config, cookieHeader);
   if (reqToken === undefined) {
     return { state: "unauthenticated" };
