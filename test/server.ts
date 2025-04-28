@@ -111,11 +111,9 @@ const server = Bun.serve({
         const cookieHeader = req.headers.get("cookie");
         const session = consume(config, cookieHeader);
         if (session.state === "requireLogout") {
-          return new Response("<p>Logged out</p>", {
-            headers: {
-              "Set-Cookie": session.logoutCookie,
-              "Content-Type": "text/html",
-            },
+          return new Response(undefined, {
+            status: 303,
+            headers: { Location: "/", "Set-Cookie": session.logoutCookie },
           });
         }
 
