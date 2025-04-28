@@ -33,11 +33,7 @@ function getSessionById(id: string): Session {
 }
 
 const config: Config<
-  Session & {
-    readonly id: string;
-    readonly token1: string;
-    readonly token2: string | undefined;
-  },
+  Pick<Session, "username" | "deviceName">,
   Pick<Session, "username" | "deviceName">
 > = {
   ...defaultConfig,
@@ -61,7 +57,17 @@ const config: Config<
     }
 
     const token2 = session.tokens.at(-2);
-    return { ...session, id, token1, token2 };
+    return {
+      id,
+      expirationDate: session.expirationDate,
+      tokenExpirationDate: session.tokenExpirationDate,
+      token1,
+      token2,
+      data: {
+        username: session.username,
+        deviceName: session.deviceName,
+      },
+    };
   },
   createSession: ({
     sessionId,
@@ -116,7 +122,7 @@ const server = Bun.serve({
         }
         const message =
           session !== undefined
-            ? `User: ${session.username}, Device: ${session.deviceName}`
+            ? `User: ${session.data.username}, Device: ${session.data.deviceName}`
             : "Logged out";
         return new Response(`<p>${message}</p>`, {
           headers: {
