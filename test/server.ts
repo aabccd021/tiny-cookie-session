@@ -24,14 +24,6 @@ const sessions: Record<string, Session> = await Bun.file(
   "./var/sessions.json",
 ).json();
 
-function getSessionById(id: string): Session {
-  const session = sessions[id];
-  if (session === undefined) {
-    throw new Error(`Session not found with id: ${id}`);
-  }
-  return session;
-}
-
 const config: Config<
   Pick<Session, "username" | "deviceName">,
   Pick<Session, "username" | "deviceName">
@@ -84,7 +76,10 @@ const config: Config<
     };
   },
   createToken: ({ sessionId, token, tokenExpirationDate }) => {
-    const session = getSessionById(sessionId);
+    const session = sessions[sessionId];
+    if (session === undefined) {
+      throw new Error(`Session not found with id: ${sessionId}`);
+    }
     session.tokens.push(token);
     session.tokenExpirationDate = tokenExpirationDate;
   },
@@ -102,7 +97,11 @@ const config: Config<
     delete sessions[sessionId];
   },
   setSessionExpirationDate: ({ sessionId, sessionExpirationDate }) => {
-    const session = getSessionById(sessionId);
+    const session = sessions[sessionId];
+    if (session === undefined) {
+      throw new Error(`Session not found with id: ${sessionId}`);
+    }
+
     session.expirationDate = sessionExpirationDate;
   },
 };
