@@ -163,33 +163,58 @@ export function hasSessionCookie<D = unknown, I = unknown>(
   return config.tokenCookieName in cookies;
 }
 
+export type SessionConsume<D = unknown> =
+  | {
+      readonly state: "requireLogout";
+      readonly reason: "session not found" | "old session" | "session expired";
+      readonly logoutCookie: string;
+    }
+  | {
+      readonly state: "unauthenticated";
+    }
+  | ({
+      readonly state: "authenticated";
+      readonly tokenRefreshCookie?: string;
+    } & Session<D>);
+
 export function consumeSession<D = unknown, I = unknown>(
   config: Config<D, I>,
   cookieHeader: string | null | undefined,
-): readonly [string | undefined, Session<D> | undefined] {
+): SessionConsume<D> {
   const reqToken = parseToken(config, cookieHeader);
   if (reqToken === undefined) {
-    return [undefined, undefined];
+    return { state: "unauthenticated" };
   }
 
   const session = config.selectSession(reqToken);
   if (session === undefined) {
     // logout the user when the session does not exist
     // the deletion might caused by the session explicitly deleted on the server side
-    return [logoutCookie(config), undefined];
+    return {
+      state: "requireLogout",
+      reason: "session not found",
+      logoutCookie: logoutCookie(config),
+    };
   }
 
   if (reqToken !== session.token1 && reqToken !== session.token2) {
-    // cookie theft
     config.deleteSessionById(session.id);
-    return [logoutCookie(config), undefined];
+    return {
+      state: "requireLogout",
+      reason: "old session",
+      logoutCookie: logoutCookie(config),
+    };
   }
 
   const now = config.dateNow?.() ?? Date.now();
 
   if (session.expirationDate < now) {
     config.deleteSessionById(session.id);
-    return [logoutCookie(config), undefined];
+    return {
+      state: "requireLogout",
+      reason: "session expired",
+      logoutCookie: logoutCookie(config),
+    };
   }
 
   const sessionRefreshDate =
@@ -208,7 +233,15 @@ export function consumeSession<D = unknown, I = unknown>(
       token: newToken,
       tokenExpirationDate: now + config.tokenExpiresIn,
     });
-    return [cookie, session];
+    return {
+      ...session,
+      state: "authenticated",
+      tokenRefreshCookie: cookie,
+    };
   }
-  return [undefined, session];
+
+  return {
+    ...session,
+    state: "authenticated",
+  };
 }

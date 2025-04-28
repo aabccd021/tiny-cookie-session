@@ -113,23 +113,38 @@ const server = Bun.serve({
     "/": {
       GET: async (req: Request): Promise<Response> => {
         const cookieHeader = req.headers.get("cookie");
-        const [sessionCookie, session] = consumeSession(config, cookieHeader);
+        const session = consumeSession(config, cookieHeader);
+        if (session.state === "requireLogout") {
+          return new Response("<p>Logged out</p>", {
+            headers: {
+              "Set-Cookie": session.logoutCookie,
+              "Content-Type": "text/html",
+            },
+          });
+        }
+
         const sleepMs = new URL(req.url).searchParams.get("sleep");
         if (sleepMs !== null) {
           await new Promise((resolve) =>
             setTimeout(resolve, Number.parseInt(sleepMs)),
           );
         }
-        const message =
-          session !== undefined
-            ? `User: ${session.data.username}, Device: ${session.data.deviceName}`
-            : "Logged out";
-        return new Response(`<p>${message}</p>`, {
-          headers: {
-            "Set-Cookie": sessionCookie ?? "",
-            "Content-Type": "text/html",
+
+        if (session.state === "unauthenticated") {
+          return new Response("<p>Logged out</p>", {
+            headers: { "Content-Type": "text/html" },
+          });
+        }
+
+        return new Response(
+          `<p>User: ${session.data.username}, Device: ${session.data.deviceName}</p>`,
+          {
+            headers: {
+              "Set-Cookie": session.tokenRefreshCookie ?? "",
+              "Content-Type": "text/html",
+            },
           },
-        });
+        );
       },
     },
     "/login": {
