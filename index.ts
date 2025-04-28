@@ -14,7 +14,7 @@ type Session<D = unknown> = {
   readonly data: D;
 };
 
-export interface Config<D = unknown, I = unknown> {
+export interface Config<D = unknown> {
   readonly cookieOption?: SerializeOptions;
   readonly tokenCookieName: string;
   readonly dateNow: () => number;
@@ -26,7 +26,7 @@ export interface Config<D = unknown, I = unknown> {
     readonly sessionExpirationDate: number;
     readonly token: string;
     readonly tokenExpirationDate: number;
-    readonly data: I;
+    readonly data: D;
   }) => void;
   readonly createToken: (params: {
     readonly sessionId: string;
@@ -57,7 +57,7 @@ const defaultCookieOption: SerializeOptions = {
   path: "/",
 };
 
-function logoutCookie<D = unknown, I = unknown>(config: Config<D, I>): string {
+function logoutCookie<D = unknown>(config: Config<D>): string {
   return serializeCookie(config.tokenCookieName, "", {
     ...defaultCookieOption,
     ...config.cookieOption,
@@ -93,9 +93,7 @@ function getRandom32bytes(): string {
   return Buffer.from(randomArray).toString("hex");
 }
 
-function createNewToken<D = unknown, I = unknown>(
-  config: Config<D, I>,
-): [string, string] {
+function createNewToken<D = unknown>(config: Config<D>): [string, string] {
   const token = getRandom32bytes();
 
   const cookie = serializeCookie(
@@ -111,8 +109,8 @@ function createNewToken<D = unknown, I = unknown>(
   return [cookie, token];
 }
 
-function parseToken<D = unknown, I = unknown>(
-  config: Config<D, I>,
+function parseToken<D = unknown>(
+  config: Config<D>,
   cookieHeader: string | null | undefined,
 ): string | undefined {
   if (cookieHeader === null || cookieHeader === undefined) {
@@ -122,8 +120,8 @@ function parseToken<D = unknown, I = unknown>(
   return cookies[config.tokenCookieName];
 }
 
-export function logout<D = unknown, I = unknown>(
-  config: Config<D, I>,
+export function logout<D = unknown>(
+  config: Config<D>,
   cookieHeader: string | null | undefined,
 ): string {
   const token = parseToken(config, cookieHeader);
@@ -133,10 +131,7 @@ export function logout<D = unknown, I = unknown>(
   return logoutCookie(config);
 }
 
-export function login<D = unknown, I = unknown>(
-  config: Config<D, I>,
-  data: I,
-): string {
+export function login<D = unknown>(config: Config<D>, data: D): string {
   const sessionId = getRandom32bytes();
   const [cookie, token] = createNewToken(config);
   const now = config.dateNow?.() ?? Date.now();
@@ -150,8 +145,8 @@ export function login<D = unknown, I = unknown>(
   return cookie;
 }
 
-export function hasCookie<D = unknown, I = unknown>(
-  config: Config<D, I>,
+export function hasCookie<D = unknown>(
+  config: Config<D>,
   cookieHeader: string | null | undefined,
 ): boolean {
   if (cookieHeader === null || cookieHeader === undefined) {
@@ -175,8 +170,8 @@ export type SessionConsume<D = unknown> =
       readonly tokenRefreshCookie?: string;
     } & Session<D>);
 
-export function consume<D = unknown, I = unknown>(
-  config: Config<D, I>,
+export function consume<D = unknown>(
+  config: Config<D>,
   cookieHeader: string | null | undefined,
 ): SessionConsume<D> {
   const reqToken = parseToken(config, cookieHeader);

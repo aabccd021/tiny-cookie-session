@@ -28,7 +28,7 @@ const sessions: Record<string, Session> = await Bun.file(
   "./var/sessions.json",
 ).json();
 
-const config: Config<SessionData, SessionData> = {
+const config: Config<SessionData> = {
   ...defaultConfig,
   dateNow: (): number => {
     const epochNowStr = fs.readFileSync("./var/now.txt", "utf8");
