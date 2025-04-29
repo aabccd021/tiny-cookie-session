@@ -127,6 +127,7 @@ const server = Bun.serve({
             headers: { "Content-Type": "text/html" },
           });
         }
+
         const session = consume(config, token);
         if (session.state === "requireLogout") {
           return new Response(undefined, {
