@@ -1,1 +1,1 @@
-printf "2" >./var/netero/active-browser.txt
+browser_switch "2"

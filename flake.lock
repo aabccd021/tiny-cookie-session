@@ -82,11 +82,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1745886867,
-        "narHash": "sha256-EG++qohrqayijcwgf8e9OWEfMcK3Avf/ZrgCQDmhdbo=",
+        "lastModified": 1745886992,
+        "narHash": "sha256-1wKD2DPYGTMFDhgYRMeJSEB0I9KBWBfJO5OAQa5pf1I=",
         "owner": "aabccd021",
         "repo": "netero-test",
-        "rev": "7f868524bfe408e5ea1b9dfae02aa7b5eb017d49",
+        "rev": "2cbbd2d252bb67d1aab3553a0ab40bb1da2848e4",
         "type": "github"
       },
       "original": {
