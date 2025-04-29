@@ -19,10 +19,8 @@
   },
   "homepage": "https://github.com/aabccd021/bun-cookie-session#readme",
   "files": ["index.ts"],
-  "dependencies": {
-    "@tinyhttp/cookie": "^2.1.1"
-  },
   "devDependencies": {
+    "@tinyhttp/cookie": "^2.1.1",
     "@types/bun": "^1.2.10"
   }
 }
