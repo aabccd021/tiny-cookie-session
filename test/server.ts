@@ -31,7 +31,11 @@ const sessions: Record<string, Session> = await Bun.file(
 const config: Config<SessionData> = {
   ...defaultConfig,
   dateNow: (): number => {
-    const epochNowStr = fs.readFileSync("./var/now.txt", "utf8");
+    const neteroDir = process.env["NETERO_STATE"];
+    if (neteroDir === undefined) {
+      throw new Error("NETERO_STATE is not set");
+    }
+    const epochNowStr = fs.readFileSync(`${neteroDir}/now.txt`, "utf8");
     return new Date(epochNowStr).getTime();
   },
   sessionExpiresIn: 5 * 60 * 60 * 1000,

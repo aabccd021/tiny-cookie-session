@@ -15,22 +15,11 @@ let
     mv server "$out/bin/server"
   '';
 
-  advance_time = pkgs.writeShellApplication {
-    name = "advance_time";
-    runtimeInputs = [ pkgs.netero-test ];
-    text = ''
-      time_now=$(cat "./var/now.txt")
-      time_advanced=$(date --utc --date "$time_now +$1" +"%Y-%m-%dT%H:%M:%SZ")
-      printf "%s" "$time_advanced" >"./var/now.txt"
-    '';
-  };
-
   mkTest = name: prev: actions: pkgs.runCommand "${name}-test"
     {
       buildInputs = [
         pkgs.netero-test
         server
-        advance_time
       ];
     } ''
     cp -Lr ${prev}/* ./var
@@ -72,7 +61,6 @@ rec {
   s0000 = pkgs.runCommand "s0000" { } ''
     mkdir -p "$out/var"
     printf "{}" > "$out/var/sessions.json"
-    printf "%s" "$(date +"%Y-%m-%dT%H:%M:%SZ")" > "$out/var/now.txt"
   '';
 
   s0001 = mkTest "s0001" s0000 [
@@ -144,31 +132,31 @@ rec {
   ];
 
   s0016 = mkTest "s0016" s0004 [
-    "advance-time-6h"
+    "time-advance-6h"
     "goto-home"
     "assert-logged-out"
   ];
 
   s0017 = mkTest "s0017" s0004 [
-    "advance-time-2h"
+    "time-advance-2h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0018 = mkTest "s0018" s0004 [
-    "advance-time-3h"
+    "time-advance-3h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0019 = mkTest "s0019" s0004 [
-    "advance-time-4h"
+    "time-advance-4h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0020 = mkTest "s0020" s0018 [
-    "advance-time-6h"
+    "time-advance-6h"
     "goto-home"
     "assert-logged-out"
   ];
@@ -185,43 +173,43 @@ rec {
   ];
 
   s0023 = mkTest "s0023" s0022 [
-    "advance-time-4h"
+    "time-advance-4h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0024 = mkTest "s0024" s0022 [
-    "advance-time-6h"
+    "time-advance-6h"
     "goto-home"
     "assert-logged-out"
   ];
 
   s0025 = mkTest "s0025" s0019 [
-    "advance-time-3h"
+    "time-advance-3h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0026 = mkTest "s0026" s0018 [
-    "advance-time-2h"
+    "time-advance-2h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0027 = mkTest "s0027" s0026 [
-    "advance-time-3h"
+    "time-advance-3h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0028 = mkTest "s0028" s0027 [
-    "advance-time-2h"
+    "time-advance-2h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0029 = mkTest "s0029" s0028 [
-    "advance-time-3h"
+    "time-advance-3h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
@@ -238,80 +226,80 @@ rec {
   ];
 
   s0032 = mkTest "s0032" s0031 [
-    "advance-time-6h"
+    "time-advance-6h"
     "goto-home"
     "assert-logged-out"
   ];
 
   s0033 = mkTest "s0033" s0029 [
-    "advance-time-2h"
+    "time-advance-2h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0034 = mkTest "s0034" s0033 [
-    "advance-time-2h"
+    "time-advance-2h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0035 = mkTest "s0035" s0034 [
-    "advance-time-2h"
+    "time-advance-2h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0036 = mkTest "s0036" s0035 [
-    "advance-time-2h"
+    "time-advance-2h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0037 = mkTest "s0037" s0036 [
-    "advance-time-2h"
+    "time-advance-2h"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0038 = mkTest "s0038" s0037 [
-    "advance-time-6h"
+    "time-advance-6h"
     "goto-home"
     "assert-logged-out"
   ];
 
   s0039 = mkTest "s0039" s0037 [
-    "advance-time-6h"
+    "time-advance-6h"
     "goto-home"
     "assert-logged-out"
   ];
 
   s0040 = mkTest "s0040" s0039 [
-    "advance-time-6h"
+    "time-advance-6h"
     "goto-home"
     "assert-logged-out"
   ];
 
   s0041 = mkTest "s0041" s0019 [
-    "advance-time-6h"
+    "time-advance-6h"
     "goto-home"
     "assert-logged-out"
   ];
 
   s0042 = mkTest "s0042" s0023 [
-    "advance-time-6h"
+    "time-advance-6h"
     "goto-home"
     "assert-logged-out"
   ];
 
   s0043 = mkTest "s0043" s0004 [
     "copy-browser1-browser2"
-    "advance-time-11m"
+    "time-advance-11m"
   ];
 
   # assert everyone is logged out after the victim consumed the session twice 10 minutes apart (access token expiration time)
   s0053 = mkTest "s0053" s0043 [
     "goto-home"
-    "advance-time-10m"
+    "time-advance-10m"
     "goto-home"
 
     "main-browser2"
@@ -328,11 +316,11 @@ rec {
   s0055 = mkTest "s0055" s0043 [
     "goto-home"
 
-    "advance-time-10m"
+    "time-advance-10m"
     "main-browser2"
     "goto-home"
 
-    "advance-time-1m"
+    "time-advance-1m"
     "main-browser1"
     "goto-home"
 
@@ -350,7 +338,7 @@ rec {
   s0054 = mkTest "s0054" s0043 [
     "main-browser2"
     "goto-home"
-    "advance-time-10m"
+    "time-advance-10m"
     "goto-home"
 
     "main-browser1"
@@ -368,11 +356,11 @@ rec {
     "main-browser2"
     "goto-home"
 
-    "advance-time-10m"
+    "time-advance-10m"
     "main-browser1"
     "goto-home"
 
-    "advance-time-1m"
+    "time-advance-1m"
     "main-browser2"
     "goto-home"
 
@@ -387,36 +375,36 @@ rec {
   ];
 
   s0050 = mkTest "s0050" s0034 [
-    "advance-time-11m"
+    "time-advance-11m"
     "concurrent-goto-home-5-1-0"
   ];
 
   s0051 = mkTest "s0051" s0050 [
-    "advance-time-1m"
+    "time-advance-1m"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0057 = mkTest "s0057" s0034 [
-    "advance-time-11m"
+    "time-advance-11m"
     "concurrent-goto-home-5-0-0"
   ];
 
   s0058 = mkTest "s0058" s0057 [
-    "advance-time-1m"
+    "time-advance-1m"
     "goto-home"
     "assert-logged-in-alice-iphone"
   ];
 
   s0060 = mkTest "s0060" s0034 [
-    "advance-time-11m"
+    "time-advance-11m"
     "concurrent-goto-home-5-1-5"
   ];
 
   s0062 = mkTest "s0062" s0043 [
     "concurrent-goto-home-rand"
 
-    "advance-time-10m"
+    "time-advance-10m"
     "goto-home"
 
     "main-browser2"
