@@ -106,21 +106,12 @@ const config: Config<SessionData> = {
   },
 };
 
-function parseToken(req: Request): string | null {
-  const cookieHeader = req.headers.get("cookie");
-  if (cookieHeader === null) {
-    return null;
-  }
-  const cookies = new Bun.CookieMap(cookieHeader);
-  return cookies.get(config.tokenCookieName);
-}
-
 const server = Bun.serve({
   port: 8080,
   routes: {
     "/": {
-      GET: async (req: Request): Promise<Response> => {
-        const token = parseToken(req);
+      GET: async (req): Promise<Response> => {
+        const token = req.cookies.get(config.tokenCookieName);
         if (token === null) {
           return new Response("<p>Logged out</p>", {
             headers: { "Content-Type": "text/html" },
@@ -206,7 +197,7 @@ const server = Bun.serve({
     "/logout": {
       GET: (req): Response => {
         req.cookies;
-        const token = parseToken(req);
+        const token = req.cookies.get(config.tokenCookieName);
         if (token === null) {
           throw new Error("Not logged in but trying to logout");
         }
