@@ -1,9 +1,25 @@
 import { getRandomValues } from "node:crypto";
-import {
-  type SerializeOptions,
-  parse as parseCookie,
-  serialize as serializeCookie,
-} from "@tinyhttp/cookie";
+
+export type CookieOptions = {
+  readonly encode?: (str: string) => string;
+  readonly maxAge?: number;
+  readonly domain?: string;
+  readonly path?: string;
+  readonly httpOnly?: boolean;
+  readonly secure?: boolean;
+  readonly sameSite?:
+    | boolean
+    | "Strict"
+    | "strict"
+    | "Lax"
+    | "lax"
+    | "None"
+    | "none"
+    | string;
+  readonly expires?: Date;
+};
+
+export type Cookie = readonly [string, string, CookieOptions];
 
 type Session<D = unknown> = {
   readonly id: string;
@@ -15,7 +31,7 @@ type Session<D = unknown> = {
 };
 
 export interface Config<D = unknown> {
-  readonly cookieOption?: SerializeOptions;
+  readonly cookieOption?: CookieOptions;
   readonly tokenCookieName: string;
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
@@ -51,18 +67,22 @@ export const defaultConfig: Pick<
   tokenExpiresIn: 10 * 60 * 1000,
 };
 
-const defaultCookieOption: SerializeOptions = {
+const defaultCookieOption: CookieOptions = {
   httpOnly: true,
   sameSite: "Lax",
   path: "/",
 };
 
-function logoutCookie<D = unknown>(config: Config<D>): string {
-  return serializeCookie(config.tokenCookieName, "", {
-    ...defaultCookieOption,
-    ...config.cookieOption,
-    maxAge: 0,
-  });
+function logoutCookie<D = unknown>(config: Config<D>): Cookie {
+  return [
+    config.tokenCookieName,
+    "",
+    {
+      ...defaultCookieOption,
+      ...config.cookieOption,
+      maxAge: 0,
+    },
+  ];
 }
 
 function getRandom32bytes(): string {
@@ -93,45 +113,28 @@ function getRandom32bytes(): string {
   return Buffer.from(randomArray).toString("hex");
 }
 
-function createNewToken<D = unknown>(config: Config<D>): [string, string] {
+function createNewToken<D = unknown>(config: Config<D>): [Cookie, string] {
   const token = getRandom32bytes();
 
-  const cookie = serializeCookie(
+  const cookie: Cookie = [
     config.tokenCookieName,
     encodeURIComponent(token),
     {
       ...defaultCookieOption,
       ...config.cookieOption,
-      maxAge: 365 * 24 * 60 * 60 * 1000,
+      maxAge: config.tokenExpiresIn,
     },
-  );
+  ];
 
   return [cookie, token];
 }
 
-function parseToken<D = unknown>(
-  config: Config<D>,
-  cookieHeader: string | null | undefined,
-): string | undefined {
-  if (cookieHeader === null || cookieHeader === undefined) {
-    return undefined;
-  }
-  const cookies = parseCookie(cookieHeader);
-  return cookies[config.tokenCookieName];
-}
-
-export function logout<D = unknown>(
-  config: Config<D>,
-  cookieHeader: string | null | undefined,
-): string {
-  const token = parseToken(config, cookieHeader);
-  if (token !== undefined) {
-    config.deleteSessionByToken(token);
-  }
+export function logout<D = unknown>(config: Config<D>, token: string): Cookie {
+  config.deleteSessionByToken(token);
   return logoutCookie(config);
 }
 
-export function login<D = unknown>(config: Config<D>, data: D): string {
+export function login<D = unknown>(config: Config<D>, data: D): Cookie {
   const sessionId = getRandom32bytes();
   const [cookie, token] = createNewToken(config);
   const now = config.dateNow?.() ?? Date.now();
@@ -145,41 +148,25 @@ export function login<D = unknown>(config: Config<D>, data: D): string {
   return cookie;
 }
 
-export function hasCookie<D = unknown>(
-  config: Config<D>,
-  cookieHeader: string | null | undefined,
-): boolean {
-  if (cookieHeader === null || cookieHeader === undefined) {
-    return false;
-  }
-  const cookies = parseCookie(cookieHeader);
-  return config.tokenCookieName in cookies;
-}
-
 export type SessionState<D = unknown> =
   | {
       readonly state: "requireLogout";
       readonly reason: "session not found" | "old session" | "session expired";
-      readonly logoutCookie: string;
+      readonly logoutCookie: Cookie;
     }
   | {
       readonly state: "unauthenticated";
     }
   | ({
       readonly state: "authenticated";
-      readonly tokenRefreshCookie?: string;
+      readonly tokenRefreshCookie?: Cookie;
     } & Session<D>);
 
 export function consume<D = unknown>(
   config: Config<D>,
-  cookieHeader: string | null | undefined,
+  token: string,
 ): SessionState<D> {
-  const reqToken = parseToken(config, cookieHeader);
-  if (reqToken === undefined) {
-    return { state: "unauthenticated" };
-  }
-
-  const session = config.selectSession(reqToken);
+  const session = config.selectSession(token);
   if (session === undefined) {
     // logout the user when the session does not exist
     // the deletion might caused by the session explicitly deleted on the server side
@@ -190,7 +177,7 @@ export function consume<D = unknown>(
     };
   }
 
-  if (reqToken !== session.token1 && reqToken !== session.token2) {
+  if (token !== session.token1 && token !== session.token2) {
     config.deleteSessionById(session.id);
     return {
       state: "requireLogout",
@@ -219,7 +206,7 @@ export function consume<D = unknown>(
     });
   }
 
-  if (session.tokenExpirationDate <= now && session.token1 === reqToken) {
+  if (session.tokenExpirationDate <= now && session.token1 === token) {
     const [cookie, newToken] = createNewToken(config);
     config.createToken({
       sessionId: session.id,

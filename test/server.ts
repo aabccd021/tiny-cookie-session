@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
+import { parse, serialize } from "@tinyhttp/cookie";
 import {
   type Config,
   consume,
   defaultConfig,
-  hasCookie,
   login,
   logout,
 } from "../index.ts";
@@ -107,17 +107,34 @@ const config: Config<SessionData> = {
   },
 };
 
+function parseToken(req: Request): string | undefined {
+  const cookieHeader = req.headers.get("cookie");
+  if (cookieHeader === null || cookieHeader === undefined) {
+    return undefined;
+  }
+  const cookies = parse(cookieHeader);
+  return cookies[config.tokenCookieName];
+}
+
 const server = Bun.serve({
   port: 8080,
   routes: {
     "/": {
       GET: async (req: Request): Promise<Response> => {
-        const cookieHeader = req.headers.get("cookie");
-        const session = consume(config, cookieHeader);
+        const token = parseToken(req);
+        if (token === undefined) {
+          return new Response("<p>Logged out</p>", {
+            headers: { "Content-Type": "text/html" },
+          });
+        }
+        const session = consume(config, token);
         if (session.state === "requireLogout") {
           return new Response(undefined, {
             status: 303,
-            headers: { Location: "/", "Set-Cookie": session.logoutCookie },
+            headers: {
+              Location: "/",
+              "Set-Cookie": serialize(...session.logoutCookie),
+            },
           });
         }
 
@@ -134,11 +151,16 @@ const server = Bun.serve({
           });
         }
 
+        const cookie =
+          session.tokenRefreshCookie !== undefined
+            ? serialize(...session.tokenRefreshCookie)
+            : "";
+
         return new Response(
           `<p>User: ${session.data.username}, Device: ${session.data.deviceName}</p>`,
           {
             headers: {
-              "Set-Cookie": session.tokenRefreshCookie ?? "",
+              "Set-Cookie": cookie,
               "Content-Type": "text/html",
             },
           },
@@ -174,25 +196,20 @@ const server = Bun.serve({
         const loginCookie = login(config, { username, deviceName });
         return new Response(undefined, {
           status: 303,
-          headers: { Location: "/", "Set-Cookie": loginCookie },
+          headers: { Location: "/", "Set-Cookie": serialize(...loginCookie) },
         });
       },
     },
     "/logout": {
       GET: (req): Response => {
-        const cookieHeader = req.headers.get("cookie");
-        const logoutCookie = logout(config, cookieHeader);
+        const token = parseToken(req);
+        if (token === undefined) {
+          throw new Error("Not logged in but trying to logout");
+        }
+        const logoutCookie = logout(config, token);
         return new Response(undefined, {
           status: 303,
-          headers: { Location: "/", "Set-Cookie": logoutCookie },
-        });
-      },
-    },
-    "/has-session-cookie": {
-      GET: (req): Response => {
-        const cookieHeader = req.headers.get("cookie");
-        return new Response(`<p>${hasCookie(config, cookieHeader)}</p>`, {
-          headers: { "Content-Type": "text/html" },
+          headers: { Location: "/", "Set-Cookie": serialize(...logoutCookie) },
         });
       },
     },

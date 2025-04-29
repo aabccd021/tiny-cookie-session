@@ -68,11 +68,6 @@ rec {
     "assert-logged-out"
   ];
 
-  s0002 = mkTest "s0002" s0000 [
-    "goto-has-session-cookie"
-    "assert-has-session-cookie-false"
-  ];
-
   s0003 = mkTest "s0003" s0001 [
     "goto-home"
     "assert-logged-out"
@@ -89,11 +84,6 @@ rec {
     "assert-logged-in-alice-iphone"
   ];
 
-  s0006 = mkTest "s0006" s0004 [
-    "goto-has-session-cookie"
-    "assert-has-session-cookie-true"
-  ];
-
   s0007 = mkTest "s0007" s0004 [
     "goto-logout"
     "assert-logged-out"
@@ -102,11 +92,6 @@ rec {
   s0008 = mkTest "s0008" s0007 [
     "goto-home"
     "assert-logged-out"
-  ];
-
-  s0009 = mkTest "s0009" s0007 [
-    "goto-has-session-cookie"
-    "assert-has-session-cookie-false"
   ];
 
   s0010 = mkTest "s0010" s0007 [
