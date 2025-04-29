@@ -70,9 +70,8 @@ in
 rec {
 
   s0000 = pkgs.runCommand "s0000" { } ''
-    mkdir -p "$out/var/browser1"
+    mkdir -p "$out/var"
     printf "{}" > "$out/var/sessions.json"
-    touch "$out/var/logs.txt"
     printf "%s" "$(date +"%Y-%m-%dT%H:%M:%SZ")" > "$out/var/now.txt"
   '';
 
