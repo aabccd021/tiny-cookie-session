@@ -20,6 +20,6 @@
   "homepage": "https://github.com/aabccd021/simple-cookie-session#readme",
   "files": ["index.ts"],
   "devDependencies": {
-    "@types/bun": "^1.2.10"
+    "@types/bun": "latest"
   }
 }
