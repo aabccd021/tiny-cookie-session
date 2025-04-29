@@ -24,9 +24,9 @@ type Session = {
   data: SessionData;
 };
 
-const sessions: Record<string, Session> = await Bun.file(
-  "./var/sessions.json",
-).json();
+const sessions: Record<string, Session> = JSON.parse(
+  fs.readFileSync("./var/sessions.json", "utf-8"),
+);
 
 const config: Config<SessionData> = {
   ...defaultConfig,
