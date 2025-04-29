@@ -74,7 +74,6 @@ rec {
     printf "{}" > "$out/var/sessions.json"
     touch "$out/var/logs.txt"
     printf "%s" "$(date +"%Y-%m-%dT%H:%M:%SZ")" > "$out/var/now.txt"
-    echo "http://localhost:8080/" > "$out/var/browser1/url.txt"
   '';
 
   s0001 = mkTest "s0001" s0000 [
