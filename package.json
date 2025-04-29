@@ -1,5 +1,5 @@
 {
-  "name": "bun-cookie-session",
+  "name": "simple-cookie-session",
   "description": "Cookie session management for Bun",
   "version": "0.0.1",
   "module": "index.ts",
@@ -8,16 +8,16 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aabccd021/bun-cookie-session.git"
+    "url": "git+https://github.com/aabccd021/simple-cookie-session.git"
   },
   "keywords": ["bun", "web", "cookie", "session"],
   "bugs": {
-    "url": "https://github.com/aabccd021/bun-cookie-session/issues"
+    "url": "https://github.com/aabccd021/simple-cookie-session/issues"
   },
   "scripts": {
     "postinstall": "cd $(dirname $npm_package_json) && nix run .#bun2nix -- --output-file bun.nix"
   },
-  "homepage": "https://github.com/aabccd021/bun-cookie-session#readme",
+  "homepage": "https://github.com/aabccd021/simple-cookie-session#readme",
   "files": ["index.ts"],
   "devDependencies": {
     "@tinyhttp/cookie": "^2.1.1",

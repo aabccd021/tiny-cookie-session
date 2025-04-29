@@ -1,3 +1,3 @@
-# bun-cookie-session
+# simple-cookie-session
 
 Cookie session management for Bun
