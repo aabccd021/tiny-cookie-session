@@ -1,5 +1,3 @@
-import { getRandomValues } from "node:crypto";
-
 export type CookieOptions = {
   readonly encode?: (str: string) => string;
   readonly maxAge?: number;
@@ -100,7 +98,7 @@ function getRandom32bytes(): string {
 
   const entropy = 32;
 
-  const randomArray = getRandomValues(new Uint8Array(entropy));
+  const randomArray = crypto.getRandomValues(new Uint8Array(entropy));
 
   // auth.js uses hex encoding
   // https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/src/lib/utils/web.ts#L108
