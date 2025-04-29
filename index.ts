@@ -5,15 +5,7 @@ export type CookieOptions = {
   readonly path?: string;
   readonly httpOnly?: boolean;
   readonly secure?: boolean;
-  readonly sameSite?:
-    | boolean
-    | "Strict"
-    | "strict"
-    | "Lax"
-    | "lax"
-    | "None"
-    | "none"
-    | string;
+  readonly sameSite?: "strict" | "lax" | "none";
   readonly expires?: Date;
 };
 
@@ -67,7 +59,7 @@ export const defaultConfig: Pick<
 
 const defaultCookieOption: CookieOptions = {
   httpOnly: true,
-  sameSite: "Lax",
+  sameSite: "lax",
   path: "/",
 };
 

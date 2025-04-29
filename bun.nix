@@ -1,11 +1,5 @@
 # Set of Bun packages to install
 {
-  "@tinyhttp/cookie" = {
-    out_path = "@tinyhttp/cookie";
-    name = "@tinyhttp/cookie@2.1.1";
-    url = "https://registry.npmjs.org/@tinyhttp/cookie/-/cookie-2.1.1.tgz";
-    hash = "sha512-h/kL9jY0e0Dvad+/QU3efKZww0aTvZJslaHj3JTPmIPC9Oan9+kYqmh3M6L5JUQRuTJYFK2nzgL2iJtH2S+6dA==";
-  };
   "@types/bun" = {
     out_path = "@types/bun";
     name = "@types/bun@1.2.10";

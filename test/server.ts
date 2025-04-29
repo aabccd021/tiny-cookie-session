@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import { parse, serialize } from "@tinyhttp/cookie";
 import {
   type Config,
   consume,
@@ -107,13 +106,13 @@ const config: Config<SessionData> = {
   },
 };
 
-function parseToken(req: Request): string | undefined {
+function parseToken(req: Request): string | null {
   const cookieHeader = req.headers.get("cookie");
-  if (cookieHeader === null || cookieHeader === undefined) {
-    return undefined;
+  if (cookieHeader === null) {
+    return null;
   }
-  const cookies = parse(cookieHeader);
-  return cookies[config.tokenCookieName];
+  const cookies = new Bun.CookieMap(cookieHeader);
+  return cookies.get(config.tokenCookieName);
 }
 
 const server = Bun.serve({
@@ -122,7 +121,7 @@ const server = Bun.serve({
     "/": {
       GET: async (req: Request): Promise<Response> => {
         const token = parseToken(req);
-        if (token === undefined) {
+        if (token === null) {
           return new Response("<p>Logged out</p>", {
             headers: { "Content-Type": "text/html" },
           });
@@ -134,7 +133,7 @@ const server = Bun.serve({
             status: 303,
             headers: {
               Location: "/",
-              "Set-Cookie": serialize(...session.logoutCookie),
+              "Set-Cookie": new Bun.Cookie(...session.logoutCookie).serialize(),
             },
           });
         }
@@ -154,7 +153,7 @@ const server = Bun.serve({
 
         const cookie =
           session.tokenRefreshCookie !== undefined
-            ? serialize(...session.tokenRefreshCookie)
+            ? new Bun.Cookie(...session.tokenRefreshCookie).serialize()
             : "";
 
         return new Response(
@@ -197,20 +196,27 @@ const server = Bun.serve({
         const loginCookie = login(config, { username, deviceName });
         return new Response(undefined, {
           status: 303,
-          headers: { Location: "/", "Set-Cookie": serialize(...loginCookie) },
+          headers: {
+            Location: "/",
+            "Set-Cookie": new Bun.Cookie(...loginCookie).serialize(),
+          },
         });
       },
     },
     "/logout": {
       GET: (req): Response => {
+        req.cookies;
         const token = parseToken(req);
-        if (token === undefined) {
+        if (token === null) {
           throw new Error("Not logged in but trying to logout");
         }
         const logoutCookie = logout(config, token);
         return new Response(undefined, {
           status: 303,
-          headers: { Location: "/", "Set-Cookie": serialize(...logoutCookie) },
+          headers: {
+            Location: "/",
+            "Set-Cookie": new Bun.Cookie(...logoutCookie).serialize(),
+          },
         });
       },
     },
