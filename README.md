@@ -9,3 +9,4 @@ Cookie session management for Bun
 - control open new tab
 - assert snapshot equal
 - debug print cookie
+- now.txt
