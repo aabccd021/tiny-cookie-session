@@ -1,5 +1,3 @@
-cp -r ./var/netero/browser/1/tab/1 ./var/netero/browser/1/tab/2
-
 goto --url "http://localhost:8080/?sleep=5000" &
 
 sleep 1
