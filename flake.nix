@@ -1,6 +1,14 @@
 {
 
   nixConfig.allow-import-from-derivation = false;
+  nixConfig.extra-substituters = [
+    "https://cache.nixos.org"
+    "https://cache.garnix.io"
+  ];
+  nixConfig.extra-trusted-public-keys = [
+    "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+    "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
+  ];
 
   inputs.nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   inputs.treefmt-nix.url = "github:numtide/treefmt-nix";
@@ -97,7 +105,7 @@
         tsc = tsc;
         biome = biome;
         nodeModules = nodeModules;
-        bun2nix = inputs.bun2nix.defaultPackage.x86_64-linux.bin;
+        bun2nix = inputs.bun2nix.packages.x86_64-linux.default;
       };
 
     in
