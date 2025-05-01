@@ -11,23 +11,29 @@ const rootDir = "./received";
 
 fs.mkdirSync(rootDir, { recursive: true });
 
-type SessionData = {
-  readonly username: string;
-  readonly deviceName: string;
-};
-
 type Session = {
   tokens: string[];
   tokenExpirationDate: number;
   expirationDate: number;
-  data: SessionData;
+  username: string;
+  deviceName: string;
 };
 
 const sessions: Record<string, Session> = JSON.parse(
   fs.readFileSync("./var/sessions.json", "utf-8"),
 );
 
-const config: Config<SessionData> = {
+const config: Config<{
+  select: {
+    readonly username: string;
+    readonly deviceName: string;
+  };
+  create: {
+    readonly requestId: string;
+    readonly username: string;
+    readonly deviceName: string;
+  };
+}> = {
   ...defaultConfig,
   dateNow: (): number => {
     const neteroDir = process.env["NETERO_STATE"];
@@ -59,7 +65,10 @@ const config: Config<SessionData> = {
       token2,
       expirationDate: session.expirationDate,
       tokenExpirationDate: session.tokenExpirationDate,
-      data: session.data,
+      data: {
+        username: session.username,
+        deviceName: session.deviceName,
+      },
     };
   },
   createSession: ({
@@ -70,10 +79,11 @@ const config: Config<SessionData> = {
     data,
   }) => {
     sessions[sessionId] = {
-      data,
       expirationDate: sessionExpirationDate,
       tokenExpirationDate: tokenExpirationDate,
       tokens: [token],
+      username: data.username,
+      deviceName: data.deviceName,
     };
   },
   createToken: ({ sessionId, token, tokenExpirationDate }) => {
@@ -170,15 +180,19 @@ const server = Bun.serve({
 
         const username = formData.get("username");
         if (typeof username !== "string") {
-          return new Response("Invalid username", { status: 400 });
+          throw new Error("Invalid username");
         }
 
         const deviceName = formData.get("deviceName");
         if (typeof deviceName !== "string") {
-          return new Response("Invalid device name", { status: 400 });
+          throw new Error("Invalid deviceName");
         }
 
-        const loginCookie = login(config, { username, deviceName });
+        const loginCookie = login(config, {
+          username,
+          deviceName,
+          requestId: crypto.randomUUID(),
+        });
         return new Response(undefined, {
           status: 303,
           headers: {
