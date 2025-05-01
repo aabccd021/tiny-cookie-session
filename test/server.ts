@@ -116,14 +116,14 @@ const server = Bun.serve({
         }
 
         const session = consume(config, token);
-        if (session.state === "requireLogout") {
+        if (session.requireLogout) {
           return new Response(undefined, {
             status: 303,
             headers: {
               Location: "/",
               "Set-Cookie": new Bun.Cookie(
                 "session_token",
-                ...session.logoutCookie,
+                ...session.cookie,
               ).serialize(),
             },
           });
@@ -136,18 +136,9 @@ const server = Bun.serve({
           );
         }
 
-        if (session.state === "unauthenticated") {
-          return new Response("<p>Logged out</p>", {
-            headers: { "Content-Type": "text/html" },
-          });
-        }
-
         const cookie =
-          session.tokenRefreshCookie !== undefined
-            ? new Bun.Cookie(
-                "session_token",
-                ...session.tokenRefreshCookie,
-              ).serialize()
+          session.cookie !== undefined
+            ? new Bun.Cookie("session_token", ...session.cookie).serialize()
             : "";
 
         return new Response(

@@ -155,16 +155,13 @@ export function login<D = unknown>(
 
 export type SessionState<D = unknown> =
   | {
-      readonly state: "requireLogout";
+      readonly requireLogout: true;
       readonly reason: "session not found" | "old session" | "session expired";
-      readonly logoutCookie: Cookie;
-    }
-  | {
-      readonly state: "unauthenticated";
+      readonly cookie: Cookie;
     }
   | ({
-      readonly state: "authenticated";
-      readonly tokenRefreshCookie?: Cookie;
+      readonly requireLogout: false;
+      readonly cookie?: Cookie;
     } & Session<D>);
 
 type ConsumeConfig =
@@ -185,18 +182,18 @@ export function consume<D = unknown>(
     // logout the user when the session does not exist
     // the deletion might caused by the session explicitly deleted on the server side
     return {
-      state: "requireLogout",
+      requireLogout: true,
       reason: "session not found",
-      logoutCookie: logoutCookie(config),
+      cookie: logoutCookie(config),
     };
   }
 
   if (token !== session.token1 && token !== session.token2) {
     config.deleteSession(token);
     return {
-      state: "requireLogout",
+      requireLogout: true,
       reason: "old session",
-      logoutCookie: logoutCookie(config),
+      cookie: logoutCookie(config),
     };
   }
 
@@ -205,9 +202,9 @@ export function consume<D = unknown>(
   if (session.expirationDate < now) {
     config.deleteSession(token);
     return {
-      state: "requireLogout",
+      requireLogout: true,
       reason: "session expired",
-      logoutCookie: logoutCookie(config),
+      cookie: logoutCookie(config),
     };
   }
 
@@ -229,13 +226,13 @@ export function consume<D = unknown>(
     });
     return {
       ...session,
-      state: "authenticated",
-      tokenRefreshCookie: cookie,
+      requireLogout: false,
+      cookie: cookie,
     };
   }
 
   return {
     ...session,
-    state: "authenticated",
+    requireLogout: false,
   };
 }
