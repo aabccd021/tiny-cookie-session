@@ -11,21 +11,21 @@ export type CookieOptions = {
 
 export type Cookie = readonly [string, CookieOptions];
 
-type Session<D> = {
-  readonly id: string;
-  readonly expirationDate: number;
-  readonly tokenExpirationDate: number;
-  readonly token1: string;
-  readonly token2: string | undefined;
-  readonly data: D;
-};
-
 export interface Config<D = undefined> {
   readonly cookieOption?: CookieOptions;
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
-  readonly selectSession: (params: { token: string }) => Session<D> | undefined;
+  readonly selectSession: (params: { token: string }) =>
+    | {
+        readonly id: string;
+        readonly expirationDate: number;
+        readonly tokenExpirationDate: number;
+        readonly token1: string;
+        readonly token2: string | undefined;
+        readonly data: D;
+      }
+    | undefined;
   readonly createSession: (params: {
     readonly sessionId: string;
     readonly sessionExpirationDate: number;
