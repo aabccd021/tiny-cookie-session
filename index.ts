@@ -1,18 +1,16 @@
 export type CookieOptions = {
-  readonly encode?: (str: string) => string;
   readonly maxAge?: number;
   readonly domain?: string;
   readonly path?: string;
   readonly httpOnly?: boolean;
   readonly secure?: boolean;
   readonly sameSite?: "strict" | "lax" | "none";
-  readonly expires?: Date;
 };
 
 export type Cookie = readonly [string, CookieOptions];
 
 export interface Config<D = undefined> {
-  readonly cookieOption?: CookieOptions;
+  readonly cookieOption?: Omit<CookieOptions, "maxAge">;
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
@@ -55,6 +53,7 @@ const defaultCookieOption: CookieOptions = {
   httpOnly: true,
   sameSite: "lax",
   path: "/",
+  secure: true,
 };
 
 function logoutCookie<D>(config: Config<D>): Cookie {
