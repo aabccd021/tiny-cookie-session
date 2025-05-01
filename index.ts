@@ -60,7 +60,11 @@ const defaultCookieOption: CookieOptions = {
   path: "/",
 };
 
-function logoutCookie<D = unknown>(config: Config<D>): Cookie {
+type LogoutCookieConfig = "tokenCookieName" | "cookieOption";
+
+function logoutCookie<D = unknown>(
+  config: Pick<Config<D>, LogoutCookieConfig>,
+): Cookie {
   return [
     config.tokenCookieName,
     "",
@@ -100,7 +104,14 @@ function getRandom32bytes(): string {
   return Buffer.from(randomArray).toString("hex");
 }
 
-function createNewToken<D = unknown>(config: Config<D>): [Cookie, string] {
+type CreateNewTokenConfig =
+  | "tokenCookieName"
+  | "cookieOption"
+  | "tokenExpiresIn";
+
+function createNewToken<D = unknown>(
+  config: Pick<Config<D>, CreateNewTokenConfig>,
+): [Cookie, string] {
   const token = getRandom32bytes();
 
   const cookie: Cookie = [
@@ -116,12 +127,27 @@ function createNewToken<D = unknown>(config: Config<D>): [Cookie, string] {
   return [cookie, token];
 }
 
-export function logout<D = unknown>(config: Config<D>, token: string): Cookie {
+type LogoutConfig = LogoutCookieConfig | "deleteSessionByToken";
+
+export function logout<D = unknown>(
+  config: Pick<Config<D>, LogoutConfig>,
+  token: string,
+): Cookie {
   config.deleteSessionByToken(token);
   return logoutCookie(config);
 }
 
-export function login<D = unknown>(config: Config<D>, data: D): Cookie {
+type LoginConfig =
+  | CreateNewTokenConfig
+  | "createSession"
+  | "sessionExpiresIn"
+  | "tokenExpiresIn"
+  | "dateNow";
+
+export function login<D = unknown>(
+  config: Pick<Config<D>, LoginConfig>,
+  data: D,
+): Cookie {
   const sessionId = getRandom32bytes();
   const [cookie, token] = createNewToken(config);
   const now = config.dateNow?.() ?? Date.now();
@@ -149,8 +175,18 @@ export type SessionState<D = unknown> =
       readonly tokenRefreshCookie?: Cookie;
     } & Session<D>);
 
+type ConsumeConfig =
+  | LogoutConfig
+  | CreateNewTokenConfig
+  | "selectSession"
+  | "deleteSessionById"
+  | "dateNow"
+  | "sessionExpiresIn"
+  | "setSessionExpirationDate"
+  | "createToken";
+
 export function consume<D = unknown>(
-  config: Config<D>,
+  config: Pick<Config<D>, ConsumeConfig>,
   token: string,
 ): SessionState<D> {
   const session = config.selectSession(token);
