@@ -38,7 +38,7 @@ export interface Config<D = unknown> {
     readonly token: string;
     readonly tokenExpirationDate: number;
   }) => void;
-  readonly deleteSessionByToken: (token: string) => void;
+  readonly deleteSession: (token: string) => void;
   readonly setSessionExpirationDate: (params: {
     readonly sessionId: string;
     readonly sessionExpirationDate: number;
@@ -119,13 +119,13 @@ function createNewToken<D = unknown>(
   return [cookie, token];
 }
 
-type LogoutConfig = LogoutCookieConfig | "deleteSessionByToken";
+type LogoutConfig = LogoutCookieConfig | "deleteSession";
 
 export function logout<D = unknown>(
   config: Pick<Config<D>, LogoutConfig>,
   token: string,
 ): Cookie {
-  config.deleteSessionByToken(token);
+  config.deleteSession(token);
   return logoutCookie(config);
 }
 
@@ -192,7 +192,7 @@ export function consume<D = unknown>(
   }
 
   if (token !== session.token1 && token !== session.token2) {
-    config.deleteSessionByToken(token);
+    config.deleteSession(token);
     return {
       state: "requireLogout",
       reason: "old session",
@@ -203,7 +203,7 @@ export function consume<D = unknown>(
   const now = config.dateNow?.() ?? Date.now();
 
   if (session.expirationDate < now) {
-    config.deleteSessionByToken(token);
+    config.deleteSession(token);
     return {
       state: "requireLogout",
       reason: "session expired",
