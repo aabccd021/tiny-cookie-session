@@ -9,7 +9,7 @@ export type CookieOptions = {
   readonly expires?: Date;
 };
 
-export type Cookie = readonly [string, string, CookieOptions];
+export type Cookie = readonly [string, CookieOptions];
 
 type Session<D = unknown> = {
   readonly id: string;
@@ -22,7 +22,6 @@ type Session<D = unknown> = {
 
 export interface Config<D = unknown> {
   readonly cookieOption?: CookieOptions;
-  readonly tokenCookieName: string;
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
@@ -48,7 +47,6 @@ export interface Config<D = unknown> {
 }
 
 export const defaultConfig = {
-  tokenCookieName: "session_token",
   dateNow: (): number => Date.now(),
   sessionExpiresIn: 30 * 24 * 60 * 60 * 1000,
   tokenExpiresIn: 10 * 60 * 1000,
@@ -60,13 +58,12 @@ const defaultCookieOption: CookieOptions = {
   path: "/",
 };
 
-type LogoutCookieConfig = "tokenCookieName" | "cookieOption";
+type LogoutCookieConfig = "cookieOption";
 
 function logoutCookie<D = unknown>(
   config: Pick<Config<D>, LogoutCookieConfig>,
 ): Cookie {
   return [
-    config.tokenCookieName,
     "",
     {
       ...defaultCookieOption,
@@ -104,10 +101,7 @@ function getRandom32bytes(): string {
   return Buffer.from(randomArray).toString("hex");
 }
 
-type CreateNewTokenConfig =
-  | "tokenCookieName"
-  | "cookieOption"
-  | "tokenExpiresIn";
+type CreateNewTokenConfig = "cookieOption" | "tokenExpiresIn";
 
 function createNewToken<D = unknown>(
   config: Pick<Config<D>, CreateNewTokenConfig>,
@@ -115,7 +109,6 @@ function createNewToken<D = unknown>(
   const token = getRandom32bytes();
 
   const cookie: Cookie = [
-    config.tokenCookieName,
     encodeURIComponent(token),
     {
       ...defaultCookieOption,

@@ -111,7 +111,7 @@ const server = Bun.serve({
   routes: {
     "/": {
       GET: async (req): Promise<Response> => {
-        const token = req.cookies.get(config.tokenCookieName);
+        const token = req.cookies.get("session_token");
         if (token === null) {
           return new Response("<p>Logged out</p>", {
             headers: { "Content-Type": "text/html" },
@@ -124,7 +124,10 @@ const server = Bun.serve({
             status: 303,
             headers: {
               Location: "/",
-              "Set-Cookie": new Bun.Cookie(...session.logoutCookie).serialize(),
+              "Set-Cookie": new Bun.Cookie(
+                "session_token",
+                ...session.logoutCookie,
+              ).serialize(),
             },
           });
         }
@@ -144,7 +147,10 @@ const server = Bun.serve({
 
         const cookie =
           session.tokenRefreshCookie !== undefined
-            ? new Bun.Cookie(...session.tokenRefreshCookie).serialize()
+            ? new Bun.Cookie(
+                "session_token",
+                ...session.tokenRefreshCookie,
+              ).serialize()
             : "";
 
         return new Response(
@@ -189,7 +195,10 @@ const server = Bun.serve({
           status: 303,
           headers: {
             Location: "/",
-            "Set-Cookie": new Bun.Cookie(...loginCookie).serialize(),
+            "Set-Cookie": new Bun.Cookie(
+              "session_token",
+              ...loginCookie,
+            ).serialize(),
           },
         });
       },
@@ -197,7 +206,7 @@ const server = Bun.serve({
     "/logout": {
       GET: (req): Response => {
         req.cookies;
-        const token = req.cookies.get(config.tokenCookieName);
+        const token = req.cookies.get("session_token");
         if (token === null) {
           throw new Error("Not logged in but trying to logout");
         }
@@ -206,7 +215,10 @@ const server = Bun.serve({
           status: 303,
           headers: {
             Location: "/",
-            "Set-Cookie": new Bun.Cookie(...logoutCookie).serialize(),
+            "Set-Cookie": new Bun.Cookie(
+              "session_token",
+              ...logoutCookie,
+            ).serialize(),
           },
         });
       },
