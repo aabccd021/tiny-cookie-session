@@ -94,9 +94,6 @@ const config: Config<SessionData> = {
     const [sessionId] = sessionEntry;
     delete sessions[sessionId];
   },
-  deleteSessionById: (sessionId) => {
-    delete sessions[sessionId];
-  },
   setSessionExpirationDate: ({ sessionId, sessionExpirationDate }) => {
     const session = sessions[sessionId];
     if (session === undefined) {

@@ -39,7 +39,6 @@ export interface Config<D = unknown> {
     readonly tokenExpirationDate: number;
   }) => void;
   readonly deleteSessionByToken: (token: string) => void;
-  readonly deleteSessionById: (sessionId: string) => void;
   readonly setSessionExpirationDate: (params: {
     readonly sessionId: string;
     readonly sessionExpirationDate: number;
@@ -172,7 +171,6 @@ type ConsumeConfig =
   | LogoutConfig
   | CreateNewTokenConfig
   | "selectSession"
-  | "deleteSessionById"
   | "dateNow"
   | "sessionExpiresIn"
   | "setSessionExpirationDate"
@@ -194,7 +192,7 @@ export function consume<D = unknown>(
   }
 
   if (token !== session.token1 && token !== session.token2) {
-    config.deleteSessionById(session.id);
+    config.deleteSessionByToken(token);
     return {
       state: "requireLogout",
       reason: "old session",
@@ -205,7 +203,7 @@ export function consume<D = unknown>(
   const now = config.dateNow?.() ?? Date.now();
 
   if (session.expirationDate < now) {
-    config.deleteSessionById(session.id);
+    config.deleteSessionByToken(token);
     return {
       state: "requireLogout",
       reason: "session expired",
