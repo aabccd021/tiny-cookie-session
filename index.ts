@@ -47,15 +47,12 @@ export interface Config<D = unknown> {
   }) => void;
 }
 
-export const defaultConfig: Pick<
-  Config,
-  "tokenCookieName" | "dateNow" | "sessionExpiresIn" | "tokenExpiresIn"
-> = {
-  tokenCookieName: "access_token",
-  dateNow: () => Date.now(),
+export const defaultConfig = {
+  tokenCookieName: "session_token",
+  dateNow: (): number => Date.now(),
   sessionExpiresIn: 30 * 24 * 60 * 60 * 1000,
   tokenExpiresIn: 10 * 60 * 1000,
-};
+} satisfies Partial<Config>;
 
 const defaultCookieOption: CookieOptions = {
   httpOnly: true,
