@@ -129,7 +129,7 @@ export function login<D>(config: Config<D>, data: D): Cookie {
   return cookie;
 }
 
-export type SessionState<D> =
+export type Session<D> =
   | {
       readonly requireLogout: true;
       readonly reason: "session not found" | "old session" | "session expired";
@@ -149,7 +149,7 @@ export type SessionState<D> =
 export function consumeSession<D>(
   config: Config<D>,
   token: string,
-): SessionState<D> {
+): Session<D> {
   const session = config.selectSession({ token });
   if (session === undefined) {
     // logout the user when the session does not exist
