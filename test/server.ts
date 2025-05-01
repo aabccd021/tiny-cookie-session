@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import {
   type Config,
-  consume,
+  consumeSession,
   defaultConfig,
   login,
   logout,
@@ -115,7 +115,7 @@ const server = Bun.serve({
           });
         }
 
-        const session = consume(config, token);
+        const session = consumeSession(config, token);
         if (session.requireLogout) {
           return new Response(undefined, {
             status: 303,
