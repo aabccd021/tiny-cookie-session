@@ -136,10 +136,16 @@ export type SessionState<D> =
       readonly reason: "session not found" | "old session" | "session expired";
       readonly cookie: Cookie;
     }
-  | ({
+  | {
       readonly requireLogout: false;
       readonly cookie?: Cookie;
-    } & Session<D>);
+      readonly id: string;
+      readonly expirationDate: number;
+      readonly tokenExpirationDate: number;
+      readonly token1: string;
+      readonly token2: string | undefined;
+      readonly data: D;
+    };
 
 export function consumeSession<D>(
   config: Config<D>,
