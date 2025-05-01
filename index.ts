@@ -39,7 +39,7 @@ export interface Config<D = unknown> {
     readonly tokenExpirationDate: number;
   }) => void;
   readonly deleteSession: (params: { token: string }) => void;
-  readonly setSessionExpirationDate: (params: {
+  readonly updateSession: (params: {
     readonly sessionId: string;
     readonly sessionExpirationDate: number;
   }) => void;
@@ -170,7 +170,7 @@ type ConsumeConfig =
   | "selectSession"
   | "dateNow"
   | "sessionExpiresIn"
-  | "setSessionExpirationDate"
+  | "updateSession"
   | "createToken";
 
 export function consume<D = unknown>(
@@ -211,7 +211,7 @@ export function consume<D = unknown>(
   const sessionRefreshDate =
     session.expirationDate - config.sessionExpiresIn / 2;
   if (sessionRefreshDate < now) {
-    config.setSessionExpirationDate({
+    config.updateSession({
       sessionId: session.id,
       sessionExpirationDate: now + config.sessionExpiresIn,
     });

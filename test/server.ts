@@ -94,7 +94,7 @@ const config: Config<SessionData> = {
     const [sessionId] = sessionEntry;
     delete sessions[sessionId];
   },
-  setSessionExpirationDate: ({ sessionId, sessionExpirationDate }) => {
+  updateSession: ({ sessionId, sessionExpirationDate }) => {
     const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error(`Session not found with id: ${sessionId}`);
