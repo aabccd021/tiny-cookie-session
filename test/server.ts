@@ -84,7 +84,7 @@ const config: Config<SessionData> = {
     session.tokens.push(token);
     session.tokenExpirationDate = tokenExpirationDate;
   },
-  deleteSession: (token) => {
+  deleteSession: ({ token }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
       session.tokens.includes(token),
     );
