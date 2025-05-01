@@ -227,7 +227,7 @@ export function consume<D = unknown>(
     return {
       ...session,
       requireLogout: false,
-      cookie: cookie,
+      cookie,
     };
   }
 
