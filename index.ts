@@ -104,7 +104,7 @@ function createNewToken<D>(config: Config<D>): [Cookie, string] {
     {
       ...defaultCookieOption,
       ...config.cookieOption,
-      maxAge: config.tokenExpiresIn,
+      maxAge: 365 * 24 * 60 * 60 * 1000,
     },
   ];
 
