@@ -25,7 +25,7 @@ export interface Config<D = unknown> {
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
-  readonly selectSession: (token: string) => Session<D> | undefined;
+  readonly selectSession: (params: { token: string }) => Session<D> | undefined;
   readonly createSession: (params: {
     readonly sessionId: string;
     readonly sessionExpirationDate: number;
@@ -177,7 +177,7 @@ export function consume<D = unknown>(
   config: Pick<Config<D>, ConsumeConfig>,
   token: string,
 ): SessionState<D> {
-  const session = config.selectSession(token);
+  const session = config.selectSession({ token });
   if (session === undefined) {
     // logout the user when the session does not exist
     // the deletion might caused by the session explicitly deleted on the server side

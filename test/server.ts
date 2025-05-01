@@ -38,7 +38,7 @@ const config: Config<SessionData> = {
     return new Date(epochNowStr).getTime();
   },
   sessionExpiresIn: 5 * 60 * 60 * 1000,
-  selectSession: (token) => {
+  selectSession: ({ token }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
       session.tokens.includes(token),
     );
