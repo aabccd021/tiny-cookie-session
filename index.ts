@@ -19,8 +19,8 @@ export type Session =
       readonly requireLogout: false;
       readonly cookie?: Cookie;
       readonly id: string;
-      readonly expirationDate: number;
-      readonly tokenExpirationDate: number;
+      readonly expDate: number;
+      readonly tokenExpDate: number;
       readonly token1: string;
       readonly token2: string | undefined;
       readonly userId: string;
@@ -34,8 +34,8 @@ export type Config = {
   readonly selectSession: (params: { token: string }) =>
     | {
         readonly id: string;
-        readonly expirationDate: number;
-        readonly tokenExpirationDate: number;
+        readonly expDate: number;
+        readonly tokenExpDate: number;
         readonly token1: string;
         readonly token2: string | undefined;
         readonly userId: string;
@@ -43,20 +43,20 @@ export type Config = {
     | undefined;
   readonly createSession: (params: {
     readonly sessionId: string;
-    readonly sessionExpirationDate: number;
+    readonly sessionExpDate: number;
     readonly token: string;
-    readonly tokenExpirationDate: number;
+    readonly tokenExpDate: number;
     readonly userId: string;
   }) => void;
   readonly createToken: (params: {
     readonly sessionId: string;
     readonly token: string;
-    readonly tokenExpirationDate: number;
+    readonly tokenExpDate: number;
   }) => void;
   readonly deleteSession: (params: { token: string }) => void;
   readonly updateSession: (params: {
     readonly sessionId: string;
-    readonly sessionExpirationDate: number;
+    readonly sessionExpDate: number;
   }) => void;
 };
 
@@ -140,8 +140,8 @@ export function login(config: Config, userId: string): Cookie {
     sessionId,
     token,
     userId,
-    sessionExpirationDate: now + config.sessionExpiresIn,
-    tokenExpirationDate: now + config.tokenExpiresIn,
+    sessionExpDate: now + config.sessionExpiresIn,
+    tokenExpDate: now + config.tokenExpiresIn,
   });
   return cookie;
 }
@@ -169,7 +169,7 @@ export function consumeSession(config: Config, token: string): Session {
 
   const now = config.dateNow?.() ?? Date.now();
 
-  if (session.expirationDate < now) {
+  if (session.expDate < now) {
     config.deleteSession({ token });
     return {
       requireLogout: true,
@@ -178,21 +178,20 @@ export function consumeSession(config: Config, token: string): Session {
     };
   }
 
-  const sessionRefreshDate =
-    session.expirationDate - config.sessionExpiresIn / 2;
+  const sessionRefreshDate = session.expDate - config.sessionExpiresIn / 2;
   if (sessionRefreshDate < now) {
     config.updateSession({
       sessionId: session.id,
-      sessionExpirationDate: now + config.sessionExpiresIn,
+      sessionExpDate: now + config.sessionExpiresIn,
     });
   }
 
-  if (session.tokenExpirationDate <= now && session.token1 === token) {
+  if (session.tokenExpDate <= now && session.token1 === token) {
     const [cookie, newToken] = createNewToken(config);
     config.createToken({
       sessionId: session.id,
       token: newToken,
-      tokenExpirationDate: now + config.tokenExpiresIn,
+      tokenExpDate: now + config.tokenExpiresIn,
     });
     return {
       ...session,

@@ -13,8 +13,8 @@ fs.mkdirSync(rootDir, { recursive: true });
 
 type Session = {
   tokens: string[];
-  tokenExpirationDate: number;
-  expirationDate: number;
+  tokenExpDate: number;
+  expDate: number;
   userId: string;
 };
 
@@ -52,32 +52,32 @@ const config: Config = {
       id,
       token1,
       token2,
-      expirationDate: session.expirationDate,
-      tokenExpirationDate: session.tokenExpirationDate,
+      expDate: session.expDate,
+      tokenExpDate: session.tokenExpDate,
       userId: session.userId,
     };
   },
   createSession: ({
     sessionId,
-    sessionExpirationDate,
+    sessionExpDate,
     token,
-    tokenExpirationDate,
+    tokenExpDate,
     userId,
   }) => {
     sessions[sessionId] = {
-      expirationDate: sessionExpirationDate,
-      tokenExpirationDate: tokenExpirationDate,
+      expDate: sessionExpDate,
+      tokenExpDate: tokenExpDate,
       tokens: [token],
       userId,
     };
   },
-  createToken: ({ sessionId, token, tokenExpirationDate }) => {
+  createToken: ({ sessionId, token, tokenExpDate }) => {
     const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error(`Session not found with id: ${sessionId}`);
     }
     session.tokens.push(token);
-    session.tokenExpirationDate = tokenExpirationDate;
+    session.tokenExpDate = tokenExpDate;
   },
   deleteSession: ({ token }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
@@ -89,12 +89,12 @@ const config: Config = {
     const [sessionId] = sessionEntry;
     delete sessions[sessionId];
   },
-  updateSession: ({ sessionId, sessionExpirationDate }) => {
+  updateSession: ({ sessionId, sessionExpDate }) => {
     const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error(`Session not found with id: ${sessionId}`);
     }
-    session.expirationDate = sessionExpirationDate;
+    session.expDate = sessionExpDate;
   },
 };
 

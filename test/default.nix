@@ -281,7 +281,7 @@ rec {
     "time-advance-11m"
   ];
 
-  # assert everyone is logged out after the victim consumed the session twice 10 minutes apart (access token expiration time)
+  # assert everyone is logged out after the victim consumed the session twice 10 minutes apart (access token exp time)
   s0053 = mkTest "s0053" s0043 [
     "goto-home"
     "time-advance-10m"
@@ -319,7 +319,7 @@ rec {
 
   ];
 
-  # assert everyone is logged out after the attacker consumed the session twice 10 minutes apart (access token expiration time)
+  # assert everyone is logged out after the attacker consumed the session twice 10 minutes apart (access token exp time)
   s0054 = mkTest "s0054" s0043 [
     "main-browser2"
     "goto-home"
