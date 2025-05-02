@@ -75,13 +75,13 @@ rec {
 
   s0004 = mkTest "s0004" s0001 [
     "goto-login"
-    "submit-login-alice-iphone"
-    "assert-logged-in-alice-iphone"
+    "submit-login-alice"
+    "assert-logged-in-alice"
   ];
 
   s0005 = mkTest "s0005" s0004 [
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0007 = mkTest "s0007" s0004 [
@@ -96,8 +96,8 @@ rec {
 
   s0010 = mkTest "s0010" s0007 [
     "goto-login"
-    "submit-login-bob-desktop"
-    "assert-logged-in-bob-desktop"
+    "submit-login-bob"
+    "assert-logged-in-bob"
   ];
 
   s0011 = mkTest "s0011" s0010 [
@@ -107,13 +107,13 @@ rec {
 
   s0012 = mkTest "s0012" s0011 [
     "goto-login"
-    "submit-login-alice-iphone"
-    "assert-logged-in-alice-iphone"
+    "submit-login-alice"
+    "assert-logged-in-alice"
   ];
 
   s0013 = mkTest "s0013" s0012 [
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0016 = mkTest "s0016" s0004 [
@@ -125,19 +125,19 @@ rec {
   s0017 = mkTest "s0017" s0004 [
     "time-advance-2h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0018 = mkTest "s0018" s0004 [
     "time-advance-3h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0019 = mkTest "s0019" s0004 [
     "time-advance-4h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0020 = mkTest "s0020" s0018 [
@@ -153,14 +153,14 @@ rec {
 
   s0022 = mkTest "s0022" s0021 [
     "goto-login"
-    "submit-login-alice-iphone"
-    "assert-logged-in-alice-iphone"
+    "submit-login-alice"
+    "assert-logged-in-alice"
   ];
 
   s0023 = mkTest "s0023" s0022 [
     "time-advance-4h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0024 = mkTest "s0024" s0022 [
@@ -172,31 +172,31 @@ rec {
   s0025 = mkTest "s0025" s0019 [
     "time-advance-3h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0026 = mkTest "s0026" s0018 [
     "time-advance-2h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0027 = mkTest "s0027" s0026 [
     "time-advance-3h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0028 = mkTest "s0028" s0027 [
     "time-advance-2h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0029 = mkTest "s0029" s0028 [
     "time-advance-3h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0030 = mkTest "s0030" s0029 [
@@ -206,8 +206,8 @@ rec {
 
   s0031 = mkTest "s0031" s0030 [
     "goto-login"
-    "submit-login-alice-iphone"
-    "assert-logged-in-alice-iphone"
+    "submit-login-alice"
+    "assert-logged-in-alice"
   ];
 
   s0032 = mkTest "s0032" s0031 [
@@ -219,31 +219,31 @@ rec {
   s0033 = mkTest "s0033" s0029 [
     "time-advance-2h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0034 = mkTest "s0034" s0033 [
     "time-advance-2h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0035 = mkTest "s0035" s0034 [
     "time-advance-2h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0036 = mkTest "s0036" s0035 [
     "time-advance-2h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0037 = mkTest "s0037" s0036 [
     "time-advance-2h"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0038 = mkTest "s0038" s0037 [
@@ -367,7 +367,7 @@ rec {
   s0051 = mkTest "s0051" s0050 [
     "time-advance-1m"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0057 = mkTest "s0057" s0034 [
@@ -378,7 +378,7 @@ rec {
   s0058 = mkTest "s0058" s0057 [
     "time-advance-1m"
     "goto-home"
-    "assert-logged-in-alice-iphone"
+    "assert-logged-in-alice"
   ];
 
   s0060 = mkTest "s0060" s0034 [

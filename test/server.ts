@@ -15,25 +15,14 @@ type Session = {
   tokens: string[];
   tokenExpirationDate: number;
   expirationDate: number;
-  username: string;
-  deviceName: string;
+  userId: string;
 };
 
 const sessions: Record<string, Session> = JSON.parse(
   fs.readFileSync("./var/sessions.json", "utf-8"),
 );
 
-const config: Config<{
-  select: {
-    readonly username: string;
-    readonly deviceName: string;
-  };
-  create: {
-    readonly requestId: string;
-    readonly username: string;
-    readonly deviceName: string;
-  };
-}> = {
+const config: Config = {
   ...defaultConfig,
   dateNow: (): number => {
     const neteroDir = process.env["NETERO_STATE"];
@@ -65,10 +54,7 @@ const config: Config<{
       token2,
       expirationDate: session.expirationDate,
       tokenExpirationDate: session.tokenExpirationDate,
-      data: {
-        username: session.username,
-        deviceName: session.deviceName,
-      },
+      userId: session.userId,
     };
   },
   createSession: ({
@@ -76,14 +62,13 @@ const config: Config<{
     sessionExpirationDate,
     token,
     tokenExpirationDate,
-    data,
+    userId,
   }) => {
     sessions[sessionId] = {
       expirationDate: sessionExpirationDate,
       tokenExpirationDate: tokenExpirationDate,
       tokens: [token],
-      username: data.username,
-      deviceName: data.deviceName,
+      userId,
     };
   },
   createToken: ({ sessionId, token, tokenExpirationDate }) => {
@@ -151,23 +136,19 @@ const server = Bun.serve({
             ? new Bun.Cookie("session_token", ...session.cookie).serialize()
             : "";
 
-        return new Response(
-          `<p>User: ${session.data.username}, Device: ${session.data.deviceName}</p>`,
-          {
-            headers: {
-              "Set-Cookie": cookie,
-              "Content-Type": "text/html",
-            },
+        return new Response(`<p>User: ${session.userId}</p>`, {
+          headers: {
+            "Set-Cookie": cookie,
+            "Content-Type": "text/html",
           },
-        );
+        });
       },
     },
     "/login": {
       GET: (): Response => {
         return new Response(
           `<form method="POST">
-            <input type="text" name="username" placeholder="username" />
-            <input type="text" name="deviceName" placeholder="deviceName" />
+            <input type="text" name="userId" placeholder="userId" />
             <button type="submit">Login</button>
           </form>`,
           {
@@ -178,21 +159,12 @@ const server = Bun.serve({
       POST: async (req): Promise<Response> => {
         const formData = await req.formData();
 
-        const username = formData.get("username");
-        if (typeof username !== "string") {
-          throw new Error("Invalid username");
+        const userId = formData.get("userId");
+        if (typeof userId !== "string") {
+          throw new Error("Invalid userId");
         }
 
-        const deviceName = formData.get("deviceName");
-        if (typeof deviceName !== "string") {
-          throw new Error("Invalid deviceName");
-        }
-
-        const loginCookie = login(config, {
-          username,
-          deviceName,
-          requestId: crypto.randomUUID(),
-        });
+        const loginCookie = login(config, userId);
         return new Response(undefined, {
           status: 303,
           headers: {

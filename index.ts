@@ -9,12 +9,7 @@ export type CookieOptions = {
 
 export type Cookie = readonly [string, CookieOptions];
 
-export type SessionData = {
-  readonly select: unknown;
-  readonly create: unknown;
-};
-
-export type Session<D extends SessionData> =
+export type Session =
   | {
       readonly requireLogout: true;
       readonly reason: "session not found" | "old session" | "session expired";
@@ -28,10 +23,10 @@ export type Session<D extends SessionData> =
       readonly tokenExpirationDate: number;
       readonly token1: string;
       readonly token2: string | undefined;
-      readonly data: D["select"];
+      readonly userId: string;
     };
 
-export type Config<D extends SessionData> = {
+export type Config = {
   readonly cookieOption?: Omit<CookieOptions, "maxAge">;
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
@@ -43,7 +38,7 @@ export type Config<D extends SessionData> = {
         readonly tokenExpirationDate: number;
         readonly token1: string;
         readonly token2: string | undefined;
-        readonly data: D["select"];
+        readonly userId: string;
       }
     | undefined;
   readonly createSession: (params: {
@@ -51,7 +46,7 @@ export type Config<D extends SessionData> = {
     readonly sessionExpirationDate: number;
     readonly token: string;
     readonly tokenExpirationDate: number;
-    readonly data: D["create"];
+    readonly userId: string;
   }) => void;
   readonly createToken: (params: {
     readonly sessionId: string;
@@ -78,7 +73,7 @@ const defaultCookieOption: CookieOptions = {
   secure: true,
 };
 
-function logoutCookie<D extends SessionData>(config: Config<D>): Cookie {
+function logoutCookie(config: Config): Cookie {
   return [
     "",
     {
@@ -117,9 +112,7 @@ function getRandom32bytes(): string {
   return Buffer.from(randomArray).toString("hex");
 }
 
-function createNewToken<D extends SessionData>(
-  config: Config<D>,
-): [Cookie, string] {
+function createNewToken(config: Config): [Cookie, string] {
   const token = getRandom32bytes();
 
   const cookie: Cookie = [
@@ -134,35 +127,26 @@ function createNewToken<D extends SessionData>(
   return [cookie, token];
 }
 
-export function logout<D extends SessionData = SessionData>(
-  config: Config<D>,
-  token: string,
-): Cookie {
+export function logout(config: Config, token: string): Cookie {
   config.deleteSession({ token });
   return logoutCookie(config);
 }
 
-export function login<D extends SessionData = SessionData>(
-  config: Config<D>,
-  data: D["create"],
-): Cookie {
+export function login(config: Config, userId: string): Cookie {
   const sessionId = getRandom32bytes();
   const [cookie, token] = createNewToken(config);
   const now = config.dateNow?.() ?? Date.now();
   config.createSession({
     sessionId,
     token,
-    data,
+    userId,
     sessionExpirationDate: now + config.sessionExpiresIn,
     tokenExpirationDate: now + config.tokenExpiresIn,
   });
   return cookie;
 }
 
-export function consumeSession<D extends SessionData = SessionData>(
-  config: Config<D>,
-  token: string,
-): Session<D> {
+export function consumeSession(config: Config, token: string): Session {
   const session = config.selectSession({ token });
   if (session === undefined) {
     // logout the user when the session does not exist

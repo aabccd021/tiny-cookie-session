@@ -5,9 +5,9 @@ sleep 1
 tab_switch "2"
 goto --url "http://localhost:8080/"
 assert_response_code_equal 200
-assert_query_returns_equal "//p" "User: alice, Device: iphone"
+assert_query_returns_equal "//p" "User: alice"
 tab_switch "1"
 
 wait
 assert_response_code_equal 200
-assert_query_returns_equal "//p" "User: alice, Device: iphone"
+assert_query_returns_equal "//p" "User: alice"
