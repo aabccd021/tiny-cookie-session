@@ -1,7 +1,7 @@
 {
   "name": "simple-cookie-session",
   "description": "Cookie session management for Bun",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "module": "index.ts",
   "type": "module",
   "author": "aabccd021",

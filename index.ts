@@ -19,7 +19,7 @@ export type Session =
       readonly requireLogout: false;
       readonly cookie?: Cookie;
       readonly id: string;
-      readonly expDate: number;
+      readonly exp: number;
       readonly tokenExp: number;
       readonly token1: string;
       readonly token2: string | undefined;
@@ -34,7 +34,7 @@ export type Config = {
   readonly selectSession: (params: { token: string }) =>
     | {
         readonly id: string;
-        readonly expDate: number;
+        readonly exp: number;
         readonly tokenExp: number;
         readonly token1: string;
         readonly token2: string | undefined;
@@ -169,7 +169,7 @@ export function consumeSession(config: Config, token: string): Session {
 
   const now = config.dateNow?.() ?? Date.now();
 
-  if (session.expDate < now) {
+  if (session.exp < now) {
     config.deleteSession({ token });
     return {
       requireLogout: true,
@@ -178,7 +178,7 @@ export function consumeSession(config: Config, token: string): Session {
     };
   }
 
-  const sessionRefreshDate = session.expDate - config.sessionExpiresIn / 2;
+  const sessionRefreshDate = session.exp - config.sessionExpiresIn / 2;
   if (sessionRefreshDate < now) {
     config.updateSession({
       sessionId: session.id,
@@ -240,7 +240,7 @@ export function testConfig(config: Config): void {
       throw new Error("Session not found");
     }
 
-    if (session.expDate !== start + config.sessionExpiresIn) {
+    if (session.exp !== start + config.sessionExpiresIn) {
       throw new Error("Session expired");
     }
 
@@ -276,7 +276,7 @@ export function testConfig(config: Config): void {
       throw new Error("Session not found");
     }
 
-    if (session.expDate !== start + 3000 + config.sessionExpiresIn) {
+    if (session.exp !== start + 3000 + config.sessionExpiresIn) {
       throw new Error("Session expired");
     }
 

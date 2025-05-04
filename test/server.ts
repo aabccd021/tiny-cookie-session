@@ -15,7 +15,7 @@ fs.mkdirSync(rootDir, { recursive: true });
 type Session = {
   tokens: string[];
   tokenExp: number;
-  expDate: number;
+  exp: number;
   userId: string;
 };
 
@@ -53,14 +53,14 @@ const config: Config = {
       id,
       token1,
       token2,
-      expDate: session.expDate,
+      exp: session.exp,
       tokenExp: session.tokenExp,
       userId: session.userId,
     };
   },
   createSession: ({ sessionId, sessionExp, token, tokenExp, userId }) => {
     sessions[sessionId] = {
-      expDate: sessionExp,
+      exp: sessionExp,
       tokenExp: tokenExp,
       tokens: [token],
       userId,
@@ -89,7 +89,7 @@ const config: Config = {
     if (session === undefined) {
       throw new Error(`Session not found with id: ${sessionId}`);
     }
-    session.expDate = sessionExp;
+    session.exp = sessionExp;
   },
 };
 
