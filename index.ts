@@ -205,3 +205,107 @@ export function consumeSession(config: Config, token: string): Session {
     requireLogout: false,
   };
 }
+
+export function testConfig(config: Config): void {
+  const sessionId = getRandom32bytes();
+  const token1 = getRandom32bytes();
+  const token2 = getRandom32bytes();
+  const token3 = getRandom32bytes();
+  const userId = getRandom32bytes();
+
+  const start = Date.now();
+  config.createSession({
+    sessionId,
+    token: token3,
+    userId,
+    sessionExpDate: start + config.sessionExpiresIn,
+    tokenExpDate: start + config.tokenExpiresIn,
+  });
+
+  config.createToken({
+    sessionId,
+    token: token2,
+    tokenExpDate: start + 1000 + config.tokenExpiresIn,
+  });
+
+  config.createToken({
+    sessionId,
+    token: token1,
+    tokenExpDate: start + 2000 + config.tokenExpiresIn,
+  });
+
+  for (const token of [token1, token2, token3]) {
+    const session = config.selectSession({ token });
+    if (session === undefined) {
+      throw new Error("Session not found");
+    }
+
+    if (session.expDate !== start + config.sessionExpiresIn) {
+      throw new Error("Session expired");
+    }
+
+    if (session.tokenExpDate !== start + 2000 + config.tokenExpiresIn) {
+      throw new Error("Token expired");
+    }
+
+    if (session.id !== sessionId) {
+      throw new Error("Session id does not match");
+    }
+
+    if (session.userId !== userId) {
+      throw new Error("Session user id does not match");
+    }
+
+    if (session.token1 !== token1) {
+      throw new Error("Session token1 does not match");
+    }
+
+    if (session.token2 !== token2) {
+      throw new Error("Session token2 does not match");
+    }
+  }
+
+  config.updateSession({
+    sessionId,
+    sessionExpDate: start + 3000 + config.sessionExpiresIn,
+  });
+
+  for (const token of [token1, token2, token3]) {
+    const session = config.selectSession({ token });
+    if (session === undefined) {
+      throw new Error("Session not found");
+    }
+
+    if (session.expDate !== start + 3000 + config.sessionExpiresIn) {
+      throw new Error("Session expired");
+    }
+
+    if (session.tokenExpDate !== start + 2000 + config.tokenExpiresIn) {
+      throw new Error("Token expired");
+    }
+
+    if (session.id !== sessionId) {
+      throw new Error("Session id does not match");
+    }
+
+    if (session.userId !== userId) {
+      throw new Error("Session user id does not match");
+    }
+
+    if (session.token1 !== token1) {
+      throw new Error("Session token1 does not match");
+    }
+
+    if (session.token2 !== token2) {
+      throw new Error("Session token2 does not match");
+    }
+  }
+
+  config.deleteSession({ token: token1 });
+  for (const token of [token1, token2, token3]) {
+    const session = config.selectSession({ token });
+    if (session !== undefined) {
+      throw new Error("Session should not be found");
+    }
+  }
+}

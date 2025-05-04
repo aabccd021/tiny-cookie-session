@@ -5,6 +5,7 @@ import {
   defaultConfig,
   login,
   logout,
+  testConfig,
 } from "../index.ts";
 
 const rootDir = "./received";
@@ -97,6 +98,8 @@ const config: Config = {
     session.expDate = sessionExpDate;
   },
 };
+
+testConfig(config);
 
 const server = Bun.serve({
   port: 8080,
