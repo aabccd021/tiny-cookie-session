@@ -20,7 +20,7 @@ export type Session =
       readonly cookie?: Cookie;
       readonly id: string;
       readonly expDate: number;
-      readonly tokenExpDate: number;
+      readonly tokenExp: number;
       readonly token1: string;
       readonly token2: string | undefined;
       readonly userId: string;
@@ -35,7 +35,7 @@ export type Config = {
     | {
         readonly id: string;
         readonly expDate: number;
-        readonly tokenExpDate: number;
+        readonly tokenExp: number;
         readonly token1: string;
         readonly token2: string | undefined;
         readonly userId: string;
@@ -43,20 +43,20 @@ export type Config = {
     | undefined;
   readonly createSession: (params: {
     readonly sessionId: string;
-    readonly sessionExpDate: number;
+    readonly sessionExp: number;
     readonly token: string;
-    readonly tokenExpDate: number;
+    readonly tokenExp: number;
     readonly userId: string;
   }) => void;
   readonly createToken: (params: {
     readonly sessionId: string;
     readonly token: string;
-    readonly tokenExpDate: number;
+    readonly tokenExp: number;
   }) => void;
   readonly deleteSession: (params: { token: string }) => void;
   readonly updateSession: (params: {
     readonly sessionId: string;
-    readonly sessionExpDate: number;
+    readonly sessionExp: number;
   }) => void;
 };
 
@@ -140,8 +140,8 @@ export function login(config: Config, userId: string): Cookie {
     sessionId,
     token,
     userId,
-    sessionExpDate: now + config.sessionExpiresIn,
-    tokenExpDate: now + config.tokenExpiresIn,
+    sessionExp: now + config.sessionExpiresIn,
+    tokenExp: now + config.tokenExpiresIn,
   });
   return cookie;
 }
@@ -182,16 +182,16 @@ export function consumeSession(config: Config, token: string): Session {
   if (sessionRefreshDate < now) {
     config.updateSession({
       sessionId: session.id,
-      sessionExpDate: now + config.sessionExpiresIn,
+      sessionExp: now + config.sessionExpiresIn,
     });
   }
 
-  if (session.tokenExpDate <= now && session.token1 === token) {
+  if (session.tokenExp <= now && session.token1 === token) {
     const [cookie, newToken] = createNewToken(config);
     config.createToken({
       sessionId: session.id,
       token: newToken,
-      tokenExpDate: now + config.tokenExpiresIn,
+      tokenExp: now + config.tokenExpiresIn,
     });
     return {
       ...session,
@@ -218,20 +218,20 @@ export function testConfig(config: Config): void {
     sessionId,
     token: token3,
     userId,
-    sessionExpDate: start + config.sessionExpiresIn,
-    tokenExpDate: start + config.tokenExpiresIn,
+    sessionExp: start + config.sessionExpiresIn,
+    tokenExp: start + config.tokenExpiresIn,
   });
 
   config.createToken({
     sessionId,
     token: token2,
-    tokenExpDate: start + 1000 + config.tokenExpiresIn,
+    tokenExp: start + 1000 + config.tokenExpiresIn,
   });
 
   config.createToken({
     sessionId,
     token: token1,
-    tokenExpDate: start + 2000 + config.tokenExpiresIn,
+    tokenExp: start + 2000 + config.tokenExpiresIn,
   });
 
   for (const token of [token1, token2, token3]) {
@@ -244,7 +244,7 @@ export function testConfig(config: Config): void {
       throw new Error("Session expired");
     }
 
-    if (session.tokenExpDate !== start + 2000 + config.tokenExpiresIn) {
+    if (session.tokenExp !== start + 2000 + config.tokenExpiresIn) {
       throw new Error("Token expired");
     }
 
@@ -267,7 +267,7 @@ export function testConfig(config: Config): void {
 
   config.updateSession({
     sessionId,
-    sessionExpDate: start + 3000 + config.sessionExpiresIn,
+    sessionExp: start + 3000 + config.sessionExpiresIn,
   });
 
   for (const token of [token1, token2, token3]) {
@@ -280,7 +280,7 @@ export function testConfig(config: Config): void {
       throw new Error("Session expired");
     }
 
-    if (session.tokenExpDate !== start + 2000 + config.tokenExpiresIn) {
+    if (session.tokenExp !== start + 2000 + config.tokenExpiresIn) {
       throw new Error("Token expired");
     }
 
