@@ -93,7 +93,7 @@ const config: Config = {
   },
 };
 
-testConfig(config);
+testConfig(config, { userId: "testUserId" });
 
 const server = Bun.serve({
   port: 8080,
@@ -161,7 +161,7 @@ const server = Bun.serve({
           throw new Error("Invalid userId");
         }
 
-        const loginCookie = login(config, userId);
+        const loginCookie = login(config, { userId });
         return new Response(undefined, {
           status: 303,
           headers: {
@@ -181,7 +181,7 @@ const server = Bun.serve({
         if (token === null) {
           throw new Error("Not logged in but trying to logout");
         }
-        const logoutCookie = logout(config, token);
+        const logoutCookie = logout(config, { token });
         return new Response(undefined, {
           status: 303,
           headers: {

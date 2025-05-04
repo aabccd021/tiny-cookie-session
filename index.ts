@@ -127,12 +127,12 @@ function createNewToken(config: Config): [Cookie, string] {
   return [cookie, token];
 }
 
-export function logout(config: Config, token: string): Cookie {
+export function logout(config: Config, { token }: { token: string }): Cookie {
   config.deleteSession({ token });
   return logoutCookie(config);
 }
 
-export function login(config: Config, userId: string): Cookie {
+export function login(config: Config, { userId }: { userId: string }): Cookie {
   const sessionId = getRandom32bytes();
   const [cookie, token] = createNewToken(config);
   const now = config.dateNow?.() ?? Date.now();
@@ -206,12 +206,14 @@ export function consumeSession(config: Config, token: string): Session {
   };
 }
 
-export function testConfig(config: Config): void {
+export function testConfig(
+  config: Config,
+  { userId }: { userId: string },
+): void {
   const sessionId = getRandom32bytes();
   const token1 = getRandom32bytes();
   const token2 = getRandom32bytes();
   const token3 = getRandom32bytes();
-  const userId = getRandom32bytes();
 
   const start = Date.now();
   config.createSession({
