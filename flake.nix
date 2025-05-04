@@ -107,7 +107,7 @@
       checks.x86_64-linux = packages;
 
       packages.x86_64-linux = packages // {
-        gcroot-all = pkgs.linkFarm "gcroot-all" packages;
+        gcroot = pkgs.linkFarm "gcroot" packages;
       };
 
       formatter.x86_64-linux = treefmtEval.config.build.wrapper;
