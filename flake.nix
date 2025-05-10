@@ -37,6 +37,8 @@
         settings.global.excludes = [ "LICENSE" "*.ico" ];
       };
 
+      formatter = treefmtEval.config.build.wrapper;
+
       tsc = pkgs.runCommand "tsc" { } ''
         cp -L ${./index.ts} ./index.ts
         cp -L ${./tsconfig.json} ./tsconfig.json
@@ -79,7 +81,7 @@
         '';
       };
 
-      devShell = pkgs.mkShellNoCC {
+      devShells.default = pkgs.mkShellNoCC {
         buildInputs = [
           pkgs.bun
           pkgs.biome
@@ -90,11 +92,11 @@
         ];
       };
 
-      packages = tests // {
+      packages = tests // devShells // {
         publish = publish;
         tests = pkgs.linkFarm "tests" tests;
-        devShell = devShell;
         formatting = treefmtEval.config.build.check self;
+        formatter = formatter;
         tsc = tsc;
         biome = biome;
         nodeModules = nodeModules;
@@ -104,14 +106,13 @@
     in
     {
 
-      checks.x86_64-linux = packages;
-
       packages.x86_64-linux = packages // {
         gcroot = pkgs.linkFarm "gcroot" packages;
       };
 
-      formatter.x86_64-linux = treefmtEval.config.build.wrapper;
+      checks.x86_64-linux = packages;
+      formatter.x86_64-linux = formatter;
+      devShells.x86_64-linux = devShells;
 
-      devShells.x86_64-linux.default = devShell;
     };
 }
