@@ -24,6 +24,8 @@
         ];
       };
 
+      lib = pkgs.lib;
+
       nodeModules = inputs.bun2nix.lib.x86_64-linux.mkBunNodeModules (import ./bun.nix);
 
       treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs {
@@ -44,7 +46,7 @@
         cp -L ${./tsconfig.json} ./tsconfig.json
         cp -Lr ${./test} ./test
         cp -Lr ${nodeModules}/node_modules ./node_modules
-        ${pkgs.typescript}/bin/tsc
+        ${lib.getExe pkgs.typescript}
         touch $out
       '';
 
@@ -55,7 +57,7 @@
         cp -L ${./package.json} ./package.json
         cp -L ${./tsconfig.json} ./tsconfig.json
         cp -Lr ${nodeModules}/node_modules ./node_modules
-        ${pkgs.biome}/bin/biome check --error-on-warnings
+        ${lib.getExe pkgs.biome} check --error-on-warnings
         touch $out
       '';
 
