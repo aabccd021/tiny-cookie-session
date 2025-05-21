@@ -15,45 +15,48 @@ let
     mv server "$out/bin/server"
   '';
 
-  mkTest = name: prev: actions: pkgs.runCommand "${name}-test"
-    {
-      buildInputs = [
-        pkgs.netero-test
-        server
-      ];
-    } ''
-    cp -Lr ${prev}/* ./var
-    chmod -R u=rwX,g=,o= ./var
+  mkTest =
+    name: prev: actions:
+    pkgs.runCommand "${name}-test"
+      {
+        buildInputs = [
+          pkgs.netero-test
+          server
+        ];
+      }
+      ''
+        cp -Lr ${prev}/* ./var
+        chmod -R u=rwX,g=,o= ./var
 
-    export NETERO_STATE="$PWD/var/netero"
-    netero_init
+        export NETERO_STATE="$PWD/var/netero"
+        netero_init
 
-    mkdir -p ./run/netero
-    mkfifo ./ready.fifo
-    mkfifo ./exit.fifo
+        mkdir -p ./run/netero
+        mkfifo ./ready.fifo
+        mkfifo ./exit.fifo
 
-    server 2>&1 | while IFS= read -r line; do
-      printf '\033[34m[server]\033[0m %s\n' "$line"
-    done &
-    server_pid=$!
+        server 2>&1 | while IFS= read -r line; do
+          printf '\033[34m[server]\033[0m %s\n' "$line"
+        done &
+        server_pid=$!
 
-    cat ./ready.fifo >/dev/null
+        cat ./ready.fifo >/dev/null
 
-    counter=1
-    for actionName in ${builtins.concatStringsSep " " actions}; do
-      printf '\033[35mclient > %02d-%s\033[0m>\n' "$counter" "$actionName"
-      bash -euo pipefail ${./actions}/"$actionName.sh" 2>&1 | while IFS= read -r line; do
-        printf '\033[35mclient > %02d-%s\033[0m> %s\n' "$counter" "$actionName" "$line"
-      done
-      counter=$((counter + 1))
-    done
+        counter=1
+        for actionName in ${builtins.concatStringsSep " " actions}; do
+          printf '\033[35mclient > %02d-%s\033[0m>\n' "$counter" "$actionName"
+          bash -euo pipefail ${./actions}/"$actionName.sh" 2>&1 | while IFS= read -r line; do
+            printf '\033[35mclient > %02d-%s\033[0m> %s\n' "$counter" "$actionName" "$line"
+          done
+          counter=$((counter + 1))
+        done
 
-    echo >./exit.fifo
-    wait "$server_pid"
+        echo >./exit.fifo
+        wait "$server_pid"
 
-    mkdir "$out"
-    mv ./var "$out/var"
-  '';
+        mkdir "$out"
+        mv ./var "$out/var"
+      '';
 
 in
 rec {
@@ -402,6 +405,4 @@ rec {
 
   ];
 
-
 }
-
