@@ -12,9 +12,7 @@
     let
       pkgs = import inputs.nixpkgs {
         system = "x86_64-linux";
-        overlays = [
-          inputs.netero-test.overlays.default
-        ];
+        overlays = [ inputs.netero-test.overlays.default ];
       };
 
       lib = pkgs.lib;
@@ -25,6 +23,7 @@
         projectRootFile = "flake.nix";
         programs.prettier.enable = true;
         programs.nixfmt.enable = true;
+        programs.nixfmt.strict = true;
         programs.biome.enable = true;
         programs.shfmt.enable = true;
         settings.formatter.prettier.priority = 1;
