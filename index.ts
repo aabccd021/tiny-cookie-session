@@ -31,7 +31,7 @@ export type Config = {
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
-  readonly selectSession: (params: { tokenHash: string }) =>
+  readonly selectSession: (params: { tokenHash: string }) => Promise<
     | {
         readonly id: string;
         readonly exp: number;
@@ -40,24 +40,25 @@ export type Config = {
         readonly token2Hash: string | undefined;
         readonly userId: string;
       }
-    | undefined;
+    | undefined
+  >;
   readonly createSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: number;
     readonly tokenHash: string;
     readonly tokenExp: number;
     readonly userId: string;
-  }) => void;
+  }) => Promise<void>;
   readonly createToken: (params: {
     readonly sessionId: string;
     readonly tokenHash: string;
     readonly tokenExp: number;
-  }) => void;
-  readonly deleteSession: (params: { tokenHash: string }) => void;
+  }) => Promise<void>;
+  readonly deleteSession: (params: { tokenHash: string }) => Promise<void>;
   readonly updateSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: number;
-  }) => void;
+  }) => Promise<void>;
 };
 
 export const defaultConfig = {
@@ -159,7 +160,7 @@ export async function consumeSession(
   token: string,
 ): Promise<Session> {
   const tokenHash = await hashToken(token);
-  const session = config.selectSession({ tokenHash });
+  const session = await config.selectSession({ tokenHash });
 
   // Logout the user when the session does not exist.
   // This way admin can force logout users by deleting the session.
@@ -184,7 +185,7 @@ export async function consumeSession(
   // 3. User does request bar with `cookie: token=old_token`.
   // 4. Response foo with `set-cookie: token=new_token`.
   if (tokenHash !== session.token1Hash && tokenHash !== session.token2Hash) {
-    config.deleteSession({ tokenHash });
+    await config.deleteSession({ tokenHash });
     return {
       requireLogout: true,
       reason: "old token",
@@ -274,7 +275,7 @@ export async function testConfig(
 
   for (const token of [token1Hash, token2Hash, token3]) {
     const tokenHash = await hashToken(token);
-    const session = config.selectSession({ tokenHash });
+    const session = await config.selectSession({ tokenHash });
     if (session === undefined) {
       throw new Error("Session not found");
     }
@@ -311,7 +312,7 @@ export async function testConfig(
 
   for (const token of [token1Hash, token2Hash, token3]) {
     const tokenHash = await hashToken(token);
-    const session = config.selectSession({ tokenHash });
+    const session = await config.selectSession({ tokenHash });
     if (session === undefined) {
       throw new Error("Session not found");
     }

@@ -34,7 +34,7 @@ const config: Config = {
     return new Date(epochNowStr).getTime();
   },
   sessionExpiresIn: 5 * 60 * 60 * 1000,
-  selectSession: ({ tokenHash }) => {
+  selectSession: async ({ tokenHash }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
       session.tokenHashes.includes(tokenHash),
     );
@@ -65,6 +65,7 @@ const config: Config = {
       tokenHashes: [tokenHash],
       userId,
     };
+    return Promise.resolve();
   },
   createToken: ({ sessionId, tokenHash, tokenExp }) => {
     const session = sessions[sessionId];
@@ -73,6 +74,7 @@ const config: Config = {
     }
     session.tokenHashes.push(tokenHash);
     session.tokenExp = tokenExp;
+    return Promise.resolve();
   },
   deleteSession: ({ tokenHash }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
@@ -83,6 +85,7 @@ const config: Config = {
     }
     const [sessionId] = sessionEntry;
     delete sessions[sessionId];
+    return Promise.resolve();
   },
   updateSession: ({ sessionId, sessionExp }) => {
     const session = sessions[sessionId];
@@ -90,6 +93,7 @@ const config: Config = {
       throw new Error(`Session not found with id: ${sessionId}`);
     }
     session.exp = sessionExp;
+    return Promise.resolve();
   },
 };
 
