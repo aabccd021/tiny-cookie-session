@@ -42,14 +42,14 @@ export type Config = {
       }
     | undefined
   >;
-  readonly createSession: (params: {
+  readonly insertSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: number;
     readonly tokenHash: string;
     readonly tokenExp: number;
     readonly userId: string;
   }) => Promise<void>;
-  readonly createToken: (params: {
+  readonly insertToken: (params: {
     readonly sessionId: string;
     readonly tokenHash: string;
     readonly tokenExp: number;
@@ -145,7 +145,7 @@ export async function login(
   const sessionId = crypto.randomUUID();
   const { cookie, tokenHash } = await createNewTokenCookie(config);
   const now = config.dateNow?.() ?? Date.now();
-  await config.createSession({
+  await config.insertSession({
     sessionId,
     tokenHash,
     userId,
@@ -225,7 +225,7 @@ export async function consumeSession(
   // the attacker can keep using the session.
   if (session.tokenExp <= now && session.token1Hash === tokenHash) {
     const { cookie, tokenHash } = await createNewTokenCookie(config);
-    await config.createToken({
+    await config.insertToken({
       sessionId: session.id,
       tokenHash,
       tokenExp: now + config.tokenExpiresIn,
@@ -253,7 +253,7 @@ export async function testConfig(
   const token3 = createRandom256BitHex();
 
   const start = Date.now();
-  await config.createSession({
+  await config.insertSession({
     sessionId,
     tokenHash: token3,
     userId,
@@ -261,13 +261,13 @@ export async function testConfig(
     tokenExp: start + config.tokenExpiresIn,
   });
 
-  await config.createToken({
+  await config.insertToken({
     sessionId,
     tokenHash: token2Hash,
     tokenExp: start + 1000 + config.tokenExpiresIn,
   });
 
-  await config.createToken({
+  await config.insertToken({
     sessionId,
     tokenHash: token1Hash,
     tokenExp: start + 2000 + config.tokenExpiresIn,

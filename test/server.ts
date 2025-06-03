@@ -58,7 +58,7 @@ const config: Config = {
       userId: session.userId,
     };
   },
-  createSession: ({ sessionId, sessionExp, tokenHash, tokenExp, userId }) => {
+  insertSession: ({ sessionId, sessionExp, tokenHash, tokenExp, userId }) => {
     sessions[sessionId] = {
       exp: sessionExp,
       tokenExp: tokenExp,
@@ -67,7 +67,7 @@ const config: Config = {
     };
     return Promise.resolve();
   },
-  createToken: ({ sessionId, tokenHash, tokenExp }) => {
+  insertToken: ({ sessionId, tokenHash, tokenExp }) => {
     const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error(`Session not found with id: ${sessionId}`);
