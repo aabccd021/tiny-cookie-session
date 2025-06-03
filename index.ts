@@ -243,6 +243,12 @@ export async function consumeSession(
   };
 }
 
+// Test wether the configuration is impelmented correctly.
+//
+// If you implementation is not correct, or throws an error, this function might leave some dirty
+// data in the database.
+// So ideally run this function in an environment as similar as possible to production, but not in
+// production.
 export async function testConfig(
   config: Config,
   { userId }: { userId: string },
