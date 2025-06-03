@@ -124,7 +124,7 @@ export function logout(config: Config, { token }: { token: string }): Cookie {
 }
 
 export function login(config: Config, { userId }: { userId: string }): Cookie {
-  const sessionId = createRandom256BitHex();
+  const sessionId = crypto.randomUUID();
   const [cookie, token] = createNewTokenCookie(config);
   const now = config.dateNow?.() ?? Date.now();
   config.createSession({
@@ -155,6 +155,8 @@ export function consumeSession(config: Config, token: string): Session {
   //
   // Two latest tokens are valid instead of just one, to handle race conditions which might occurs
   // with valid request from the user.
+  // So ideally `tokenExpiresIn` is set a value as short as possible, but still longer than the
+  // longest request time expected.
   // Example:
   // 1. User does request foo with `cookie: token=old_token`.
   // 2. Token `new_token` is created on database, and is the latest token.
