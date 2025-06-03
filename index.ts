@@ -222,7 +222,7 @@ export function testConfig(
   config: Config,
   { userId }: { userId: string },
 ): void {
-  const sessionId = createRandom256BitHex();
+  const sessionId = crypto.randomUUID();
   const token1 = createRandom256BitHex();
   const token2 = createRandom256BitHex();
   const token3 = createRandom256BitHex();
