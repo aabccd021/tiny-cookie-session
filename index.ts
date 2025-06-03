@@ -183,18 +183,25 @@ export async function consumeSession(
     };
   }
 
-  // Old access token (neither latest or second latest) was used, which means the cookie was stolen,
-  // so logout the session and logout both user and attacker.
+  // Old access token (neither latest or second latest) was used, which means the cookie was stolen.
+  // So we will delete the session, which will log out both the user and the attacker.
   //
-  // Two latest tokens are valid instead of just one, to handle race conditions which might occurs
-  // with valid request from the user.
-  // So ideally `tokenExpiresIn` is set a value as short as possible, but still longer than the
-  // longest request time expected.
+  // Two latest tokens can be used to identifying a session, instead of just the latest token.
+  // We do this to prevent the user from being logged out while doing completely valid requests,
+  // but on certain race conditions.
+  //
   // Example:
   // 1. User does request foo with `cookie: token=old_token`.
   // 2. Token `new_token` is created on database, and is the latest token.
   // 3. User does request bar with `cookie: token=old_token`.
-  // 4. Response foo with `set-cookie: token=new_token`.
+  // 4. Response foo sent with `set-cookie: token=new_token`.
+  //
+  // Above example is a valid scenario that might happen, but will log out the user if we only use
+  // the latest token to identify the session.
+  //
+  // Ideally `tokenExpiresIn` is set to a duration as short as possible, but still longer than the
+  // longest request time. More precisely, it's a time between when a request is initiated and when
+  // the new token is set as a cookie.
   if (tokenHash !== session.token1Hash && tokenHash !== session.token2Hash) {
     await config.deleteSession({ tokenHash });
     return {
