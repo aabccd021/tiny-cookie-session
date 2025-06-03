@@ -211,7 +211,6 @@ export async function consumeSession(
 
   const now = config.dateNow?.() ?? Date.now();
 
-  // Session expired, so logout the session.
   if (session.exp < now) {
     await config.deleteSession({ tokenHash });
     return {
@@ -221,11 +220,8 @@ export async function consumeSession(
     };
   }
 
-  // Only give new access token if token is not expired and it is the last token.
-  // This way only either the user or the attacker can aquire the new token.
-  //
-  // Known vulnerability: as long as the token is newest, and session (not token) is not expired,
-  // the attacker can keep using the session.
+  // Set-Cookie to new access token only if the requested token is the latest one.
+  // This way only one of the user or the attacker can acquire the new token.
   if (session.tokenExp <= now && session.token1Hash === tokenHash) {
     const { cookie, tokenHash } = await createNewTokenCookie(config);
     await config.insertTokenAndUpdateSession({
