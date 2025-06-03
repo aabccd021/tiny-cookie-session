@@ -121,6 +121,8 @@ async function createNewTokenCookie(config: Config): Promise<{
   return { cookie, tokenHash };
 }
 
+// An access token needs to be hashed before storing it in the database.
+// This way when the database is compromised, the attacker cannot use the access tokens directly.
 export async function hashToken(token: string): Promise<string> {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -217,6 +219,9 @@ export async function consumeSession(
 
   // Only give new access token if token is not expired and it is the last token.
   // This way only either the user or the attacker can aquire the new token.
+  //
+  // Known vulnerability: as long as the token is newest, and session (not token) is not expired,
+  // the attacker can keep using the session.
   if (session.tokenExp <= now && session.token1Hash === tokenHash) {
     const { cookie, tokenHash } = await createNewTokenCookie(config);
     config.createToken({
