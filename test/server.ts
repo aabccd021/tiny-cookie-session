@@ -13,7 +13,7 @@ const rootDir = "./received";
 fs.mkdirSync(rootDir, { recursive: true });
 
 type Session = {
-  tokens: string[];
+  tokenHashes: string[];
   tokenExp: number;
   exp: number;
   userId: string;
@@ -34,52 +34,52 @@ const config: Config = {
     return new Date(epochNowStr).getTime();
   },
   sessionExpiresIn: 5 * 60 * 60 * 1000,
-  selectSession: ({ token }) => {
+  selectSession: ({ tokenHash }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
-      session.tokens.includes(token),
+      session.tokenHashes.includes(tokenHash),
     );
     if (sessionEntry === undefined) {
       return undefined;
     }
     const [id, session] = sessionEntry;
 
-    const token1 = session.tokens.at(-1);
-    if (token1 === undefined) {
+    const token1Hash = session.tokenHashes.at(-1);
+    if (token1Hash === undefined) {
       return undefined;
     }
 
-    const token2 = session.tokens.at(-2);
+    const token2Hash = session.tokenHashes.at(-2);
     return {
       id,
-      token1,
-      token2,
+      token1Hash,
+      token2Hash,
       exp: session.exp,
       tokenExp: session.tokenExp,
       userId: session.userId,
     };
   },
-  createSession: ({ sessionId, sessionExp, token, tokenExp, userId }) => {
+  createSession: ({ sessionId, sessionExp, tokenHash, tokenExp, userId }) => {
     sessions[sessionId] = {
       exp: sessionExp,
       tokenExp: tokenExp,
-      tokens: [token],
+      tokenHashes: [tokenHash],
       userId,
     };
   },
-  createToken: ({ sessionId, token, tokenExp }) => {
+  createToken: ({ sessionId, tokenHash, tokenExp }) => {
     const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error(`Session not found with id: ${sessionId}`);
     }
-    session.tokens.push(token);
+    session.tokenHashes.push(tokenHash);
     session.tokenExp = tokenExp;
   },
-  deleteSession: ({ token }) => {
+  deleteSession: ({ tokenHash }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
-      session.tokens.includes(token),
+      session.tokenHashes.includes(tokenHash),
     );
     if (sessionEntry === undefined) {
-      throw new Error(`Session not found with token: ${token}`);
+      throw new Error(`Session not found with token: ${tokenHash}`);
     }
     const [sessionId] = sessionEntry;
     delete sessions[sessionId];
@@ -107,7 +107,7 @@ const server = Bun.serve({
           });
         }
 
-        const session = consumeSession(config, token);
+        const session = await consumeSession(config, token);
         if (session.requireLogout) {
           return new Response(undefined, {
             status: 303,
@@ -161,7 +161,7 @@ const server = Bun.serve({
           throw new Error("Invalid userId");
         }
 
-        const loginCookie = login(config, { userId });
+        const loginCookie = await login(config, { userId });
         return new Response(undefined, {
           status: 303,
           headers: {
@@ -175,13 +175,13 @@ const server = Bun.serve({
       },
     },
     "/logout": {
-      GET: (req): Response => {
+      GET: async (req): Promise<Response> => {
         req.cookies;
         const token = req.cookies.get("session_token");
         if (token === null) {
           throw new Error("Not logged in but trying to logout");
         }
-        const logoutCookie = logout(config, { token });
+        const logoutCookie = await logout(config, { token });
         return new Response(undefined, {
           status: 303,
           headers: {

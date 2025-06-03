@@ -21,8 +21,8 @@ export type Session =
       readonly id: string;
       readonly exp: number;
       readonly tokenExp: number;
-      readonly token1: string;
-      readonly token2: string | undefined;
+      readonly token1Hash: string;
+      readonly token2Hash: string | undefined;
       readonly userId: string;
     };
 
@@ -31,29 +31,29 @@ export type Config = {
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
-  readonly selectSession: (params: { token: string }) =>
+  readonly selectSession: (params: { tokenHash: string }) =>
     | {
         readonly id: string;
         readonly exp: number;
         readonly tokenExp: number;
-        readonly token1: string;
-        readonly token2: string | undefined;
+        readonly token1Hash: string;
+        readonly token2Hash: string | undefined;
         readonly userId: string;
       }
     | undefined;
   readonly createSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: number;
-    readonly token: string;
+    readonly tokenHash: string;
     readonly tokenExp: number;
     readonly userId: string;
   }) => void;
   readonly createToken: (params: {
     readonly sessionId: string;
-    readonly token: string;
+    readonly tokenHash: string;
     readonly tokenExp: number;
   }) => void;
-  readonly deleteSession: (params: { token: string }) => void;
+  readonly deleteSession: (params: { tokenHash: string }) => void;
   readonly updateSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: number;
@@ -99,12 +99,15 @@ function logoutCookie(config: Config): Cookie {
 const entropyBits = 256;
 
 function createRandom256BitHex(): string {
-  const randomArray = crypto.getRandomValues(new Uint8Array(entropyBits / 8));
-  return Buffer.from(randomArray).toString("hex");
+  return crypto.getRandomValues(new Uint8Array(entropyBits / 8)).toHex();
 }
 
-function createNewTokenCookie(config: Config): [Cookie, string] {
+async function createNewTokenCookie(config: Config): Promise<{
+  readonly cookie: Cookie;
+  readonly tokenHash: string;
+}> {
   const token = createRandom256BitHex();
+  const tokenHash = await hashToken(token);
 
   const cookie: Cookie = [
     encodeURIComponent(token),
@@ -115,21 +118,33 @@ function createNewTokenCookie(config: Config): [Cookie, string] {
     },
   ];
 
-  return [cookie, token];
+  return { cookie, tokenHash };
 }
 
-export function logout(config: Config, { token }: { token: string }): Cookie {
-  config.deleteSession({ token });
+export async function hashToken(token: string): Promise<string> {
+  const data = new TextEncoder().encode(token);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return new Uint8Array(hashBuffer).toHex();
+}
+
+export async function logout(
+  config: Config,
+  { token }: { token: string },
+): Promise<Cookie> {
+  config.deleteSession({ tokenHash: await hashToken(token) });
   return logoutCookie(config);
 }
 
-export function login(config: Config, { userId }: { userId: string }): Cookie {
+export async function login(
+  config: Config,
+  { userId }: { userId: string },
+): Promise<Cookie> {
   const sessionId = crypto.randomUUID();
-  const [cookie, token] = createNewTokenCookie(config);
+  const { cookie, tokenHash } = await createNewTokenCookie(config);
   const now = config.dateNow?.() ?? Date.now();
   config.createSession({
     sessionId,
-    token,
+    tokenHash,
     userId,
     sessionExp: now + config.sessionExpiresIn,
     tokenExp: now + config.tokenExpiresIn,
@@ -137,8 +152,12 @@ export function login(config: Config, { userId }: { userId: string }): Cookie {
   return cookie;
 }
 
-export function consumeSession(config: Config, token: string): Session {
-  const session = config.selectSession({ token });
+export async function consumeSession(
+  config: Config,
+  token: string,
+): Promise<Session> {
+  const tokenHash = await hashToken(token);
+  const session = config.selectSession({ tokenHash });
 
   // Logout the user when the session does not exist.
   // This way admin can force logout users by deleting the session.
@@ -162,8 +181,8 @@ export function consumeSession(config: Config, token: string): Session {
   // 2. Token `new_token` is created on database, and is the latest token.
   // 3. User does request bar with `cookie: token=old_token`.
   // 4. Response foo with `set-cookie: token=new_token`.
-  if (token !== session.token1 && token !== session.token2) {
-    config.deleteSession({ token });
+  if (tokenHash !== session.token1Hash && tokenHash !== session.token2Hash) {
+    config.deleteSession({ tokenHash });
     return {
       requireLogout: true,
       reason: "old token",
@@ -175,7 +194,7 @@ export function consumeSession(config: Config, token: string): Session {
 
   // Session expired, so logout the session.
   if (session.exp < now) {
-    config.deleteSession({ token });
+    config.deleteSession({ tokenHash });
     return {
       requireLogout: true,
       reason: "session expired",
@@ -198,11 +217,11 @@ export function consumeSession(config: Config, token: string): Session {
 
   // Only give new access token if token is not expired and it is the last token.
   // This way only either the user or the attacker can aquire the new token.
-  if (session.tokenExp <= now && session.token1 === token) {
-    const [cookie, newToken] = createNewTokenCookie(config);
+  if (session.tokenExp <= now && session.token1Hash === tokenHash) {
+    const { cookie, tokenHash } = await createNewTokenCookie(config);
     config.createToken({
       sessionId: session.id,
-      token: newToken,
+      tokenHash,
       tokenExp: now + config.tokenExpiresIn,
     });
     return {
@@ -218,19 +237,19 @@ export function consumeSession(config: Config, token: string): Session {
   };
 }
 
-export function testConfig(
+export async function testConfig(
   config: Config,
   { userId }: { userId: string },
-): void {
+): Promise<void> {
   const sessionId = crypto.randomUUID();
-  const token1 = createRandom256BitHex();
-  const token2 = createRandom256BitHex();
+  const token1Hash = createRandom256BitHex();
+  const token2Hash = createRandom256BitHex();
   const token3 = createRandom256BitHex();
 
   const start = Date.now();
   config.createSession({
     sessionId,
-    token: token3,
+    tokenHash: token3,
     userId,
     sessionExp: start + config.sessionExpiresIn,
     tokenExp: start + config.tokenExpiresIn,
@@ -238,18 +257,19 @@ export function testConfig(
 
   config.createToken({
     sessionId,
-    token: token2,
+    tokenHash: token2Hash,
     tokenExp: start + 1000 + config.tokenExpiresIn,
   });
 
   config.createToken({
     sessionId,
-    token: token1,
+    tokenHash: token1Hash,
     tokenExp: start + 2000 + config.tokenExpiresIn,
   });
 
-  for (const token of [token1, token2, token3]) {
-    const session = config.selectSession({ token });
+  for (const token of [token1Hash, token2Hash, token3]) {
+    const tokenHash = await hashToken(token);
+    const session = config.selectSession({ tokenHash });
     if (session === undefined) {
       throw new Error("Session not found");
     }
@@ -270,12 +290,12 @@ export function testConfig(
       throw new Error("Session user id does not match");
     }
 
-    if (session.token1 !== token1) {
-      throw new Error("Session token1 does not match");
+    if (session.token1Hash !== token1Hash) {
+      throw new Error("Session token1Hash does not match");
     }
 
-    if (session.token2 !== token2) {
-      throw new Error("Session token2 does not match");
+    if (session.token2Hash !== token2Hash) {
+      throw new Error("Session token2Hash does not match");
     }
   }
 
@@ -284,8 +304,9 @@ export function testConfig(
     sessionExp: start + 3000 + config.sessionExpiresIn,
   });
 
-  for (const token of [token1, token2, token3]) {
-    const session = config.selectSession({ token });
+  for (const token of [token1Hash, token2Hash, token3]) {
+    const tokenHash = await hashToken(token);
+    const session = config.selectSession({ tokenHash });
     if (session === undefined) {
       throw new Error("Session not found");
     }
@@ -306,18 +327,19 @@ export function testConfig(
       throw new Error("Session user id does not match");
     }
 
-    if (session.token1 !== token1) {
-      throw new Error("Session token1 does not match");
+    if (session.token1Hash !== token1Hash) {
+      throw new Error("Session token1Hash does not match");
     }
 
-    if (session.token2 !== token2) {
-      throw new Error("Session token2 does not match");
+    if (session.token2Hash !== token2Hash) {
+      throw new Error("Session token2Hash does not match");
     }
   }
 
-  config.deleteSession({ token: token1 });
-  for (const token of [token1, token2, token3]) {
-    const session = config.selectSession({ token });
+  config.deleteSession({ tokenHash: token1Hash });
+  for (const token of [token1Hash, token2Hash, token3]) {
+    const tokenHash = await hashToken(token);
+    const session = config.selectSession({ tokenHash });
     if (session !== undefined) {
       throw new Error("Session should not be found");
     }
