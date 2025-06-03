@@ -12,7 +12,7 @@ export type Cookie = readonly [string, CookieOptions];
 export type Session =
   | {
       readonly requireLogout: true;
-      readonly reason: "session not found" | "old session" | "session expired";
+      readonly reason: "session not found" | "old token" | "session expired";
       readonly cookie: Cookie;
     }
   | {
@@ -84,36 +84,27 @@ function logoutCookie(config: Config): Cookie {
   ];
 }
 
-function getRandom32bytes(): string {
-  // remix uses 8 bytes (64 bits) of entropy
-  // https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L45
+// remix uses 64 bits of entropy
+// https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L45
+//
+// owasp recommends at least 64 bits of entropy
+// https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length
+//
+// lucia uses 160 bits of entropy in their sqlite example
+// https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
+//
+// auth.js uses 256 bits of entropy in their test
+// https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/test/actions/session.test.ts#L146
+//
+const entropyBits = 256;
 
-  // owasp recommends at least 8 bytes (64 bits) of entropy
-  // https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length
-
-  // lucia uses 20 bytes (160 bits) of entropy in their sqlite example
-  // https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
-
-  // auth.js uses 32 bytes (256 bits) of entropy in their test
-  // https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/test/actions/session.test.ts#L146
-
-  const entropy = 32;
-
-  const randomArray = crypto.getRandomValues(new Uint8Array(entropy));
-
-  // auth.js uses hex encoding
-  // https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/src/lib/utils/web.ts#L108
-
-  // remix uses hex encoding
-  // https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L50
-
-  // lucia uses base32 encoding
-  // https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
+function createRandom256BitHex(): string {
+  const randomArray = crypto.getRandomValues(new Uint8Array(entropyBits / 8));
   return Buffer.from(randomArray).toString("hex");
 }
 
-function createNewToken(config: Config): [Cookie, string] {
-  const token = getRandom32bytes();
+function createNewTokenCookie(config: Config): [Cookie, string] {
+  const token = createRandom256BitHex();
 
   const cookie: Cookie = [
     encodeURIComponent(token),
@@ -133,8 +124,8 @@ export function logout(config: Config, { token }: { token: string }): Cookie {
 }
 
 export function login(config: Config, { userId }: { userId: string }): Cookie {
-  const sessionId = getRandom32bytes();
-  const [cookie, token] = createNewToken(config);
+  const sessionId = createRandom256BitHex();
+  const [cookie, token] = createNewTokenCookie(config);
   const now = config.dateNow?.() ?? Date.now();
   config.createSession({
     sessionId,
@@ -148,9 +139,10 @@ export function login(config: Config, { userId }: { userId: string }): Cookie {
 
 export function consumeSession(config: Config, token: string): Session {
   const session = config.selectSession({ token });
+
+  // Logout the user when the session does not exist.
+  // This way admin can force logout users by deleting the session.
   if (session === undefined) {
-    // logout the user when the session does not exist
-    // the deletion might caused by the session explicitly deleted on the server side
     return {
       requireLogout: true,
       reason: "session not found",
@@ -158,17 +150,28 @@ export function consumeSession(config: Config, token: string): Session {
     };
   }
 
+  // Old access token (neither latest or second latest) was used, which means the cookie was stolen,
+  // so logout the session and logout both user and attacker.
+  //
+  // Two latest tokens are valid instead of just one, to handle race conditions which might occurs
+  // with valid request from the user.
+  // Example:
+  // 1. User does request foo with `cookie: token=old_token`.
+  // 2. Token `new_token` is created on database, and is the latest token.
+  // 3. User does request bar with `cookie: token=old_token`.
+  // 4. Response foo with `set-cookie: token=new_token`.
   if (token !== session.token1 && token !== session.token2) {
     config.deleteSession({ token });
     return {
       requireLogout: true,
-      reason: "old session",
+      reason: "old token",
       cookie: logoutCookie(config),
     };
   }
 
   const now = config.dateNow?.() ?? Date.now();
 
+  // Session expired, so logout the session.
   if (session.exp < now) {
     config.deleteSession({ token });
     return {
@@ -178,6 +181,11 @@ export function consumeSession(config: Config, token: string): Session {
     };
   }
 
+  // If sessionExpiresIn is set to 4 weeks,
+  // - If user didn't use the session for 4 weeks, session will expire
+  // - On the first two weeks, expiration date is never extended
+  // - On any point on the last two weeks, if user used the session,
+  //   expiration date will be extended to that point + 4 weeks
   const sessionRefreshDate = session.exp - config.sessionExpiresIn / 2;
   if (sessionRefreshDate < now) {
     config.updateSession({
@@ -186,8 +194,10 @@ export function consumeSession(config: Config, token: string): Session {
     });
   }
 
+  // Only give new access token if token is not expired and it is the last token.
+  // This way only either the user or the attacker can aquire the new token.
   if (session.tokenExp <= now && session.token1 === token) {
-    const [cookie, newToken] = createNewToken(config);
+    const [cookie, newToken] = createNewTokenCookie(config);
     config.createToken({
       sessionId: session.id,
       token: newToken,
@@ -210,10 +220,10 @@ export function testConfig(
   config: Config,
   { userId }: { userId: string },
 ): void {
-  const sessionId = getRandom32bytes();
-  const token1 = getRandom32bytes();
-  const token2 = getRandom32bytes();
-  const token3 = getRandom32bytes();
+  const sessionId = createRandom256BitHex();
+  const token1 = createRandom256BitHex();
+  const token2 = createRandom256BitHex();
+  const token3 = createRandom256BitHex();
 
   const start = Date.now();
   config.createSession({
