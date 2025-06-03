@@ -71,14 +71,14 @@ const config: Config = {
     sessionId,
     sessionExp,
     newTokenHash,
-    newTokenExp,
+    tokenExp,
   }) => {
     const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error(`Session not found with id: ${sessionId}`);
     }
     session.tokenHashes.push(newTokenHash);
-    session.tokenExp = newTokenExp;
+    session.tokenExp = tokenExp;
     session.exp = sessionExp;
     return Promise.resolve();
   },

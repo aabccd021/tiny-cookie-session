@@ -52,8 +52,8 @@ export type Config = {
   readonly insertTokenAndUpdateSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: number;
+    readonly tokenExp: number;
     readonly newTokenHash: string;
-    readonly newTokenExp: number;
   }) => Promise<void>;
   readonly deleteSession: (params: { tokenHash: string }) => Promise<void>;
 };
@@ -232,7 +232,7 @@ export async function consumeSession(
       sessionId: session.id,
       sessionExp: now + config.sessionExpiresIn,
       newTokenHash: tokenHash,
-      newTokenExp: now + config.tokenExpiresIn,
+      tokenExp: now + config.tokenExpiresIn,
     });
     return {
       ...session,
@@ -275,14 +275,14 @@ export async function testConfig(
     sessionId,
     sessionExp: start + config.sessionExpiresIn,
     newTokenHash: token2Hash,
-    newTokenExp: start + 1000 + config.tokenExpiresIn,
+    tokenExp: start + 1000 + config.tokenExpiresIn,
   });
 
   await config.insertTokenAndUpdateSession({
     sessionId,
     sessionExp: start + config.sessionExpiresIn,
     newTokenHash: token1Hash,
-    newTokenExp: start + 2000 + config.tokenExpiresIn,
+    tokenExp: start + 2000 + config.tokenExpiresIn,
   });
 
   for (const token of [token1Hash, token2Hash, token3]) {
