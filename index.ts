@@ -134,7 +134,7 @@ export async function logout(
   config: Config,
   { token }: { token: string },
 ): Promise<Cookie> {
-  config.deleteSession({ tokenHash: await hashToken(token) });
+  await config.deleteSession({ tokenHash: await hashToken(token) });
   return logoutCookie(config);
 }
 
@@ -145,7 +145,7 @@ export async function login(
   const sessionId = crypto.randomUUID();
   const { cookie, tokenHash } = await createNewTokenCookie(config);
   const now = config.dateNow?.() ?? Date.now();
-  config.createSession({
+  await config.createSession({
     sessionId,
     tokenHash,
     userId,
@@ -197,7 +197,7 @@ export async function consumeSession(
 
   // Session expired, so logout the session.
   if (session.exp < now) {
-    config.deleteSession({ tokenHash });
+    await config.deleteSession({ tokenHash });
     return {
       requireLogout: true,
       reason: "session expired",
@@ -212,7 +212,7 @@ export async function consumeSession(
   //   expiration date will be extended to that point + 4 weeks
   const sessionRefreshDate = session.exp - config.sessionExpiresIn / 2;
   if (sessionRefreshDate < now) {
-    config.updateSession({
+    await config.updateSession({
       sessionId: session.id,
       sessionExp: now + config.sessionExpiresIn,
     });
@@ -225,7 +225,7 @@ export async function consumeSession(
   // the attacker can keep using the session.
   if (session.tokenExp <= now && session.token1Hash === tokenHash) {
     const { cookie, tokenHash } = await createNewTokenCookie(config);
-    config.createToken({
+    await config.createToken({
       sessionId: session.id,
       tokenHash,
       tokenExp: now + config.tokenExpiresIn,
@@ -253,7 +253,7 @@ export async function testConfig(
   const token3 = createRandom256BitHex();
 
   const start = Date.now();
-  config.createSession({
+  await config.createSession({
     sessionId,
     tokenHash: token3,
     userId,
@@ -261,13 +261,13 @@ export async function testConfig(
     tokenExp: start + config.tokenExpiresIn,
   });
 
-  config.createToken({
+  await config.createToken({
     sessionId,
     tokenHash: token2Hash,
     tokenExp: start + 1000 + config.tokenExpiresIn,
   });
 
-  config.createToken({
+  await config.createToken({
     sessionId,
     tokenHash: token1Hash,
     tokenExp: start + 2000 + config.tokenExpiresIn,
@@ -305,7 +305,7 @@ export async function testConfig(
     }
   }
 
-  config.updateSession({
+  await config.updateSession({
     sessionId,
     sessionExp: start + 3000 + config.sessionExpiresIn,
   });
@@ -342,10 +342,10 @@ export async function testConfig(
     }
   }
 
-  config.deleteSession({ tokenHash: token1Hash });
+  await config.deleteSession({ tokenHash: token1Hash });
   for (const token of [token1Hash, token2Hash, token3]) {
     const tokenHash = await hashToken(token);
-    const session = config.selectSession({ tokenHash });
+    const session = await config.selectSession({ tokenHash });
     if (session !== undefined) {
       throw new Error("Session should not be found");
     }
