@@ -173,7 +173,7 @@ export async function consumeSession(
   const tokenHash = await hashToken(token);
   const session = await config.selectSession({ tokenHash });
 
-  // Logout the user when the session does not exist.
+  // Logout the user when the session doesn't exist.
   // This way admin can force logout users by deleting the session.
   if (session === undefined) {
     return {
@@ -191,10 +191,11 @@ export async function consumeSession(
   // but on certain race conditions.
   //
   // Example:
-  // 1. User does request foo with `cookie: token=old_token`.
-  // 2. Token `new_token` is created on database, and is the latest token.
-  // 3. User does request bar with `cookie: token=old_token`.
-  // 4. Response foo sent with `set-cookie: token=new_token`.
+  // 1. Client sends request lorem with `cookie: token=old_token`. Valid token.
+  // 2. Server creates token `new_token` on database. Now it's the latest token.
+  // 3. Client sends request ipsum with `cookie: token=old_token`. Invalid token.
+  // 4. Server sends response lorem with `set-cookie: token=new_token`.
+  // 5. Client sends request dolor with `cookie: token=new_token`. Valid token.
   //
   // Above example is a valid scenario that might happen, but will log out the user if we only use
   // the latest token to identify the session.
