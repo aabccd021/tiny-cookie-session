@@ -45,7 +45,7 @@ let
         counter=1
         for actionName in ${builtins.concatStringsSep " " actions}; do
           printf '\033[35mclient > %02d-%s\033[0m>\n' "$counter" "$actionName"
-          bash -euo pipefail ${./actions}/"$actionName.sh" 2>&1 | while IFS= read -r line; do
+          timeout 15 bash -euo pipefail ${./actions}/"$actionName.sh" 2>&1 | while IFS= read -r line; do
             printf '\033[35mclient > %02d-%s\033[0m> %s\n' "$counter" "$actionName" "$line"
           done
           counter=$((counter + 1))
