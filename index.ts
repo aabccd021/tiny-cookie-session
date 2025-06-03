@@ -130,6 +130,11 @@ async function createNewTokenCookie(config: Config): Promise<{
 // random 256 bit hex string, which is resistant to brute force attacks and dictionary attacks.
 // Instead we use SHA-256 hashing, which is secure enough for this purpose, and is fast enough
 // to be done on every HTTP request, not just on login.
+//
+// So to hijack someone's session without stealing the cookie, the attacker would need to:
+// 1. Compromise the database, and get someone's token hash
+// 2. Find a 256 bit hex string which hash is equal to the token hash
+// 3. Finish step 2 before the user uses the session again
 export async function hashToken(token: string): Promise<string> {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
