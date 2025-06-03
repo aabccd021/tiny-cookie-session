@@ -254,14 +254,14 @@ export async function testConfig(
   { userId }: { userId: string },
 ): Promise<void> {
   const sessionId = crypto.randomUUID();
-  const token1Hash = createRandom256BitHex();
-  const token2Hash = createRandom256BitHex();
-  const token3 = createRandom256BitHex();
+  const token1Hash = await hashToken(createRandom256BitHex());
+  const token2Hash = await hashToken(createRandom256BitHex());
+  const token3Hash = await hashToken(createRandom256BitHex());
 
   const start = Date.now();
   await config.insertSession({
     sessionId,
-    tokenHash: token3,
+    tokenHash: token3Hash,
     userId,
     sessionExp: start + config.sessionExpiresIn,
     tokenExp: start + config.tokenExpiresIn,
@@ -281,8 +281,7 @@ export async function testConfig(
     tokenExp: start + 2000 + config.tokenExpiresIn,
   });
 
-  for (const token of [token1Hash, token2Hash, token3]) {
-    const tokenHash = await hashToken(token);
+  for (const tokenHash of [token1Hash, token2Hash, token3Hash]) {
     const session = await config.selectSession({ tokenHash });
     if (session === undefined) {
       throw new Error("Session not found");
@@ -314,8 +313,7 @@ export async function testConfig(
   }
 
   await config.deleteSession({ tokenHash: token1Hash });
-  for (const token of [token1Hash, token2Hash, token3]) {
-    const tokenHash = await hashToken(token);
+  for (const tokenHash of [token1Hash, token2Hash, token3Hash]) {
     const session = await config.selectSession({ tokenHash });
     if (session !== undefined) {
       throw new Error("Session should not be found");
