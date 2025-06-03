@@ -124,6 +124,12 @@ async function createNewTokenCookie(config: Config): Promise<{
 
 // An access token needs to be hashed before storing it in the database.
 // This way when the database is compromised, the attacker cannot use the access tokens directly.
+//
+// Author (security amateur) has an opinion that we don't need to use common password storing
+// methods like bcrypt encryption, salt, or pepper, because we are hashing already cryptographically
+// random 256 bit hex string, which is resistant to brute force attacks and dictionary attacks.
+// Instead we use SHA-256 hashing, which is secure enough for this purpose, and is fast enough
+// to be done on every HTTP request, not just on login.
 export async function hashToken(token: string): Promise<string> {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
