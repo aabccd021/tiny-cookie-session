@@ -49,16 +49,13 @@ export type Config = {
     readonly tokenExp: number;
     readonly userId: string;
   }) => Promise<void>;
-  readonly insertToken: (params: {
-    readonly sessionId: string;
-    readonly tokenHash: string;
-    readonly tokenExp: number;
-  }) => Promise<void>;
-  readonly deleteSession: (params: { tokenHash: string }) => Promise<void>;
-  readonly updateSession: (params: {
+  readonly insertTokenAndUpdateSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: number;
+    readonly newTokenHash: string;
+    readonly newTokenExp: number;
   }) => Promise<void>;
+  readonly deleteSession: (params: { tokenHash: string }) => Promise<void>;
 };
 
 export const defaultConfig = {
@@ -224,19 +221,6 @@ export async function consumeSession(
     };
   }
 
-  // If sessionExpiresIn is set to 4 weeks,
-  // - If user didn't use the session for 4 weeks, session will expire
-  // - On the first two weeks, expiration date is never extended
-  // - On any point on the last two weeks, if user used the session,
-  //   expiration date will be extended to that point + 4 weeks
-  const sessionRefreshDate = session.exp - config.sessionExpiresIn / 2;
-  if (sessionRefreshDate < now) {
-    await config.updateSession({
-      sessionId: session.id,
-      sessionExp: now + config.sessionExpiresIn,
-    });
-  }
-
   // Only give new access token if token is not expired and it is the last token.
   // This way only either the user or the attacker can aquire the new token.
   //
@@ -244,10 +228,11 @@ export async function consumeSession(
   // the attacker can keep using the session.
   if (session.tokenExp <= now && session.token1Hash === tokenHash) {
     const { cookie, tokenHash } = await createNewTokenCookie(config);
-    await config.insertToken({
+    await config.insertTokenAndUpdateSession({
       sessionId: session.id,
-      tokenHash,
-      tokenExp: now + config.tokenExpiresIn,
+      sessionExp: now + config.sessionExpiresIn,
+      newTokenHash: tokenHash,
+      newTokenExp: now + config.tokenExpiresIn,
     });
     return {
       ...session,
@@ -286,16 +271,18 @@ export async function testConfig(
     tokenExp: start + config.tokenExpiresIn,
   });
 
-  await config.insertToken({
+  await config.insertTokenAndUpdateSession({
     sessionId,
-    tokenHash: token2Hash,
-    tokenExp: start + 1000 + config.tokenExpiresIn,
+    sessionExp: start + config.sessionExpiresIn,
+    newTokenHash: token2Hash,
+    newTokenExp: start + 1000 + config.tokenExpiresIn,
   });
 
-  await config.insertToken({
+  await config.insertTokenAndUpdateSession({
     sessionId,
-    tokenHash: token1Hash,
-    tokenExp: start + 2000 + config.tokenExpiresIn,
+    sessionExp: start + config.sessionExpiresIn,
+    newTokenHash: token1Hash,
+    newTokenExp: start + 2000 + config.tokenExpiresIn,
   });
 
   for (const token of [token1Hash, token2Hash, token3]) {
@@ -303,14 +290,6 @@ export async function testConfig(
     const session = await config.selectSession({ tokenHash });
     if (session === undefined) {
       throw new Error("Session not found");
-    }
-
-    if (session.exp !== start + config.sessionExpiresIn) {
-      throw new Error("Session expired");
-    }
-
-    if (session.tokenExp !== start + 2000 + config.tokenExpiresIn) {
-      throw new Error("Token expired");
     }
 
     if (session.id !== sessionId) {
@@ -327,19 +306,6 @@ export async function testConfig(
 
     if (session.token2Hash !== token2Hash) {
       throw new Error("Session token2Hash does not match");
-    }
-  }
-
-  await config.updateSession({
-    sessionId,
-    sessionExp: start + 3000 + config.sessionExpiresIn,
-  });
-
-  for (const token of [token1Hash, token2Hash, token3]) {
-    const tokenHash = await hashToken(token);
-    const session = await config.selectSession({ tokenHash });
-    if (session === undefined) {
-      throw new Error("Session not found");
     }
 
     if (session.exp !== start + 3000 + config.sessionExpiresIn) {
@@ -348,22 +314,6 @@ export async function testConfig(
 
     if (session.tokenExp !== start + 2000 + config.tokenExpiresIn) {
       throw new Error("Token expired");
-    }
-
-    if (session.id !== sessionId) {
-      throw new Error("Session id does not match");
-    }
-
-    if (session.userId !== userId) {
-      throw new Error("Session user id does not match");
-    }
-
-    if (session.token1Hash !== token1Hash) {
-      throw new Error("Session token1Hash does not match");
-    }
-
-    if (session.token2Hash !== token2Hash) {
-      throw new Error("Session token2Hash does not match");
     }
   }
 

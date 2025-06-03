@@ -67,13 +67,19 @@ const config: Config = {
     };
     return Promise.resolve();
   },
-  insertToken: ({ sessionId, tokenHash, tokenExp }) => {
+  insertTokenAndUpdateSession: ({
+    sessionId,
+    sessionExp,
+    newTokenHash,
+    newTokenExp,
+  }) => {
     const session = sessions[sessionId];
     if (session === undefined) {
       throw new Error(`Session not found with id: ${sessionId}`);
     }
-    session.tokenHashes.push(tokenHash);
-    session.tokenExp = tokenExp;
+    session.tokenHashes.push(newTokenHash);
+    session.tokenExp = newTokenExp;
+    session.exp = sessionExp;
     return Promise.resolve();
   },
   deleteSession: ({ tokenHash }) => {
@@ -85,14 +91,6 @@ const config: Config = {
     }
     const [sessionId] = sessionEntry;
     delete sessions[sessionId];
-    return Promise.resolve();
-  },
-  updateSession: ({ sessionId, sessionExp }) => {
-    const session = sessions[sessionId];
-    if (session === undefined) {
-      throw new Error(`Session not found with id: ${sessionId}`);
-    }
-    session.exp = sessionExp;
     return Promise.resolve();
   },
 };
