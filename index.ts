@@ -119,8 +119,8 @@ async function createNewTokenCookie(config: Config): Promise<{
   return { cookie, tokenHash };
 }
 
-// An access token needs to be hashed before storing it in the database.
-// This way when the database is compromised, the attacker cannot use the access tokens directly.
+// An token needs to be hashed before storing it in the database.
+// This way when the database is compromised, the attacker cannot use the tokens directly.
 //
 // Author (security amateur) has an opinion that we don't need to use common password storing
 // methods like bcrypt encryption, salt, or pepper, because we are hashing already cryptographically
@@ -180,7 +180,7 @@ export async function consumeSession(
     };
   }
 
-  // Old access token (neither latest or second latest) was used, which means the cookie was stolen.
+  // Old token (neither latest or second latest) was used, which means the cookie was stolen.
   // So we will delete the session, which will log out both the user and the attacker.
   //
   // Two latest tokens can be used to identifying a session, instead of just the latest token.
@@ -220,7 +220,7 @@ export async function consumeSession(
     };
   }
 
-  // Set-Cookie to new access token only if the requested token is the latest one.
+  // Set-Cookie to new token only if the requested token is the latest one.
   // This way only one of the user or the attacker can acquire the new token.
   if (session.tokenExp <= now && session.token1Hash === tokenHash) {
     const { cookie, tokenHash } = await createNewTokenCookie(config);
