@@ -35,19 +35,20 @@ let
         mkfifo ./ready.fifo
         mkfifo ./exit.fifo
 
-        server 2>&1 | while IFS= read -r line; do
-          printf '\033[34m[server]\033[0m %s\n' "$line"
-        done &
+        blue=$(printf "\033[34m")
+        purple=$(printf "\033[35m")
+        reset=$(printf "\033[0m")
+
+        server 2>&1 | sed "s/^/''${blue}server>''${reset} /" &
         server_pid=$!
 
         cat ./ready.fifo >/dev/null
 
         counter=1
         for actionName in ${builtins.concatStringsSep " " actions}; do
-          printf '\033[35mclient > %02d-%s\033[0m>\n' "$counter" "$actionName"
-          timeout 15 bash -euo pipefail ${./actions}/"$actionName.sh" 2>&1 | while IFS= read -r line; do
-            printf '\033[35mclient > %02d-%s\033[0m> %s\n' "$counter" "$actionName" "$line"
-          done
+          echo "''${purple}client > $counter-$actionName''${reset}> "
+          timeout 15 bash -euo pipefail ${./actions}/"$actionName.sh" 2>&1 \
+            | sed "s/^/''${purple}client > $counter-$actionName''${reset} /"
           counter=$((counter + 1))
         done
 
