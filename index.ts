@@ -269,14 +269,14 @@ export async function testConfig(
 
   await config.insertTokenAndUpdateSession({
     sessionId,
-    sessionExp: start + config.sessionExpiresIn,
+    sessionExp: start + 10000 + config.sessionExpiresIn,
     newTokenHash: token2Hash,
     tokenExp: start + 1000 + config.tokenExpiresIn,
   });
 
   await config.insertTokenAndUpdateSession({
     sessionId,
-    sessionExp: start + config.sessionExpiresIn,
+    sessionExp: start + 20000 + config.sessionExpiresIn,
     newTokenHash: token1Hash,
     tokenExp: start + 2000 + config.tokenExpiresIn,
   });
@@ -303,7 +303,7 @@ export async function testConfig(
       throw new Error("Session token2Hash does not match");
     }
 
-    if (session.exp !== start + 3000 + config.sessionExpiresIn) {
+    if (session.exp !== start + 20000 + config.sessionExpiresIn) {
       throw new Error("Session expired");
     }
 
