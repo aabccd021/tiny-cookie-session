@@ -10,14 +10,26 @@
   outputs =
     { self, ... }@inputs:
     let
+      lib = inputs.nixpkgs.lib;
+
+      collectInputs =
+        is:
+        pkgs.linkFarm "inputs" (
+          builtins.mapAttrs (
+            name: i:
+            pkgs.linkFarm name {
+              self = i.outPath;
+              deps = collectInputs (lib.attrByPath [ "inputs" ] { } i);
+            }
+          ) is
+        );
+
       pkgs = import inputs.nixpkgs {
         system = "x86_64-linux";
         overlays = [
           inputs.netero-test.overlays.default
         ];
       };
-
-      lib = pkgs.lib;
 
       nodeModules = inputs.bun2nix.lib.x86_64-linux.mkBunNodeModules (import ./bun.nix);
 
@@ -102,6 +114,7 @@
           tests = pkgs.linkFarm "tests" tests;
           formatting = treefmtEval.config.build.check self;
           formatter = formatter;
+          allInputs = collectInputs inputs;
           tsc = tsc;
           biome = biome;
           nodeModules = nodeModules;
