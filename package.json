@@ -10,7 +10,12 @@
     "type": "git",
     "url": "git+https://github.com/aabccd021/simple-cookie-session.git"
   },
-  "keywords": ["bun", "web", "cookie", "session"],
+  "keywords": [
+    "bun",
+    "web",
+    "cookie",
+    "session"
+  ],
   "bugs": {
     "url": "https://github.com/aabccd021/simple-cookie-session/issues"
   },
@@ -18,7 +23,9 @@
     "postinstall": "cd $(dirname $npm_package_json) && nix run .#bun2nix -- --output-file bun.nix"
   },
   "homepage": "https://github.com/aabccd021/simple-cookie-session#readme",
-  "files": ["index.ts"],
+  "files": [
+    "index.ts"
+  ],
   "devDependencies": {
     "@types/bun": "latest"
   }
