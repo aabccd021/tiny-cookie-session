@@ -6,21 +6,10 @@
     "useIgnoreFile": true
   },
   "formatter": {
-    "enabled": true,
     "indentStyle": "space"
   },
-  "assist": {
-    "enabled": true,
-    "actions": {
-      "source": {
-        "organizeImports": "on"
-      }
-    }
-  },
   "linter": {
-    "enabled": true,
     "rules": {
-      "recommended": true,
       "complexity": {
         "useLiteralKeys": "off"
       }
