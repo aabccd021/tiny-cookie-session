@@ -9,7 +9,7 @@ export type CookieOptions = {
 
 export type Cookie = readonly [string, CookieOptions];
 
-export type Session<T> =
+export type Session =
   | {
       readonly requireLogout: true;
       readonly reason: "session not found" | "old token" | "session expired";
@@ -24,10 +24,9 @@ export type Session<T> =
       readonly token1Hash: string;
       readonly token2Hash: string | undefined;
       readonly userId: string;
-      readonly extraData: T;
     };
 
-export type Config<T> = {
+export type Config = {
   readonly cookieOption?: Omit<CookieOptions, "maxAge">;
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
@@ -40,7 +39,6 @@ export type Config<T> = {
         readonly token1Hash: string;
         readonly token2Hash: string | undefined;
         readonly userId: string;
-        readonly extraData: T;
       }
     | undefined
   >;
@@ -73,7 +71,7 @@ const defaultCookieOption: CookieOptions = {
   secure: true,
 };
 
-function logoutCookie<T>(config: Config<T>): Cookie {
+function logoutCookie(config: Config): Cookie {
   return [
     "",
     {
@@ -102,7 +100,7 @@ function createRandom256BitHex(): string {
   return crypto.getRandomValues(new Uint8Array(entropyBits / 8)).toHex();
 }
 
-async function createNewTokenCookie<T>(config: Config<T>): Promise<{
+async function createNewTokenCookie(config: Config): Promise<{
   readonly cookie: Cookie;
   readonly tokenHash: string;
 }> {
@@ -140,16 +138,16 @@ export async function hashToken(token: string): Promise<string> {
   return new Uint8Array(hashBuffer).toHex();
 }
 
-export async function logout<T>(
-  config: Config<T>,
+export async function logout(
+  config: Config,
   { token }: { token: string },
 ): Promise<Cookie> {
   await config.deleteSession({ tokenHash: await hashToken(token) });
   return logoutCookie(config);
 }
 
-export async function login<T>(
-  config: Config<T>,
+export async function login(
+  config: Config,
   { userId }: { userId: string },
 ): Promise<Cookie> {
   const sessionId = crypto.randomUUID();
@@ -165,10 +163,10 @@ export async function login<T>(
   return cookie;
 }
 
-export async function consumeSession<T>(
-  config: Config<T>,
+export async function consumeSession(
+  config: Config,
   token: string,
-): Promise<Session<T>> {
+): Promise<Session> {
   const tokenHash = await hashToken(token);
   const session = await config.selectSession({ tokenHash });
 
@@ -251,8 +249,8 @@ export async function consumeSession<T>(
 // data in the database.
 // So ideally run this function in an environment as similar as possible to production, but not in
 // production.
-export async function testConfig<T>(
-  config: Config<T>,
+export async function testConfig(
+  config: Config,
   { userId }: { userId: string },
 ): Promise<void> {
   const sessionId = crypto.randomUUID();
