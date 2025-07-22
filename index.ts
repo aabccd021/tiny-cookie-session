@@ -31,7 +31,7 @@ export type Config = {
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
-  readonly selectSession: (params: { tokenHash: string }) => Promise<
+  readonly selectSession: (params: { tokenHash: string }) =>
     | {
         readonly id: string;
         readonly exp: number;
@@ -40,22 +40,21 @@ export type Config = {
         readonly token2Hash: string | undefined;
         readonly userId: string;
       }
-    | undefined
-  >;
+    | undefined;
   readonly insertSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: number;
     readonly tokenHash: string;
     readonly tokenExp: number;
     readonly userId: string;
-  }) => Promise<void>;
+  }) => void;
   readonly insertTokenAndUpdateSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: number;
     readonly tokenExp: number;
     readonly newTokenHash: string;
-  }) => Promise<void>;
-  readonly deleteSession: (params: { tokenHash: string }) => Promise<void>;
+  }) => void;
+  readonly deleteSession: (params: { tokenHash: string }) => void;
 };
 
 export const defaultConfig = {
@@ -100,12 +99,12 @@ function createRandom256BitHex(): string {
   return crypto.getRandomValues(new Uint8Array(entropyBits / 8)).toHex();
 }
 
-async function createNewTokenCookie(config: Config): Promise<{
+function createNewTokenCookie(config: Config): {
   readonly cookie: Cookie;
   readonly tokenHash: string;
-}> {
+} {
   const token = createRandom256BitHex();
-  const tokenHash = await hashToken(token);
+  const tokenHash = hashToken(token);
 
   const cookie: Cookie = [
     encodeURIComponent(token),
@@ -119,12 +118,12 @@ async function createNewTokenCookie(config: Config): Promise<{
   return { cookie, tokenHash };
 }
 
-// An token needs to be hashed before storing it in the database.
+// A token needs to be hashed before storing it in the database.
 // This way when the database is compromised, the attacker cannot use the tokens directly.
 //
 // Author (security amateur) has an opinion that we don't need to use common password storing
 // methods like bcrypt encryption, salt, or pepper, because we are hashing already cryptographically
-// random 256 bit hex string, which is resistant to brute force attacks and dictionary attacks.
+// random 256 bit hex string, which is resistant to dictionary attacks.
 // Instead we use SHA-256 hashing, which is secure enough for this purpose, and is fast enough
 // to be done on every HTTP request, not just on login.
 //
@@ -132,28 +131,22 @@ async function createNewTokenCookie(config: Config): Promise<{
 // 1. Compromise the database, and get someone's token hash
 // 2. Find a 256 bit hex string which hash is equal to the token hash
 // 3. Finish step 2 before the user uses the session again
-export async function hashToken(token: string): Promise<string> {
-  const data = new TextEncoder().encode(token);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return new Uint8Array(hashBuffer).toHex();
+export function hashToken(token: string): string {
+  const hasher = new Bun.CryptoHasher("sha256");
+  hasher.update(token);
+  return hasher.digest("hex");
 }
 
-export async function logout(
-  config: Config,
-  { token }: { token: string },
-): Promise<Cookie> {
-  await config.deleteSession({ tokenHash: await hashToken(token) });
+export function logout(config: Config, { token }: { token: string }): Cookie {
+  config.deleteSession({ tokenHash: hashToken(token) });
   return logoutCookie(config);
 }
 
-export async function login(
-  config: Config,
-  { userId }: { userId: string },
-): Promise<Cookie> {
+export function login(config: Config, { userId }: { userId: string }): Cookie {
   const sessionId = crypto.randomUUID();
-  const { cookie, tokenHash } = await createNewTokenCookie(config);
+  const { cookie, tokenHash } = createNewTokenCookie(config);
   const now = config.dateNow?.() ?? Date.now();
-  await config.insertSession({
+  config.insertSession({
     sessionId,
     tokenHash,
     userId,
@@ -163,12 +156,9 @@ export async function login(
   return cookie;
 }
 
-export async function consumeSession(
-  config: Config,
-  token: string,
-): Promise<Session> {
-  const tokenHash = await hashToken(token);
-  const session = await config.selectSession({ tokenHash });
+export function consumeSession(config: Config, token: string): Session {
+  const tokenHash = hashToken(token);
+  const session = config.selectSession({ tokenHash });
 
   // Logout the user when the session doesn't exist.
   // This way admin can force logout users by deleting the session.
@@ -201,7 +191,7 @@ export async function consumeSession(
   // longest request time. More precisely, it's a time between when a request is initiated and when
   // the new token is set as a cookie.
   if (tokenHash !== session.token1Hash && tokenHash !== session.token2Hash) {
-    await config.deleteSession({ tokenHash });
+    config.deleteSession({ tokenHash });
     return {
       requireLogout: true,
       reason: "old token",
@@ -212,7 +202,7 @@ export async function consumeSession(
   const now = config.dateNow?.() ?? Date.now();
 
   if (session.exp < now) {
-    await config.deleteSession({ tokenHash });
+    config.deleteSession({ tokenHash });
     return {
       requireLogout: true,
       reason: "session expired",
@@ -223,8 +213,8 @@ export async function consumeSession(
   // Set-Cookie to new token only if the requested token is the latest one.
   // This way only one of the user or the attacker can acquire the new token.
   if (session.tokenExp <= now && session.token1Hash === tokenHash) {
-    const { cookie, tokenHash } = await createNewTokenCookie(config);
-    await config.insertTokenAndUpdateSession({
+    const { cookie, tokenHash } = createNewTokenCookie(config);
+    config.insertTokenAndUpdateSession({
       sessionId: session.id,
       sessionExp: now + config.sessionExpiresIn,
       newTokenHash: tokenHash,
@@ -249,17 +239,17 @@ export async function consumeSession(
 // data in the database.
 // So ideally run this function in an environment as similar as possible to production, but not in
 // production.
-export async function testConfig(
+export function testConfig(
   config: Config,
   { userId }: { userId: string },
-): Promise<void> {
+): void {
   const sessionId = crypto.randomUUID();
-  const token1Hash = await hashToken(createRandom256BitHex());
-  const token2Hash = await hashToken(createRandom256BitHex());
-  const token3Hash = await hashToken(createRandom256BitHex());
+  const token1Hash = hashToken(createRandom256BitHex());
+  const token2Hash = hashToken(createRandom256BitHex());
+  const token3Hash = hashToken(createRandom256BitHex());
 
   const start = Date.now();
-  await config.insertSession({
+  config.insertSession({
     sessionId,
     tokenHash: token3Hash,
     userId,
@@ -267,14 +257,14 @@ export async function testConfig(
     tokenExp: start + config.tokenExpiresIn,
   });
 
-  await config.insertTokenAndUpdateSession({
+  config.insertTokenAndUpdateSession({
     sessionId,
     sessionExp: start + 10000 + config.sessionExpiresIn,
     newTokenHash: token2Hash,
     tokenExp: start + 1000 + config.tokenExpiresIn,
   });
 
-  await config.insertTokenAndUpdateSession({
+  config.insertTokenAndUpdateSession({
     sessionId,
     sessionExp: start + 20000 + config.sessionExpiresIn,
     newTokenHash: token1Hash,
@@ -282,7 +272,7 @@ export async function testConfig(
   });
 
   for (const tokenHash of [token1Hash, token2Hash, token3Hash]) {
-    const session = await config.selectSession({ tokenHash });
+    const session = config.selectSession({ tokenHash });
     if (session === undefined) {
       throw new Error("Session not found");
     }
@@ -312,9 +302,9 @@ export async function testConfig(
     }
   }
 
-  await config.deleteSession({ tokenHash: token1Hash });
+  config.deleteSession({ tokenHash: token1Hash });
   for (const tokenHash of [token1Hash, token2Hash, token3Hash]) {
-    const session = await config.selectSession({ tokenHash });
+    const session = config.selectSession({ tokenHash });
     if (session !== undefined) {
       throw new Error("Session should not be found");
     }

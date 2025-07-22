@@ -34,7 +34,7 @@ const config: Config = {
     return new Date(epochNowStr).getTime();
   },
   sessionExpiresIn: 5 * 60 * 60 * 1000,
-  selectSession: async ({ tokenHash }) => {
+  selectSession: ({ tokenHash }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
       session.tokenHashes.includes(tokenHash),
     );
@@ -65,7 +65,6 @@ const config: Config = {
       tokenHashes: [tokenHash],
       userId,
     };
-    return Promise.resolve();
   },
   insertTokenAndUpdateSession: ({
     sessionId,
@@ -80,7 +79,6 @@ const config: Config = {
     session.tokenHashes.push(newTokenHash);
     session.tokenExp = tokenExp;
     session.exp = sessionExp;
-    return Promise.resolve();
   },
   deleteSession: ({ tokenHash }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
@@ -91,7 +89,6 @@ const config: Config = {
     }
     const [sessionId] = sessionEntry;
     delete sessions[sessionId];
-    return Promise.resolve();
   },
 };
 
@@ -109,7 +106,7 @@ const server = Bun.serve({
           });
         }
 
-        const session = await consumeSession(config, token);
+        const session = consumeSession(config, token);
         if (session.requireLogout) {
           return new Response(undefined, {
             status: 303,
@@ -163,7 +160,7 @@ const server = Bun.serve({
           throw new Error("Invalid userId");
         }
 
-        const loginCookie = await login(config, { userId });
+        const loginCookie = login(config, { userId });
         return new Response(undefined, {
           status: 303,
           headers: {
@@ -183,7 +180,7 @@ const server = Bun.serve({
         if (token === null) {
           throw new Error("Not logged in but trying to logout");
         }
-        const logoutCookie = await logout(config, { token });
+        const logoutCookie = logout(config, { token });
         return new Response(undefined, {
           status: 303,
           headers: {
