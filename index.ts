@@ -1,3 +1,5 @@
+import * as crypto from "node:crypto";
+
 export type CookieOptions = {
   readonly maxAge?: number;
   readonly domain?: string;
@@ -132,9 +134,7 @@ function createNewTokenCookie(config: Config): {
 // 2. Find a 256 bit hex string which hash is equal to the token hash
 // 3. Finish step 2 before the user uses the session again
 export function hashToken(token: string): string {
-  const hasher = new Bun.CryptoHasher("sha256");
-  hasher.update(token);
-  return hasher.digest("hex");
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 export function logout(config: Config, { token }: { token: string }): Cookie {
