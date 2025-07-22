@@ -23,7 +23,7 @@ const sessions: Record<string, Session> = JSON.parse(
   fs.readFileSync("./var/sessions.json", "utf-8"),
 );
 
-const config: Config = {
+const config: Config<string> = {
   ...defaultConfig,
   dateNow: (): number => {
     const neteroDir = process.env["NETERO_STATE"];
@@ -56,6 +56,7 @@ const config: Config = {
       exp: session.exp,
       tokenExp: session.tokenExp,
       userId: session.userId,
+      extraData: "foo",
     };
   },
   insertSession: ({ sessionId, sessionExp, tokenHash, tokenExp, userId }) => {

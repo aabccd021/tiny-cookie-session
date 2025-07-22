@@ -53,7 +53,7 @@
 
       formatter = treefmtEval.config.build.wrapper;
 
-      tsc = pkgs.runCommand "tsc" { } ''
+      check-tsc = pkgs.runCommand "tsc" { } ''
         cp -L ${./index.ts} ./index.ts
         cp -L ${./tsconfig.json} ./tsconfig.json
         cp -Lr ${./test} ./test
@@ -62,7 +62,7 @@
         touch $out
       '';
 
-      biome = pkgs.runCommand "biome" { } ''
+      check-biome = pkgs.runCommand "biome" { } ''
         cp -L ${./biome.jsonc} ./biome.jsonc
         cp -L ${./index.ts} ./index.ts
         cp -Lr ${./test} ./test
@@ -119,8 +119,8 @@
           formatting = treefmtEval.config.build.check self;
           formatter = formatter;
           allInputs = collectInputs inputs;
-          tsc = tsc;
-          biome = biome;
+          check-tsc = check-tsc;
+          check-biome = check-biome;
           nodeModules = nodeModules;
           bun2nix = inputs.bun2nix.packages.x86_64-linux.default;
         };
