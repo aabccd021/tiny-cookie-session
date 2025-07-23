@@ -291,6 +291,10 @@ export function testConfig(
   config: Config,
   { userId }: { userId: string },
 ): void {
+  if (config.tokenExpiresIn >= config.sessionExpiresIn) {
+    throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
+  }
+
   const sessionId = crypto.randomUUID();
   const token1Hash = hashToken(generateToken());
   const token2Hash = hashToken(generateToken());
