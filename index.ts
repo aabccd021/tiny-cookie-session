@@ -217,9 +217,8 @@ export function consumeSession(config: Config, token: string): Session {
   Ideally `tokenExpiresIn` should set to a duration as short as possible, but 
   still longer than the longest request time. 
 
-  No need to use `crypto.timingSafeEqual` here, since the attacker can't vary 
-  one character at a time in the hash digest while holding everything before it 
-  constant.
+  No need to use `crypto.timingSafeEqual` here, since we compare hashes of high 
+  entropy tokens.
   */
   if (tokenHash !== session.token1Hash && tokenHash !== session.token2Hash) {
     config.deleteSession({ tokenHash });
