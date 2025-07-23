@@ -100,7 +100,7 @@ https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c762024
 const tokenEntropyBit = 256;
 
 function generateToken(): string {
-  return crypto.getRandomValues(new Uint8Array(tokenEntropyBit / 8)).toHex();
+  return crypto.randomBytes(tokenEntropyBit / 8).toString("hex");
 }
 
 /*
