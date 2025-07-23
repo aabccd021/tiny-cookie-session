@@ -129,7 +129,7 @@ function createNewTokenCookie(config: Config): {
   const now = config.dateNow?.() ?? Date.now();
 
   const cookie: Cookie = [
-    encodeURIComponent(token),
+    token,
     {
       ...defaultCookieOption,
       ...config.cookieOption,
