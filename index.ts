@@ -187,13 +187,17 @@ export function consumeSession(config: Config, token: string): Session {
     };
   }
 
+  /*
+  Personally I don't think we need to use timingSafeEqual here since we are 
+  comparing hashed high entropy tokens, but LLM keeps saying "Just do it,
+  it's a good practice" so here we go.
+  */
   const isToken1 =
     tokenHash.length === session.token1Hash.length &&
     crypto.timingSafeEqual(
       Buffer.from(tokenHash),
       Buffer.from(session.token1Hash),
     );
-
   const isToken2 =
     tokenHash.length === session.token2Hash?.length &&
     crypto.timingSafeEqual(
