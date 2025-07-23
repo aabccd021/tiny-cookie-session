@@ -2,6 +2,7 @@ import * as crypto from "node:crypto";
 
 export type CookieOptions = {
   readonly maxAge?: number;
+  readonly expires?: Date;
   readonly domain?: string;
   readonly path?: string;
   readonly httpOnly?: boolean;
@@ -29,7 +30,7 @@ export type Session =
     };
 
 export type Config = {
-  readonly cookieOption?: Omit<CookieOptions, "maxAge">;
+  readonly cookieOption?: Omit<CookieOptions, "maxAge" | "expires">;
   readonly dateNow: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
@@ -83,58 +84,72 @@ function logoutCookie(config: Config): Cookie {
   ];
 }
 
-// remix uses 64 bits of entropy
-// https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L45
-//
-// owasp recommends at least 64 bits of entropy
-// https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length
-//
-// lucia uses 160 bits of entropy in their sqlite example
-// https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
-//
-// auth.js uses 256 bits of entropy in their test
-// https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/test/actions/session.test.ts#L146
-//
-const entropyBits = 256;
+/*
+remix uses 64 bits of entropy
+https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L45
 
-function createRandom256BitHex(): string {
-  return crypto.getRandomValues(new Uint8Array(entropyBits / 8)).toHex();
+owasp recommends at least 64 bits of entropy
+https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length
+
+lucia uses 160 bits of entropy in their sqlite example
+https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
+
+auth.js uses 256 bits of entropy in their test
+https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/test/actions/session.test.ts#L146
+*/
+const tokenEntropyBit = 256;
+
+function generateToken(): string {
+  return crypto.getRandomValues(new Uint8Array(tokenEntropyBit / 8)).toHex();
+}
+
+/*
+A token is hashed before being stored in the database.
+
+This way when the database is compromised, the attacker can't just use any data
+in the database to hijack the session.
+
+Since the token itself is already a random string with high entropy, unlike a 
+password, we don't need any additional processing like salting, stretching, or
+peppering.
+
+Doing sha-256 for every request might seem like a lot, but it's not any more 
+taxing than doing cookie signing, which is a common practice in web services.
+*/
+export function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 function createNewTokenCookie(config: Config): {
   readonly cookie: Cookie;
   readonly tokenHash: string;
 } {
-  const token = createRandom256BitHex();
+  const token = generateToken();
   const tokenHash = hashToken(token);
+  const now = config.dateNow?.() ?? Date.now();
 
   const cookie: Cookie = [
     encodeURIComponent(token),
     {
       ...defaultCookieOption,
       ...config.cookieOption,
-      maxAge: 365 * 24 * 60 * 60 * 1000,
+
+      /*
+      We use `sessionExpiresIn` instead of `tokenExpiresIn` here, because we
+      want the cookie to expire when the session expires, not when the token
+      expires.
+
+      This allows the user to stay logged in as long as the session is valid,
+      even if the token is rotated frequently.
+
+      We primarily use short-lived tokens to detect cookie theft, and not to
+      limit the session duration.
+      */
+      expires: new Date(now + config.sessionExpiresIn),
     },
   ];
 
   return { cookie, tokenHash };
-}
-
-// A token needs to be hashed before storing it in the database.
-// This way when the database is compromised, the attacker cannot use the tokens directly.
-//
-// Author (security amateur) has an opinion that we don't need to use common password storing
-// methods like bcrypt encryption, salt, or pepper, because we are hashing already cryptographically
-// random 256 bit hex string, which is resistant to dictionary attacks.
-// Instead we use SHA-256 hashing, which is secure enough for this purpose, and is fast enough
-// to be done on every HTTP request, not just on login.
-//
-// So to hijack someone's session without stealing the cookie, the attacker would need to:
-// 1. Compromise the database, and get someone's token hash
-// 2. Find a 256 bit hex string which hash is equal to the token hash
-// 3. Finish step 2 before the user uses the session again
-export function hashToken(token: string): string {
-  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 export function logout(config: Config, { token }: { token: string }): Cookie {
@@ -160,8 +175,11 @@ export function consumeSession(config: Config, token: string): Session {
   const tokenHash = hashToken(token);
   const session = config.selectSession({ tokenHash });
 
-  // Logout the user when the session doesn't exist.
-  // This way admin can force logout users by deleting the session.
+  /*
+  Logout the user when the session doesn't exist.
+  This way the server administrator can immediately force logout users by 
+  manually deleting the session.
+  */
   if (session === undefined) {
     return {
       requireLogout: true,
@@ -170,26 +188,39 @@ export function consumeSession(config: Config, token: string): Session {
     };
   }
 
-  // Old token (neither latest or second latest) was used, which means the cookie was stolen.
-  // So we will delete the session, which will log out both the user and the attacker.
-  //
-  // Two latest tokens can be used to identifying a session, instead of just the latest token.
-  // We do this to prevent the user from being logged out while doing completely valid requests,
-  // but on certain race conditions.
-  //
-  // Example:
-  // 1. Client sends request lorem with `cookie: token=old_token`. Valid token.
-  // 2. Server creates token `new_token` on database. Now it's the latest token.
-  // 3. Client sends request ipsum with `cookie: token=old_token`. Invalid token.
-  // 4. Server sends response lorem with `set-cookie: token=new_token`.
-  // 5. Client sends request dolor with `cookie: token=new_token`. Valid token.
-  //
-  // Above example is a valid scenario that might happen, but will log out the user if we only use
-  // the latest token to identify the session.
-  //
-  // Ideally `tokenExpiresIn` is set to a duration as short as possible, but still longer than the
-  // longest request time. More precisely, it's a time between when a request is initiated and when
-  // the new token is set as a cookie.
+  /*
+  The `selectSession` function returns a session (not undefined), 
+  which means the token is a legit token that is associated with the session, 
+  not a random token generated by brute force attack.
+
+  But entering this block means the token is neither the latest token nor the 
+  second latest token.
+
+  The only scenario when this can happen is when the token was stolen, so we 
+  will log out both the user and the attacker by deleting the session.
+
+  While using just the latest token to identify a session would be enough to 
+  detect cookie theft, we will instead use two latest tokens.
+
+  We do this to prevent the user from being logged out while doing completely 
+  valid requests, but on a certain race condition.
+  
+  Below example shows a scenario where the user would be logged out for a valid
+  request, if we only used the latest token.
+
+  1. Client sends request lorem with `cookie: token=old_token`. Valid token.
+  2. Server creates token `new_token` on database. Now it's the latest token.
+  3. Client sends request ipsum with `cookie: token=old_token`. Invalid token.
+  4. Server sends response lorem with `set-cookie: token=new_token`.
+  5. Client sends request dolor with `cookie: token=new_token`. Valid token.
+  
+  Ideally `tokenExpiresIn` should set to a duration as short as possible, but 
+  still longer than the longest request time. 
+
+  No need to use `crypto.timingSafeEqual` here, since the attacker can't vary 
+  one character at a time in the hash digest while holding everything before it 
+  constant.
+  */
   if (tokenHash !== session.token1Hash && tokenHash !== session.token2Hash) {
     config.deleteSession({ tokenHash });
     return {
@@ -210,14 +241,25 @@ export function consumeSession(config: Config, token: string): Session {
     };
   }
 
-  // Set-Cookie to new token only if the requested token is the latest one.
-  // This way only one of the user or the attacker can acquire the new token.
+  /*
+  Generate and return new token only if the request's token is the latest one,
+  but not the second latest one.
+
+  This way only one of the browsers (the user's or the attacker's) can 
+  acquire the new token.
+
+  No need to use `crypto.timingSafeEqual` here, since we compare hashes of high 
+  entropy tokens.
+
+  We will also extend the session expiration time here, which is more efficient
+  than extending it on every request.
+  */
   if (session.tokenExp <= now && session.token1Hash === tokenHash) {
     const { cookie, tokenHash } = createNewTokenCookie(config);
     config.insertTokenAndUpdateSession({
       sessionId: session.id,
-      sessionExp: now + config.sessionExpiresIn,
       newTokenHash: tokenHash,
+      sessionExp: now + config.sessionExpiresIn,
       tokenExp: now + config.tokenExpiresIn,
     });
     return {
@@ -233,20 +275,20 @@ export function consumeSession(config: Config, token: string): Session {
   };
 }
 
-// Test wether the configuration is impelmented correctly.
-//
-// If you implementation is not correct, or throws an error, this function might leave some dirty
-// data in the database.
-// So ideally run this function in an environment as similar as possible to production, but not in
-// production.
+/*
+Test wether the `Config` is impelmented correctly.
+
+If your `Config` implementation is not correct or throws an error, 
+this function might leave some dirty data in the database.
+*/
 export function testConfig(
   config: Config,
   { userId }: { userId: string },
 ): void {
   const sessionId = crypto.randomUUID();
-  const token1Hash = hashToken(createRandom256BitHex());
-  const token2Hash = hashToken(createRandom256BitHex());
-  const token3Hash = hashToken(createRandom256BitHex());
+  const token1Hash = hashToken(generateToken());
+  const token2Hash = hashToken(generateToken());
+  const token3Hash = hashToken(generateToken());
 
   const start = Date.now();
   config.insertSession({
