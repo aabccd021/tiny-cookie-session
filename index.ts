@@ -188,6 +188,20 @@ export function consumeSession(config: Config, token: string): Session {
     };
   }
 
+  const isToken1 =
+    tokenHash.length === session.token1Hash.length &&
+    crypto.timingSafeEqual(
+      Buffer.from(tokenHash),
+      Buffer.from(session.token1Hash),
+    );
+
+  const isToken2 =
+    tokenHash.length === session.token2Hash?.length &&
+    crypto.timingSafeEqual(
+      Buffer.from(tokenHash),
+      Buffer.from(session.token2Hash),
+    );
+
   /*
   The `selectSession` function returns a session (not undefined), 
   which means the token is a legit token that is associated with the session, 
@@ -216,11 +230,8 @@ export function consumeSession(config: Config, token: string): Session {
   
   Ideally `tokenExpiresIn` should set to a duration as short as possible, but 
   still longer than the longest request time. 
-
-  No need to use `crypto.timingSafeEqual` here, since we compare hashes of high 
-  entropy tokens.
   */
-  if (tokenHash !== session.token1Hash && tokenHash !== session.token2Hash) {
+  if (!isToken1 && !isToken2) {
     config.deleteSession({ tokenHash });
     return {
       requireLogout: true,
@@ -247,13 +258,10 @@ export function consumeSession(config: Config, token: string): Session {
   This way only one of the browsers (the user's or the attacker's) can 
   acquire the new token.
 
-  No need to use `crypto.timingSafeEqual` here, since we compare hashes of high 
-  entropy tokens.
-
   We will also extend the session expiration time here, which is more efficient
   than extending it on every request.
   */
-  if (session.tokenExp <= now && session.token1Hash === tokenHash) {
+  if (session.tokenExp <= now && isToken1) {
     const { cookie, tokenHash } = createNewTokenCookie(config);
     config.insertTokenAndUpdateSession({
       sessionId: session.id,
