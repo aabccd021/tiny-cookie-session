@@ -41,7 +41,7 @@ export type Session =
 
 export type Config = {
   readonly cookieOption?: Omit<CookieOptions, "maxAge" | "expires">;
-  readonly dateNow: () => number;
+  readonly dateNow?: () => number;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
   readonly selectSession: (params: { tokenHash: string }) =>
