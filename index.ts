@@ -61,7 +61,6 @@ export type Config = {
 };
 
 export const defaultConfig = {
-  dateNow: (): number => Date.now(),
   sessionExpiresIn: 30 * 24 * 60 * 60 * 1000,
   tokenExpiresIn: 1 * 60 * 1000,
 };
