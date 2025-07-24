@@ -170,14 +170,14 @@ export function login(
   config: Config,
   arg: {
     userId: string;
-    sessionId?: string;
+    sessionId: string;
   },
 ): Cookie {
   const { cookie, tokenHash } = createNewTokenCookie(config);
   const now = config.dateNow?.() ?? Date.now();
   config.insertSession({
-    sessionId: arg.sessionId ?? crypto.randomUUID(),
     tokenHash,
+    sessionId: arg.sessionId,
     userId: arg.userId,
     sessionExp: now + config.sessionExpiresIn,
     tokenExp: now + config.tokenExpiresIn,

@@ -160,7 +160,10 @@ const server = Bun.serve({
           throw new Error("Invalid userId");
         }
 
-        const loginCookie = login(config, { userId });
+        const loginCookie = login(config, {
+          sessionId: crypto.randomUUID(),
+          userId,
+        });
         return new Response(undefined, {
           status: 303,
           headers: {
