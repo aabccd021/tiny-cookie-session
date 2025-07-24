@@ -166,14 +166,19 @@ export function logout(config: Config, { token }: { token: string }): Cookie {
   return logoutCookie(config);
 }
 
-export function login(config: Config, { userId }: { userId: string }): Cookie {
-  const sessionId = crypto.randomUUID();
+export function login(
+  config: Config,
+  arg: {
+    userId: string;
+    sessionId?: string;
+  },
+): Cookie {
   const { cookie, tokenHash } = createNewTokenCookie(config);
   const now = config.dateNow?.() ?? Date.now();
   config.insertSession({
-    sessionId,
+    sessionId: arg.sessionId ?? crypto.randomUUID(),
     tokenHash,
-    userId,
+    userId: arg.userId,
     sessionExp: now + config.sessionExpiresIn,
     tokenExp: now + config.tokenExpiresIn,
   });
