@@ -80,25 +80,12 @@
 
       publish = pkgs.writeShellApplication {
         name = "publish";
-        runtimeInputs = [
-          pkgs.jq
-          pkgs.bun
-          pkgs.curl
-        ];
+        runtimeInputs = [ pkgs.bun ];
         text = ''
           repo_root=$(git rev-parse --show-toplevel)
-
           export NPM_CONFIG_USERCONFIG="$repo_root/.npmrc"
-          if ! grep -q "_authToken" "$NPM_CONFIG_USERCONFIG"; then
+          if [ ! -f "$NPM_CONFIG_USERCONFIG" ]; then
             bunx npm login
-          fi
-
-          current_version=$(jq -r .version "$repo_root/package.json")
-          name=$(jq -r .name "$repo_root/package.json")
-          published_version=$(curl -s "https://registry.npmjs.org/$name" | jq -r '.["dist-tags"].latest')
-          if [ "$published_version" = "$current_version" ]; then
-            echo "Version $current_version is already published"
-            exit 0
           fi
           nix flake check
           bun publish
