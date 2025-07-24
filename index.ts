@@ -6,8 +6,8 @@ To maintain the simplicity of this library, we don't do any cookie signing.
 For detecting cookie tampering, we can simply check whether the token hash is
 present in the database.
 
-You can still unsign a cookie yourself before passing it to this library,
-and sign a cookie after it's returned from this library.
+You can still unsign a cookie yourself before passing it to this library, and
+sign a cookie after it's returned from this library.
 */
 
 export type CookieOptions = {
@@ -237,8 +237,8 @@ export function consumeSession(config: Config, token: string): Session {
   We do this to prevent the user from being logged out while doing completely
   valid requests, but on a certain race condition.
 
-  Below is an example that shows a scenario where the user would be logged out for a valid
-  request if we only used the latest token.
+  Below is an example that shows a scenario where the user would be logged out
+  for a valid request if we only used the latest token.
 
   (1) Client sends request lorem with `cookie: token=old_token`. Valid token.
   (2) Server creates token `new_token` in database. Now it's the latest token.
