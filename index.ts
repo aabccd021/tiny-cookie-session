@@ -109,7 +109,7 @@ https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c762024
 const tokenEntropyBit = 256;
 
 function generateToken(): string {
-  return crypto.randomBytes(tokenEntropyBit / 8).toString("hex");
+  return crypto.randomBytes(tokenEntropyBit / 8).toString("base64");
 }
 
 /*
@@ -126,7 +126,7 @@ Doing sha-256 for every request might seem like a lot, but it's not any more
 taxing than doing cookie signing, which is a common practice in web services.
 */
 export function hashToken(token: string): string {
-  return crypto.createHash("sha256").update(token).digest("hex");
+  return crypto.createHash("sha256").update(token).digest("base64");
 }
 
 function createNewTokenCookie(config: Config): {
