@@ -8,6 +8,8 @@ present in the database.
 
 You can still unsign a cookie yourself before passing it to this library, and
 sign a cookie after it's returned from this library.
+
+Also we don't cache cookies. We just access database every time.
 */
 
 export type CookieOptions = {
