@@ -14,24 +14,41 @@ fs.mkdirSync(rootDir, { recursive: true });
 
 type Session = {
   tokenHashes: string[];
+  tokenExp: Date;
+  exp: Date;
+  userId: string;
+};
+
+type SessionSerialized = {
+  tokenHashes: string[];
   tokenExp: number;
   exp: number;
   userId: string;
 };
 
-const sessions: Record<string, Session> = JSON.parse(
+const rawSessions: Record<string, SessionSerialized> = JSON.parse(
   fs.readFileSync("./var/sessions.json", "utf-8"),
+);
+const sessions: Record<string, Session> = Object.fromEntries(
+  Object.entries(rawSessions).map(([id, session]) => [
+    id,
+    {
+      ...session,
+      tokenExp: new Date(Number(session.tokenExp)),
+      exp: new Date(Number(session.exp)),
+    } as Session,
+  ]),
 );
 
 const config: Config = {
   ...defaultConfig,
-  dateNow: (): number => {
+  dateNow: (): Date => {
     const neteroDir = process.env["NETERO_STATE"];
     if (neteroDir === undefined) {
       throw new Error("NETERO_STATE is not set");
     }
     const epochNowStr = fs.readFileSync(`${neteroDir}/now.txt`, "utf8");
-    return new Date(epochNowStr).getTime();
+    return new Date(epochNowStr);
   },
   sessionExpiresIn: 5 * 60 * 60 * 1000,
   selectSession: ({ tokenHash }) => {
@@ -203,7 +220,19 @@ fs.writeFileSync("./ready.fifo", "");
 
 await fs.promises.readFile("./exit.fifo");
 
-fs.writeFileSync("./var/sessions.json", JSON.stringify(sessions));
+const serializedSessions: Record<string, SessionSerialized> =
+  Object.fromEntries(
+    Object.entries(sessions).map(([id, session]) => [
+      id,
+      {
+        ...session,
+        tokenExp: session.tokenExp.getTime(),
+        exp: session.exp.getTime(),
+      },
+    ]),
+  );
+
+fs.writeFileSync("./var/sessions.json", JSON.stringify(serializedSessions));
 
 await server.stop();
 process.exit(0);

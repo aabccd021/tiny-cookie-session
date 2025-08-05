@@ -34,8 +34,8 @@ export type Session =
       readonly requireLogout: false;
       readonly cookie?: Cookie;
       readonly id: string;
-      readonly exp: number;
-      readonly tokenExp: number;
+      readonly exp: Date;
+      readonly tokenExp: Date;
       readonly token1Hash: string;
       readonly token2Hash: string | undefined;
       readonly userId: string;
@@ -43,14 +43,14 @@ export type Session =
 
 export type Config = {
   readonly cookieOption?: Omit<CookieOptions, "maxAge" | "expires">;
-  readonly dateNow?: () => number;
+  readonly dateNow?: () => Date;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
   readonly selectSession: (params: { tokenHash: string }) =>
     | {
         readonly id: string;
-        readonly exp: number;
-        readonly tokenExp: number;
+        readonly exp: Date;
+        readonly tokenExp: Date;
         readonly token1Hash: string;
         readonly token2Hash: string | undefined;
         readonly userId: string;
@@ -58,15 +58,15 @@ export type Config = {
     | undefined;
   readonly insertSession: (params: {
     readonly sessionId: string;
-    readonly sessionExp: number;
+    readonly sessionExp: Date;
     readonly tokenHash: string;
-    readonly tokenExp: number;
+    readonly tokenExp: Date;
     readonly userId: string;
   }) => void;
   readonly insertTokenAndUpdateSession: (params: {
     readonly sessionId: string;
-    readonly sessionExp: number;
-    readonly tokenExp: number;
+    readonly sessionExp: Date;
+    readonly tokenExp: Date;
     readonly newTokenHash: string;
   }) => void;
   readonly deleteSession: (params: { tokenHash: string }) => void;
@@ -137,7 +137,7 @@ function createNewTokenCookie(config: Config): {
 } {
   const token = generateToken();
   const tokenHash = hashToken(token);
-  const now = config.dateNow?.() ?? Date.now();
+  const now = config.dateNow?.() ?? new Date();
 
   /*
   We use `sessionExpiresIn` instead of `tokenExpiresIn` here, because we want
@@ -149,7 +149,7 @@ function createNewTokenCookie(config: Config): {
   We primarily use short-lived tokens to detect cookie theft, and not to limit
   the session duration.
   */
-  const expires = new Date(now + config.sessionExpiresIn);
+  const expires = new Date(now.getTime() + config.sessionExpiresIn);
 
   const cookie: Cookie = [
     token,
@@ -179,13 +179,14 @@ export function login(
   },
 ): Cookie {
   const { cookie, tokenHash } = createNewTokenCookie(config);
-  const now = config.dateNow?.() ?? Date.now();
+  const now = config.dateNow?.() ?? new Date();
+
   config.insertSession({
     tokenHash,
     sessionId,
     userId,
-    sessionExp: now + config.sessionExpiresIn,
-    tokenExp: now + config.tokenExpiresIn,
+    sessionExp: new Date(now.getTime() + config.sessionExpiresIn),
+    tokenExp: new Date(now.getTime() + config.tokenExpiresIn),
   });
   return cookie;
 }
@@ -276,7 +277,7 @@ export function consumeSession(config: Config, token: string): Session {
     };
   }
 
-  const now = config.dateNow?.() ?? Date.now();
+  const now = config.dateNow?.() ?? new Date();
 
   if (session.exp < now) {
     config.deleteSession({ tokenHash });
@@ -302,8 +303,8 @@ export function consumeSession(config: Config, token: string): Session {
     config.insertTokenAndUpdateSession({
       sessionId: session.id,
       newTokenHash: tokenHash,
-      sessionExp: now + config.sessionExpiresIn,
-      tokenExp: now + config.tokenExpiresIn,
+      sessionExp: new Date(now.getTime() + config.sessionExpiresIn),
+      tokenExp: new Date(now.getTime() + config.tokenExpiresIn),
     });
     return {
       ...session,
@@ -337,27 +338,27 @@ export function testConfig(
   const token2Hash = hashToken(generateToken());
   const token3Hash = hashToken(generateToken());
 
-  const start = Date.now();
+  const start = new Date();
   config.insertSession({
     sessionId,
     tokenHash: token3Hash,
     userId,
-    sessionExp: start + config.sessionExpiresIn,
-    tokenExp: start + config.tokenExpiresIn,
+    sessionExp: new Date(start.getTime() + config.sessionExpiresIn),
+    tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
   });
 
   config.insertTokenAndUpdateSession({
     sessionId,
-    sessionExp: start + 10000 + config.sessionExpiresIn,
+    sessionExp: new Date(start.getTime() + 10000 + config.sessionExpiresIn),
     newTokenHash: token2Hash,
-    tokenExp: start + 1000 + config.tokenExpiresIn,
+    tokenExp: new Date(start.getTime() + 1000 + config.tokenExpiresIn),
   });
 
   config.insertTokenAndUpdateSession({
     sessionId,
-    sessionExp: start + 20000 + config.sessionExpiresIn,
+    sessionExp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),
     newTokenHash: token1Hash,
-    tokenExp: start + 2000 + config.tokenExpiresIn,
+    tokenExp: new Date(start.getTime() + 2000 + config.tokenExpiresIn),
   });
 
   for (const tokenHash of [token1Hash, token2Hash, token3Hash]) {
@@ -382,11 +383,17 @@ export function testConfig(
       throw new Error("Session token2Hash does not match");
     }
 
-    if (session.exp !== start + 20000 + config.sessionExpiresIn) {
+    const expectedSessionExp = new Date(
+      start.getTime() + 20000 + config.sessionExpiresIn,
+    );
+    if (session.exp.getTime() !== expectedSessionExp.getTime()) {
       throw new Error("Session expired");
     }
 
-    if (session.tokenExp !== start + 2000 + config.tokenExpiresIn) {
+    const expectedTokenExp = new Date(
+      start.getTime() + 2000 + config.tokenExpiresIn,
+    );
+    if (session.tokenExp.getTime() !== expectedTokenExp.getTime()) {
       throw new Error("Token expired");
     }
   }
