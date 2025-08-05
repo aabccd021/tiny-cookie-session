@@ -34,8 +34,8 @@ const sessions: Record<string, Session> = Object.fromEntries(
     id,
     {
       ...session,
-      tokenExp: new Date(Number(session.tokenExp)),
-      exp: new Date(Number(session.exp)),
+      tokenExp: new Date(session.tokenExp),
+      exp: new Date(session.exp),
     } as Session,
   ]),
 );
