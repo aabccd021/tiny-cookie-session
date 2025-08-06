@@ -69,7 +69,7 @@
         cp -L ${./package.json} ./package.json
         cp -L ${./tsconfig.json} ./tsconfig.json
         cp -Lr ${nodeModules}/node_modules ./node_modules
-        ${lib.getExe pkgs.biome} check --error-on-warnings
+        ${pkgs.biome}/bin/biome check --error-on-warnings
         touch $out
       '';
 
