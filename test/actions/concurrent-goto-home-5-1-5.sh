@@ -2,12 +2,12 @@ goto --url "http://localhost:8080/?sleep=5000" &
 
 sleep 1
 
-tab_switch "2"
+tab-switch "2"
 goto --url "http://localhost:8080/?sleep=5000"
-assert_response_code_equal 200
-assert_query_returns_equal "//p" "User: alice"
-tab_switch "1"
+assert-response-code-equal 200
+assert-query-returns-equal "//p" "User: alice"
+tab-switch "1"
 
 wait
-assert_response_code_equal 200
-assert_query_returns_equal "//p" "User: alice"
+assert-response-code-equal 200
+assert-query-returns-equal "//p" "User: alice"

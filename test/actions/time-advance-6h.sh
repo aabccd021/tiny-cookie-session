@@ -1,1 +1,1 @@
-time_advance "6 hour"
+time-advance "6 hour"

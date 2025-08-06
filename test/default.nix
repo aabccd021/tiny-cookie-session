@@ -29,7 +29,7 @@ let
         chmod -R u=rwX,g=,o= ./var
 
         export NETERO_STATE="$PWD/var/netero"
-        netero_init
+        netero-init
 
         mkdir -p ./run/netero
         mkfifo ./ready.fifo

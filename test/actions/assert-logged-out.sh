@@ -1,1 +1,1 @@
-assert_query_returns_equal "//p" "Logged out"
+assert-query-returns-equal "//p" "Logged out"

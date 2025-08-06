@@ -1,1 +1,1 @@
-time_advance "10 minute"
+time-advance "10 minute"

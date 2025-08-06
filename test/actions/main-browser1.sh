@@ -1,1 +1,1 @@
-browser_switch "1"
+browser-switch "1"
