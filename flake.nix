@@ -47,7 +47,7 @@
         programs.shfmt.enable = true;
         settings.global.excludes = [
           "LICENSE"
-          "*.ico"
+          "bun.nix"
         ];
       };
 
