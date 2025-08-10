@@ -1,6 +1,7 @@
 # simple-cookie-session
 
 todo:
+- remove default config
 - catch config throw
 - add tests
 

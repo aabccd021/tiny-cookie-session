@@ -6,9 +6,7 @@ type Session = {
   exp: Date;
   userId: string;
 };
-
 const sessions: Record<string, Session> = {};
-
 const config = {
   ...defaultConfig,
   dateNow: () => new Date(),
