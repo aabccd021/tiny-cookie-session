@@ -112,7 +112,6 @@ function logoutCookie(config) {
       path: "/",
       secure: true,
       ...config.cookieOption,
-      expires: new Date(config.dateNow().getTime() - 1000), // Set to past date to expire the cookie
     },
   };
 }
@@ -153,12 +152,12 @@ async function createNewTokenCookie(config) {
   const cookie = {
     value: token,
     options: {
-      ...config.cookieOption,
       httpOnly: true,
       sameSite: "lax",
       path: "/",
       secure: true,
       expires,
+      ...config.cookieOption,
     },
   };
 
