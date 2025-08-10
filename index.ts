@@ -24,7 +24,17 @@ export type CookieOptions = {
 
 export type Cookie = readonly [string, CookieOptions];
 
-export type Session =
+export type ExtraData = {
+  readonly insert: unknown;
+  readonly select: unknown;
+};
+
+export type DefaultExtraData = {
+  readonly insert: undefined;
+  readonly select: undefined;
+};
+
+export type Session<T> =
   | {
       readonly requireLogout: true;
       readonly reason: "session not found" | "old token" | "session expired";
@@ -38,10 +48,14 @@ export type Session =
       readonly tokenExp: Date;
       readonly token1Hash: string;
       readonly token2Hash: string | undefined;
-      readonly userId: string;
+      readonly extra: SelectExtra<T>;
     };
 
-export type Config = {
+export type SelectExtra<T> = T extends { select: infer U } ? U : undefined;
+
+export type InsertExtra<T> = T extends { insert: infer U } ? U : undefined;
+
+export type Config<T = unknown> = {
   readonly cookieOption?: Omit<CookieOptions, "maxAge" | "expires">;
   readonly dateNow?: () => Date;
   readonly sessionExpiresIn: number;
@@ -53,7 +67,7 @@ export type Config = {
         readonly tokenExp: Date;
         readonly token1Hash: string;
         readonly token2Hash: string | undefined;
-        readonly userId: string;
+        readonly extra: SelectExtra<T>;
       }
     | undefined;
   readonly insertSession: (params: {
@@ -61,7 +75,7 @@ export type Config = {
     readonly sessionExp: Date;
     readonly tokenHash: string;
     readonly tokenExp: Date;
-    readonly userId: string;
+    readonly extra: InsertExtra<T>;
   }) => void;
   readonly insertTokenAndUpdateSession: (params: {
     readonly sessionId: string;
@@ -168,14 +182,14 @@ export function logout(config: Config, { token }: { token: string }): Cookie {
   return logoutCookie(config);
 }
 
-export function login(
-  config: Config,
+export function login<T = unknown>(
+  config: Config<T>,
   {
-    userId,
     sessionId,
+    extra,
   }: {
-    userId: string;
     sessionId: string;
+    extra: InsertExtra<T>;
   },
 ): Cookie {
   const { cookie, tokenHash } = createNewTokenCookie(config);
@@ -184,14 +198,17 @@ export function login(
   config.insertSession({
     tokenHash,
     sessionId,
-    userId,
     sessionExp: new Date(now.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(now.getTime() + config.tokenExpiresIn),
+    extra,
   });
   return cookie;
 }
 
-export function consumeSession(config: Config, token: string): Session {
+export function consumeSession<T = unknown>(
+  config: Config<T>,
+  token: string,
+): Session<T> {
   const tokenHash = hashToken(token);
   const session = config.selectSession({ tokenHash });
 
@@ -325,9 +342,9 @@ Test whether the `Config` is implemented correctly.
 If your `Config` implementation is not correct or throws an error, this
 function might leave some dirty data in the database.
 */
-export function testConfig(
-  config: Config,
-  { userId }: { userId: string },
+export function testConfig<T = unknown>(
+  config: Config<T>,
+  { insertExtra }: { insertExtra: InsertExtra<T> },
 ): void {
   if (config.tokenExpiresIn >= config.sessionExpiresIn) {
     throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
@@ -342,9 +359,9 @@ export function testConfig(
   config.insertSession({
     sessionId,
     tokenHash: token3Hash,
-    userId,
     sessionExp: new Date(start.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
+    extra: insertExtra,
   });
 
   config.insertTokenAndUpdateSession({
@@ -369,10 +386,6 @@ export function testConfig(
 
     if (session.id !== sessionId) {
       throw new Error("Session id does not match");
-    }
-
-    if (session.userId !== userId) {
-      throw new Error("Session user id does not match");
     }
 
     if (session.token1Hash !== token1Hash) {

@@ -40,7 +40,16 @@ const sessions: Record<string, Session> = Object.fromEntries(
   ]),
 );
 
-const config: Config = {
+type ExtraData = {
+  readonly insert: {
+    readonly userId: string;
+  };
+  readonly select: {
+    readonly userId: string;
+  };
+};
+
+const config: Config<ExtraData> = {
   ...defaultConfig,
   dateNow: (): Date => {
     const neteroDir = process.env["NETERO_STATE"];
@@ -72,15 +81,17 @@ const config: Config = {
       token2Hash,
       exp: session.exp,
       tokenExp: session.tokenExp,
-      userId: session.userId,
+      extra: {
+        userId: session.userId,
+      },
     };
   },
-  insertSession: ({ sessionId, sessionExp, tokenHash, tokenExp, userId }) => {
+  insertSession: ({ sessionId, sessionExp, tokenHash, tokenExp, extra }) => {
     sessions[sessionId] = {
       exp: sessionExp,
       tokenExp: tokenExp,
       tokenHashes: [tokenHash],
-      userId,
+      userId: extra.userId,
     };
   },
   insertTokenAndUpdateSession: ({
@@ -109,7 +120,7 @@ const config: Config = {
   },
 };
 
-testConfig(config, { userId: "testUserId" });
+testConfig(config, { insertExtra: { userId: "testUserId" } });
 
 const server = Bun.serve({
   port: 8080,
@@ -149,7 +160,7 @@ const server = Bun.serve({
             ? new Bun.Cookie("session_token", ...session.cookie).serialize()
             : "";
 
-        return new Response(`<p>User: ${session.userId}</p>`, {
+        return new Response(`<p>User: ${session.extra.userId}</p>`, {
           headers: {
             "Set-Cookie": cookie,
             "Content-Type": "text/html",
@@ -179,7 +190,7 @@ const server = Bun.serve({
 
         const loginCookie = login(config, {
           sessionId: crypto.randomUUID(),
-          userId,
+          extra: { userId },
         });
         return new Response(undefined, {
           status: 303,
