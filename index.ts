@@ -107,7 +107,7 @@ const defaultCookieOption: CookieOptions = {
   secure: true,
 };
 
-function logoutCookie(config: Config): Cookie {
+function logoutCookie<S = unknown, I = unknown>(config: Config<S, I>): Cookie {
   return [
     "",
     {
@@ -150,7 +150,7 @@ peppering.
 Doing sha-256 for every request might seem like a lot, but it's not any more
 taxing than doing cookie signing, which is a common practice in web services.
 */
-export async function hashToken(token: string): Promise<string> {
+async function hashToken(token: string): Promise<string> {
   // return crypto.createHash("sha256").update(token).digest("base64");
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -191,15 +191,18 @@ async function createNewTokenCookie<S = unknown, I = unknown>(
   return { cookie, tokenHash };
 }
 
-export async function logout(config: Config, { token }: { token: string }): Promise<Cookie> {
-  const tokenHash = await hashToken(token);
+export async function logout<S = unknown, I = unknown>(
+  config: Config<S, I>,
+  arg: { token: string },
+): Promise<Cookie> {
+  const tokenHash = await hashToken(arg.token);
   config.deleteSession({ tokenHash });
   return logoutCookie(config);
 }
 
 export async function login<S = unknown, I = unknown>(
   config: Config<S, I>,
-  { extra }: { extra: I },
+  arg: { extra: I },
 ): Promise<Cookie> {
   const { cookie, tokenHash } = await createNewTokenCookie(config);
   const now = config.dateNow();
@@ -210,16 +213,16 @@ export async function login<S = unknown, I = unknown>(
     sessionId,
     sessionExp: new Date(now.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(now.getTime() + config.tokenExpiresIn),
-    extra,
+    extra: arg.extra,
   });
   return cookie;
 }
 
-export async function consumeSession<T = unknown>(
-  config: Config<T>,
-  token: string,
-): Promise<Session<T>> {
-  const requestTokenHash = await hashToken(token);
+export async function consumeSession<S = unknown, I = unknown>(
+  config: Config<S, I>,
+  arg: { token: string },
+): Promise<Session<S>> {
+  const requestTokenHash = await hashToken(arg.token);
   const session = await config.selectSession({ tokenHash: requestTokenHash });
 
   /*

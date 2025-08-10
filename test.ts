@@ -1,4 +1,4 @@
-import { defaultConfig, testConfig } from "./index";
+import { consumeSession, defaultConfig, login, logout, testConfig } from "./index";
 
 type Session = {
   tokenHashes: string[];
@@ -80,3 +80,19 @@ const config = {
 };
 
 testConfig(config, { insertExtra: { userId: "test-user" } });
+// login(config, { extra: { userId: "test-user" }, })
+//
+// logout(config, { token: "test-token" })
+//
+// const session = consumeSession(config, {
+//   token: "test"
+// });
+// console.log("Session consumed:", session);
+{
+  const foo = "bar";
+  console.log(foo);
+}
+{
+  const foo = "foo";
+  console.log(foo);
+}
