@@ -15,6 +15,7 @@
         projectRootFile = "flake.nix";
         programs.nixfmt.enable = true;
         programs.biome.enable = true;
+        programs.biome.formatUnsafe = true;
         programs.biome.settings.formatter.indentStyle = "space";
         programs.biome.settings.formatter.lineWidth = 100;
       };
