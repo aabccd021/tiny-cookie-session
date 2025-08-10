@@ -1,7 +1,7 @@
 # simple-cookie-session
 
 todo:
-- use generic instead of userid
+- config generateId
 - test garbage collection
 - compare with device bound session credentials
 
