@@ -168,7 +168,8 @@ function createNewTokenCookie(config: Config): {
 }
 
 export function logout(config: Config, { token }: { token: string }): Cookie {
-  config.deleteSession({ tokenHash: hashToken(token) });
+  const tokenHash = hashToken(token);
+  config.deleteSession({ tokenHash });
   return logoutCookie(config);
 }
 
