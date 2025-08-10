@@ -118,7 +118,6 @@ function generateToken() {
 async function hashToken(token) {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-
   // @ts-ignore https://tc39.es/proposal-arraybuffer-base64/spec/#sec-uint8array.prototype.tobase64
   return new Uint8Array(hashBuffer).toBase64();
 }
