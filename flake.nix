@@ -17,8 +17,6 @@
         programs.biome.enable = true;
       };
 
-      formatter = treefmtEval.config.build.wrapper;
-
       check-tsc = pkgs.runCommand "tsc" { } ''
         cp -L ${./index.ts} ./index.ts
         cp -L ${./tsconfig.json} ./tsconfig.json
@@ -52,7 +50,7 @@
 
       packages.x86_64-linux = packages;
       checks.x86_64-linux = packages;
-      formatter.x86_64-linux = formatter;
+      formatter.x86_64-linux = treefmtEval.config.build.wrapper;
 
       devShells.x86_64-linux.default = pkgs.mkShellNoCC {
         buildInputs = [
