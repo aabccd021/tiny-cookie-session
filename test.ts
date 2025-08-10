@@ -7,10 +7,14 @@ type Session = {
   userId: string;
 };
 
-function assertEq<T extends string | boolean | number | undefined | null>(actual: T, expected: T) {
+function assertEq<T extends string | boolean | number | undefined | null>(
+  actual: T,
+  expected: T,
+  message?: string,
+) {
   if (expected !== actual) {
     console.error("Expected", expected, "found", actual);
-    throw `Expected ${expected} found ${actual}`;
+    throw new Error(message ?? "Assertion failed");
   }
 }
 
@@ -111,4 +115,6 @@ function createConfig(state: { sessions: Record<string, Session>; date?: Date })
   assertEq(cookie.options.sameSite, "lax");
   assertEq(cookie.options.path, "/");
   assertEq(cookie.options.expires?.toISOString(), "2023-10-01T05:00:00.000Z");
+  assertEq(cookie.value.length, 64);
+  assertEq(/^[a-zA-Z0-9]*$/.test(cookie.value), true, cookie.value);
 }

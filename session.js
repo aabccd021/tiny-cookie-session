@@ -108,8 +108,9 @@ const tokenEntropyBit = 256;
  * @returns {string}
  */
 function generateToken() {
-  // @ts-ignore https://tc39.es/proposal-arraybuffer-base64/spec/#sec-uint8array.prototype.tobase64
-  return crypto.getRandomValues(new Uint8Array(tokenEntropyBit / 8)).toBase64();
+  // TODO: Remove when https://tc39.es/proposal-arraybuffer-base64 added to typescript
+  // @ts-ignore https://tc39.es/proposal-arraybuffer-base64
+  return crypto.getRandomValues(new Uint8Array(tokenEntropyBit / 8)).toHex();
 }
 
 /**
@@ -119,8 +120,9 @@ function generateToken() {
 async function hashToken(token) {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  // @ts-ignore https://tc39.es/proposal-arraybuffer-base64/spec/#sec-uint8array.prototype.tobase64
-  return new Uint8Array(hashBuffer).toBase64();
+  // TODO: Remove when https://tc39.es/proposal-arraybuffer-base64 added to typescript
+  // @ts-ignore
+  return new Uint8Array(hashBuffer).toHex();
 }
 
 /**
