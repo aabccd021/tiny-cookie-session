@@ -79,7 +79,6 @@
  * @template S
  * @template I
  * @typedef {Object} Config
- * @property {Omit<CookieOptions, "maxAge" | "expires">} [cookieOption]
  * @property {function(): Date} dateNow
  * @property {number} sessionExpiresIn
  * @property {number} tokenExpiresIn
@@ -98,23 +97,17 @@ export const defaultConfig = {
 };
 
 /**
- * @template S
- * @template I
- * @param {Config<S, I>} config
- * @returns {Cookie}
+ * @type {Cookie}
  */
-function logoutCookie(config) {
-  return {
-    value: "",
-    options: {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: true,
-      ...config.cookieOption,
-    },
-  };
-}
+const logoutCookie = {
+  value: "",
+  options: {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: true,
+  },
+};
 
 const tokenEntropyBit = 256;
 
@@ -122,6 +115,7 @@ const tokenEntropyBit = 256;
  * @returns {string}
  */
 function generateToken() {
+  // @ts-ignore https://tc39.es/proposal-arraybuffer-base64/spec/#sec-uint8array.prototype.tobase64
   return crypto.getRandomValues(new Uint8Array(tokenEntropyBit / 8)).toBase64();
 }
 
@@ -132,6 +126,8 @@ function generateToken() {
 async function hashToken(token) {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+  // @ts-ignore https://tc39.es/proposal-arraybuffer-base64/spec/#sec-uint8array.prototype.tobase64
   return new Uint8Array(hashBuffer).toBase64();
 }
 
@@ -157,7 +153,6 @@ async function createNewTokenCookie(config) {
       path: "/",
       secure: true,
       expires,
-      ...config.cookieOption,
     },
   };
 
@@ -174,7 +169,7 @@ async function createNewTokenCookie(config) {
 export async function logout(config, arg) {
   const tokenHash = await hashToken(arg.token);
   config.deleteSession({ tokenHash });
-  return logoutCookie(config);
+  return logoutCookie;
 }
 
 /**
@@ -213,7 +208,7 @@ export async function consumeSession(config, arg) {
   if (session === undefined) {
     return {
       state: "NotFound",
-      cookie: logoutCookie(config),
+      cookie: logoutCookie,
       requestTokenHash,
     };
   }
@@ -225,7 +220,7 @@ export async function consumeSession(config, arg) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
       state: "TokenStolen",
-      cookie: logoutCookie(config),
+      cookie: logoutCookie,
       requestTokenHash,
       data: session,
     };
@@ -237,7 +232,7 @@ export async function consumeSession(config, arg) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
       state: "Expired",
-      cookie: logoutCookie(config),
+      cookie: logoutCookie,
       requestTokenHash,
       data: session,
       now,
