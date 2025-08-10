@@ -324,7 +324,12 @@ export async function consumeSession<S = unknown, I = unknown>(
     const { cookie, tokenHash } = await createNewTokenCookie(config);
     const sessionExp = new Date(now.getTime() + config.sessionExpiresIn);
     const tokenExp = new Date(now.getTime() + config.tokenExpiresIn);
-    config.insertTokenAndUpdateSession({ sessionId: session.id, tokenHash, sessionExp, tokenExp });
+    config.insertTokenAndUpdateSession({
+      sessionId: session.id,
+      tokenHash,
+      sessionExp,
+      tokenExp,
+    });
     return {
       state: "TokenRefreshed",
       cookie,

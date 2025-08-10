@@ -1,4 +1,4 @@
-import { consumeSession, defaultConfig, login, logout, testConfig } from "./index";
+import { defaultConfig, testConfig } from "./index";
 
 type Session = {
   tokenHashes: string[];
@@ -14,30 +14,23 @@ const config = {
   dateNow: () => new Date(),
   sessionExpiresIn: 5 * 60 * 60 * 1000,
   selectSession: async (arg: { tokenHash: string }) => {
-    const sessionEntry = Object.entries(sessions).find(([_, session]) =>
-      session.tokenHashes.includes(arg.tokenHash),
-    );
-    if (sessionEntry === undefined) {
-      return undefined;
+    for (const [id, session] of Object.entries(sessions)) {
+      const [token1Hash, token2Hash] = session.tokenHashes.toReversed();
+      if (token1Hash !== undefined && session.tokenHashes.includes(arg.tokenHash)) {
+        return {
+          id,
+          token1Hash,
+          token2Hash,
+          exp: session.exp,
+          tokenExp: session.tokenExp,
+          extra: {
+            userId: session.userId,
+          },
+        };
+      }
     }
-    const [id, session] = sessionEntry;
 
-    const token1Hash = session.tokenHashes.at(-1);
-    if (token1Hash === undefined) {
-      return undefined;
-    }
-
-    const token2Hash = session.tokenHashes.at(-2);
-    return {
-      id,
-      token1Hash,
-      token2Hash,
-      exp: session.exp,
-      tokenExp: session.tokenExp,
-      extra: {
-        userId: session.userId,
-      },
-    };
+    return undefined;
   },
   insertSession: async (arg: {
     sessionId: string;
