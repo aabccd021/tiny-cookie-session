@@ -1,4 +1,4 @@
-import { login, testConfig } from "./session.js";
+import { consumeSession, login, testConfig } from "./session.js";
 
 type Session = {
   tokenHashes: string[];
@@ -18,8 +18,8 @@ function assertEq<T extends string | boolean | number | undefined | null>(
   }
 }
 
-function createConfig(state: { sessions?: Record<string, Session>; date?: Date }) {
-  const sessions = state.sessions ?? {};
+function createConfig(state?: { sessions?: Record<string, Session>; date?: Date }) {
+  const sessions = state?.sessions ?? {};
   return {
     dateNow: () => state?.date ?? new Date(),
     tokenExpiresIn: 1 * 60 * 1000,
@@ -86,8 +86,7 @@ function createConfig(state: { sessions?: Record<string, Session>; date?: Date }
 
 {
   console.info("# testConfig");
-  const state = { sessions: {} };
-  const config = createConfig(state);
+  const config = createConfig();
   testConfig(config, {
     sessionId: crypto.randomUUID(),
     insertExtra: {
@@ -98,11 +97,7 @@ function createConfig(state: { sessions?: Record<string, Session>; date?: Date }
 
 {
   console.info("# login");
-  const state = {
-    sessions: {},
-    date: new Date("2023-10-01T00:00:00Z"),
-  };
-  const config = createConfig(state);
+  const config = createConfig({ date: new Date("2023-10-01T00:00:00Z") });
 
   const cookie = await login(config, {
     sessionId: "test-session-id",
@@ -121,25 +116,18 @@ function createConfig(state: { sessions?: Record<string, Session>; date?: Date }
 }
 
 {
-  console.info("# unknown token");
-  const state = {
-    sessions: {},
-    date: new Date("2023-10-01T00:00:00Z"),
-  };
-  const config = createConfig(state);
+  console.info("# consumeSession: unknown token");
+  const config = createConfig();
 
-  const cookie = await login(config, {
-    sessionId: "test-session-id",
-    extra: {
-      userId: "test-user-id",
-    },
-  });
+  const session = await consumeSession(config, { token: "unknown-token" });
 
-  assertEq(cookie.options.httpOnly, true);
-  assertEq(cookie.options.secure, true);
-  assertEq(cookie.options.sameSite, "lax");
-  assertEq(cookie.options.path, "/");
-  assertEq(cookie.options.expires?.toISOString(), "2023-10-01T05:00:00.000Z");
-  assertEq(cookie.value.length, 64);
-  assertEq(/^[a-zA-Z0-9]*$/.test(cookie.value), true, cookie.value);
+  if (session.state !== "NotFound") {
+    throw new Error("Expected session state to be NotFound");
+  }
+  assertEq(
+    session.requestTokenHash,
+    "9206c2394794b8fc97fcd896f95e40028ab7a15c10279446c23fbdd4b4ae7a1e",
+  );
+  assertEq(session.cookie.value, "");
+  assertEq(session.cookie.options.maxAge, 0);
 }
