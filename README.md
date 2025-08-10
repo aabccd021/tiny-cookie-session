@@ -12,6 +12,9 @@ Cookie session management for javascript servers.
 
 - CSRF and cookie tampering is not included, and should be performed before using
 
+## Garbage Collection
+not implemented in this library because not security relevant.     
+
 ## LICENCE
 
 ```
