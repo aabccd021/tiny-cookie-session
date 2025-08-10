@@ -98,6 +98,7 @@ const logoutCookie = {
     sameSite: "lax",
     path: "/",
     secure: true,
+    maxAge: 0,
   },
 };
 
