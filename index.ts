@@ -28,7 +28,10 @@ export type CookieOptions = {
   readonly sameSite?: "strict" | "lax" | "none";
 };
 
-export type Cookie = readonly [string, CookieOptions];
+export type Cookie = {
+  readonly value: string;
+  readonly options: CookieOptions;
+};
 
 export type SessionData<S> = {
   readonly id: string;
@@ -108,14 +111,14 @@ const defaultCookieOption: CookieOptions = {
 };
 
 function logoutCookie<S, I>(config: Config<S, I>): Cookie {
-  return [
-    "",
-    {
+  return {
+    value: "",
+    options: {
       ...defaultCookieOption,
       ...config.cookieOption,
       maxAge: 0,
     },
-  ];
+  };
 }
 
 /*
@@ -179,14 +182,14 @@ async function createNewTokenCookie<S, I>(
   */
   const expires = new Date(now.getTime() + config.sessionExpiresIn);
 
-  const cookie: Cookie = [
-    token,
-    {
+  const cookie: Cookie = {
+    value: token,
+    options: {
       ...defaultCookieOption,
       ...config.cookieOption,
       expires,
     },
-  ];
+  };
 
   return { cookie, tokenHash };
 }

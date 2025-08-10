@@ -1,4 +1,4 @@
-import { defaultConfig, testConfig } from "./index";
+import { defaultConfig, testConfig } from "./session.js";
 
 type Session = {
   tokenHashes: string[];

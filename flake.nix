@@ -19,8 +19,9 @@
         programs.biome.settings.formatter.lineWidth = 100;
       };
 
-      check-tsc = pkgs.runCommand "tsc" { } ''
+      tsc = pkgs.runCommand "tsc" { } ''
         cp -L ${./index.ts} ./index.ts
+        cp -L ${./session.js} ./session.js
         cp -L ${./tsconfig.json} ./tsconfig.json
         mkdir --parents "$out"  
         ${pkgs.typescript}/bin/tsc --outDir "$out"
@@ -28,6 +29,7 @@
 
       test = pkgs.runCommand "test" { } ''
         cp -L ${./index.ts} ./index.ts
+        cp -L ${./session.js} ./session.js
         cp -L ${./test.ts} ./test.ts
         ${pkgs.bun}/bin/bun ./test.ts
         touch "$out"
@@ -50,7 +52,7 @@
       packages = {
         publish = publish;
         formatting = treefmtEval.config.build.check self;
-        check-tsc = check-tsc;
+        tsc = tsc;
         test = test;
       };
 
