@@ -2,9 +2,7 @@
 
 todo:
 - catch config throw
-- test garbage collection
-- compare with device bound session credentials
-
+- add tests
 
 Cookie session management for javascript servers.
 
@@ -14,6 +12,23 @@ Cookie session management for javascript servers.
 
 ## Garbage Collection
 not implemented in this library because not security relevant.     
+
+## Comparison with Device Bound Session Credentials
+
+- DBSC will only invalidate attacker
+- DBSC doesnt require storing all past session tokens
+
+## CSRF
+
+## Session Tampering / User Agent Detection / GeoIP
+
+## What this library is not
+
+- Protecting from malware continuously stealing cookies 
+
+## Improving security with service workers
+
+- By periodically refreshing the session cookie, you can detect cookie theft faster
 
 ## LICENCE
 
