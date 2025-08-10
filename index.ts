@@ -30,7 +30,7 @@ export type CookieOptions = {
 
 export type Cookie = readonly [string, CookieOptions];
 
-export type SessionData<S = unknown> = {
+export type SessionData<S> = {
   readonly id: string;
   readonly exp: Date;
   readonly tokenExp: Date;
@@ -39,7 +39,7 @@ export type SessionData<S = unknown> = {
   readonly extra: S;
 };
 
-export type Session<S = unknown> =
+export type Session<S> =
   | {
       readonly state: "NotFound";
       readonly cookie: Cookie;
@@ -70,7 +70,7 @@ export type Session<S = unknown> =
       readonly now: Date;
     };
 
-export type Config<S = unknown, I = unknown> = {
+export type Config<S, I> = {
   readonly cookieOption?: Omit<CookieOptions, "maxAge" | "expires">;
   readonly dateNow: () => Date;
   readonly sessionExpiresIn: number;
@@ -107,7 +107,7 @@ const defaultCookieOption: CookieOptions = {
   secure: true,
 };
 
-function logoutCookie<S = unknown, I = unknown>(config: Config<S, I>): Cookie {
+function logoutCookie<S, I>(config: Config<S, I>): Cookie {
   return [
     "",
     {
@@ -157,7 +157,7 @@ async function hashToken(token: string): Promise<string> {
   return new Uint8Array(hashBuffer).toBase64();
 }
 
-async function createNewTokenCookie<S = unknown, I = unknown>(
+async function createNewTokenCookie<S, I>(
   config: Config<S, I>,
 ): Promise<{
   readonly cookie: Cookie;
@@ -191,19 +191,13 @@ async function createNewTokenCookie<S = unknown, I = unknown>(
   return { cookie, tokenHash };
 }
 
-export async function logout<S = unknown, I = unknown>(
-  config: Config<S, I>,
-  arg: { token: string },
-): Promise<Cookie> {
+export async function logout<S, I>(config: Config<S, I>, arg: { token: string }): Promise<Cookie> {
   const tokenHash = await hashToken(arg.token);
   config.deleteSession({ tokenHash });
   return logoutCookie(config);
 }
 
-export async function login<S = unknown, I = unknown>(
-  config: Config<S, I>,
-  arg: { extra: I },
-): Promise<Cookie> {
+export async function login<S, I>(config: Config<S, I>, arg: { extra: I }): Promise<Cookie> {
   const { cookie, tokenHash } = await createNewTokenCookie(config);
   const now = config.dateNow();
   const sessionId = config.generateSessionId();
@@ -218,7 +212,7 @@ export async function login<S = unknown, I = unknown>(
   return cookie;
 }
 
-export async function consumeSession<S = unknown, I = unknown>(
+export async function consumeSession<S, I>(
   config: Config<S, I>,
   arg: { token: string },
 ): Promise<Session<S>> {
@@ -358,7 +352,7 @@ Test whether the `Config` is implemented correctly.
 If your `Config` implementation is not correct or throws an error, this
 function might leave some dirty data in the database.
 */
-export async function testConfig<S = unknown, I = unknown>(
+export async function testConfig<S, I>(
   config: Config<S, I>,
   { insertExtra }: { insertExtra: I },
 ): Promise<void> {
