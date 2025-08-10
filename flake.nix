@@ -58,9 +58,9 @@
         cp -L ${./tsconfig.json} ./tsconfig.json
         # cp -Lr ${./test} ./test
         cp -Lr ${nodeModules}/node_modules ./node_modules
-        ${pkgs.typescript}/bin/tsc
-        ls -la
-        touch $out
+
+        mkdir --parents "$out"  
+        ${pkgs.typescript}/bin/tsc --outDir "$out"
       '';
 
       tests = import ./test {
