@@ -45,31 +45,31 @@ export type SessionData<T> = {
 
 export type Session<T> =
   | {
-      readonly status: "NotFound";
+      readonly state: "NotFound";
       readonly cookie: Cookie;
       readonly requestTokenHash: string;
     }
   | {
-      readonly status: "TokenStolen";
+      readonly state: "TokenStolen";
       readonly cookie: Cookie;
       readonly requestTokenHash: string;
       readonly data: SessionData<T>;
     }
   | {
-      readonly status: "Expired";
+      readonly state: "Expired";
       readonly cookie: Cookie;
       readonly requestTokenHash: string;
       readonly data: SessionData<T>;
       readonly now: Date;
     }
   | {
-      readonly status: "TokenRefreshed";
+      readonly state: "TokenRefreshed";
       readonly data: SessionData<T>;
       readonly cookie: Cookie;
       readonly now: Date;
     }
   | {
-      readonly status: "Active";
+      readonly state: "Active";
       readonly data: SessionData<T>;
       readonly now: Date;
     };
@@ -236,7 +236,7 @@ export async function consumeSession<T = unknown>(
   */
   if (session === undefined) {
     return {
-      status: "NotFound",
+      state: "NotFound",
       cookie: logoutCookie(config),
       requestTokenHash,
     };
@@ -293,7 +293,7 @@ export async function consumeSession<T = unknown>(
   if (!isSessionToken1 && !isSessionToken2) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
-      status: "TokenStolen",
+      state: "TokenStolen",
       cookie: logoutCookie(config),
       requestTokenHash,
       data: session,
@@ -305,7 +305,7 @@ export async function consumeSession<T = unknown>(
   if (session.exp < now) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
-      status: "Expired",
+      state: "Expired",
       cookie: logoutCookie(config),
       requestTokenHash,
       data: session,
@@ -329,7 +329,7 @@ export async function consumeSession<T = unknown>(
     const tokenExp = new Date(now.getTime() + config.tokenExpiresIn);
     config.insertTokenAndUpdateSession({ sessionId: session.id, tokenHash, sessionExp, tokenExp });
     return {
-      status: "TokenRefreshed",
+      state: "TokenRefreshed",
       cookie,
       now,
       data: {
@@ -344,7 +344,7 @@ export async function consumeSession<T = unknown>(
   }
 
   return {
-    status: "Active",
+    state: "Active",
     data: session,
     now,
   };
