@@ -130,4 +130,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   );
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
+  assertEq(session.cookie.options.httpOnly, true);
+  assertEq(session.cookie.options.secure, true);
+  assertEq(session.cookie.options.sameSite, "lax");
+  assertEq(session.cookie.options.path, "/");
 }
