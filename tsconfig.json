@@ -2,8 +2,7 @@
   "compilerOptions": {
     // Environment Settings
     "target": "esnext",
-    "lib": ["esnext"],
-    "types": ["node"],
+    "lib": ["esnext", "webworker"],
 
     // Other Outputs
     "sourceMap": true,

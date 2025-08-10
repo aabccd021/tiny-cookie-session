@@ -1,7 +1,7 @@
 # simple-cookie-session
 
 todo:
-- config generateId
+- catch config throw
 - test garbage collection
 - compare with device bound session credentials
 

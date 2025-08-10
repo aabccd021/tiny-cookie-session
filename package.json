@@ -19,14 +19,8 @@
   "bugs": {
     "url": "https://github.com/aabccd021/simple-cookie-session/issues"
   },
-  "scripts": {
-    "postinstall": "cd $(dirname $npm_package_json) && nix run .#bun2nix -- --output-file bun.nix"
-  },
   "homepage": "https://github.com/aabccd021/simple-cookie-session#readme",
   "files": [
     "index.ts"
-  ],
-  "devDependencies": {
-    "@types/node": "^24.2.1"
-  }
+  ]
 }

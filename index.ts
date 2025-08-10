@@ -1,5 +1,3 @@
-import * as crypto from "node:crypto";
-
 /*
 To maintain the simplicity of this library, we don't do any cookie signing.
 
@@ -11,6 +9,14 @@ sign a cookie after it's returned from this library.
 
 Also we don't cache cookies. We just access database every time.
 */
+
+// TODO: Remove this when the proposal is implemented
+declare global {
+  interface Uint8Array {
+    // https://tc39.es/proposal-arraybuffer-base64/spec/#sec-uint8array.prototype.tobase64
+    toBase64(): string;
+  }
+}
 
 export type CookieOptions = {
   readonly maxAge?: number;
@@ -50,7 +56,7 @@ export type Config<T = unknown> = {
   readonly dateNow: () => Date;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
-  readonly selectSession: (params: { tokenHash: string }) =>
+  readonly selectSession: (params: { tokenHash: string }) => Promise<
     | {
         readonly id: string;
         readonly exp: Date;
@@ -59,20 +65,21 @@ export type Config<T = unknown> = {
         readonly token2Hash: string | undefined;
         readonly extra: SelectExtra<T>;
       }
-    | undefined;
+    | undefined
+  >;
   readonly insertSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: Date;
     readonly tokenHash: string;
     readonly tokenExp: Date;
     readonly extra: InsertExtra<T>;
-  }) => void;
+  }) => Promise<void>;
   readonly insertTokenAndUpdateSession: (params: {
     readonly sessionId: string;
     readonly sessionExp: Date;
     readonly tokenExp: Date;
     readonly newTokenHash: string;
-  }) => void;
+  }) => Promise<void>;
   readonly deleteSession: (params: { tokenHash: string }) => void;
   readonly generateSessionId: () => string;
 };
@@ -118,7 +125,7 @@ https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c762024
 const tokenEntropyBit = 256;
 
 function generateToken(): string {
-  return crypto.randomBytes(tokenEntropyBit / 8).toString("base64");
+  return crypto.getRandomValues(new Uint8Array(tokenEntropyBit / 8)).toBase64();
 }
 
 /*
@@ -134,16 +141,19 @@ peppering.
 Doing sha-256 for every request might seem like a lot, but it's not any more
 taxing than doing cookie signing, which is a common practice in web services.
 */
-export function hashToken(token: string): string {
-  return crypto.createHash("sha256").update(token).digest("base64");
+export async function hashToken(token: string): Promise<string> {
+  // return crypto.createHash("sha256").update(token).digest("base64");
+  const data = new TextEncoder().encode(token);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return new Uint8Array(hashBuffer).toBase64();
 }
 
-function createNewTokenCookie(config: Config): {
+async function createNewTokenCookie(config: Config): Promise<{
   readonly cookie: Cookie;
   readonly tokenHash: string;
-} {
+}> {
   const token = generateToken();
-  const tokenHash = hashToken(token);
+  const tokenHash = await hashToken(token);
   const now = config.dateNow();
 
   /*
@@ -170,21 +180,24 @@ function createNewTokenCookie(config: Config): {
   return { cookie, tokenHash };
 }
 
-export function logout(config: Config, { token }: { token: string }): Cookie {
-  const tokenHash = hashToken(token);
+export async function logout(
+  config: Config,
+  { token }: { token: string },
+): Promise<Cookie> {
+  const tokenHash = await hashToken(token);
   config.deleteSession({ tokenHash });
   return logoutCookie(config);
 }
 
-export function login<T = unknown>(
+export async function login<T = unknown>(
   config: Config<T>,
   {
     extra,
   }: {
     extra: InsertExtra<T>;
   },
-): Cookie {
-  const { cookie, tokenHash } = createNewTokenCookie(config);
+): Promise<Cookie> {
+  const { cookie, tokenHash } = await createNewTokenCookie(config);
   const now = config.dateNow();
   const sessionId = config.generateSessionId();
 
@@ -198,12 +211,12 @@ export function login<T = unknown>(
   return cookie;
 }
 
-export function consumeSession<T = unknown>(
+export async function consumeSession<T = unknown>(
   config: Config<T>,
   token: string,
-): Session<T> {
-  const tokenHash = hashToken(token);
-  const session = config.selectSession({ tokenHash });
+): Promise<Session<T>> {
+  const requestTokenHash = await hashToken(token);
+  const session = await config.selectSession({ tokenHash: requestTokenHash });
 
   /*
   Logout the user when the session doesn't exist.
@@ -220,22 +233,11 @@ export function consumeSession<T = unknown>(
   }
 
   /*
-  Personally, I don't think we need to use timingSafeEqual here since we are
-  comparing hashed high entropy tokens, but LLM keeps saying "Just do it, it's
-  the best practice" so here we go.
+  No need to use `crypto.timingSafeEqual` here because we are comparing hashes
+  https://security.stackexchange.com/questions/237116/using-timingsafeequal#comment521092_237133
   */
-  const isToken1 =
-    tokenHash.length === session.token1Hash.length &&
-    crypto.timingSafeEqual(
-      Buffer.from(tokenHash),
-      Buffer.from(session.token1Hash),
-    );
-  const isToken2 =
-    tokenHash.length === session.token2Hash?.length &&
-    crypto.timingSafeEqual(
-      Buffer.from(tokenHash),
-      Buffer.from(session.token2Hash),
-    );
+  const isSessionToken1 = requestTokenHash === session.token1Hash;
+  const isSessionToken2 = requestTokenHash === session.token2Hash;
 
   /*
 
@@ -278,8 +280,8 @@ export function consumeSession<T = unknown>(
   but still longer than the longest request time.
 
   */
-  if (!isToken1 && !isToken2) {
-    config.deleteSession({ tokenHash });
+  if (!isSessionToken1 && !isSessionToken2) {
+    config.deleteSession({ tokenHash: requestTokenHash });
     return {
       requireLogout: true,
       reason: "old token",
@@ -290,7 +292,7 @@ export function consumeSession<T = unknown>(
   const now = config.dateNow();
 
   if (session.exp < now) {
-    config.deleteSession({ tokenHash });
+    config.deleteSession({ tokenHash: requestTokenHash });
     return {
       requireLogout: true,
       reason: "session expired",
@@ -308,8 +310,8 @@ export function consumeSession<T = unknown>(
   We will also extend the session expiration time here, which is more efficient
   than extending it on every request.
   */
-  if (session.tokenExp <= now && isToken1) {
-    const { cookie, tokenHash } = createNewTokenCookie(config);
+  if (session.tokenExp <= now && isSessionToken1) {
+    const { cookie, tokenHash } = await createNewTokenCookie(config);
     config.insertTokenAndUpdateSession({
       sessionId: session.id,
       newTokenHash: tokenHash,
@@ -335,18 +337,18 @@ Test whether the `Config` is implemented correctly.
 If your `Config` implementation is not correct or throws an error, this
 function might leave some dirty data in the database.
 */
-export function testConfig<T = unknown>(
+export async function testConfig<T = unknown>(
   config: Config<T>,
   { insertExtra }: { insertExtra: InsertExtra<T> },
-): void {
+): Promise<void> {
   if (config.tokenExpiresIn >= config.sessionExpiresIn) {
     throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
   }
 
   const sessionId = config.generateSessionId();
-  const token1Hash = hashToken(generateToken());
-  const token2Hash = hashToken(generateToken());
-  const token3Hash = hashToken(generateToken());
+  const token1Hash = await hashToken(generateToken());
+  const token2Hash = await hashToken(generateToken());
+  const token3Hash = await hashToken(generateToken());
 
   const start = new Date();
   config.insertSession({
@@ -372,7 +374,7 @@ export function testConfig<T = unknown>(
   });
 
   for (const tokenHash of [token1Hash, token2Hash, token3Hash]) {
-    const session = config.selectSession({ tokenHash });
+    const session = await config.selectSession({ tokenHash });
     if (session === undefined) {
       throw new Error("Session not found");
     }
