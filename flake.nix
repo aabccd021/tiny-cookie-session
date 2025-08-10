@@ -15,14 +15,8 @@
         projectRootFile = "flake.nix";
         programs.nixfmt.enable = true;
         programs.biome.enable = true;
-        programs.biome.settings = builtins.fromJSON (builtins.readFile ./biome.json);
+        programs.biome.settings.formatter.indentStyle = "space";
         programs.biome.formatUnsafe = true;
-        settings.formatter.biome.options = [ "--vcs-enabled=false" ];
-        programs.shfmt.enable = true;
-        settings.global.excludes = [
-          "LICENSE"
-          "bun.nix"
-        ];
       };
 
       formatter = treefmtEval.config.build.wrapper;
