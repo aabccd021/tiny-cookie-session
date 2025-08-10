@@ -79,7 +79,7 @@
  * @template S
  * @template I
  * @typedef {Object} Config
- * @property {function(): Date} dateNow
+ * @property {function(): Date} [ dateNow ]
  * @property {number} sessionExpiresIn
  * @property {number} tokenExpiresIn
  * @property {function({tokenHash: string}): Promise<SessionData<S>|undefined>} selectSession
@@ -87,12 +87,6 @@
  * @property {function({sessionId: string, sessionExp: Date, tokenExp: Date, tokenHash: string}): Promise<void>} insertTokenAndUpdateSession
  * @property {function({tokenHash: string}): Promise<void>} deleteSession
  */
-
-export const defaultConfig = {
-  sessionExpiresIn: 30 * 24 * 60 * 60 * 1000,
-  tokenExpiresIn: 1 * 60 * 1000,
-  dateNow: () => new Date(),
-};
 
 /**
  * @type {Cookie}
@@ -138,7 +132,7 @@ async function hashToken(token) {
 async function createNewTokenCookie(config) {
   const token = generateToken();
   const tokenHash = await hashToken(token);
-  const now = config.dateNow();
+  const now = config.dateNow?.() ?? new Date();
 
   const expires = new Date(now.getTime() + config.sessionExpiresIn);
 
@@ -179,7 +173,7 @@ export async function logout(config, arg) {
  */
 export async function login(config, arg) {
   const { cookie, tokenHash } = await createNewTokenCookie(config);
-  const now = config.dateNow();
+  const now = config.dateNow?.() ?? new Date();
 
   config.insertSession({
     tokenHash,
@@ -223,8 +217,7 @@ export async function consumeSession(config, arg) {
     };
   }
 
-  const now = config.dateNow();
-
+  const now = config.dateNow?.() ?? new Date();
   if (session.exp < now) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {

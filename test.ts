@@ -1,4 +1,4 @@
-import { defaultConfig, testConfig } from "./session.js";
+import { testConfig } from "./session.js";
 
 type Session = {
   tokenHashes: string[];
@@ -8,8 +8,8 @@ type Session = {
 };
 const sessions: Record<string, Session> = {};
 const config = {
-  ...defaultConfig,
   dateNow: () => new Date(),
+  tokenExpiresIn: 1 * 60 * 1000,
   sessionExpiresIn: 5 * 60 * 60 * 1000,
   selectSession: async (arg: { tokenHash: string }) => {
     for (const [id, session] of Object.entries(sessions)) {
