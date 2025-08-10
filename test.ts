@@ -1,4 +1,4 @@
-import { type Config, defaultConfig, testConfig } from "./index";
+import { defaultConfig, testConfig } from "./index";
 
 type Session = {
   tokenHashes: string[];
@@ -9,11 +9,11 @@ type Session = {
 
 const sessions: Record<string, Session> = {};
 
-const config: Config<{ userId: string }, { userId: string }> = {
+const config = {
   ...defaultConfig,
   dateNow: () => new Date(),
   sessionExpiresIn: 5 * 60 * 60 * 1000,
-  selectSession: async (arg) => {
+  selectSession: async (arg: { tokenHash: string }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
       session.tokenHashes.includes(arg.tokenHash),
     );
@@ -39,7 +39,13 @@ const config: Config<{ userId: string }, { userId: string }> = {
       },
     };
   },
-  insertSession: async (arg) => {
+  insertSession: async (arg: {
+    sessionId: string;
+    sessionExp: Date;
+    tokenExp: Date;
+    tokenHash: string;
+    extra: { userId: string };
+  }) => {
     sessions[arg.sessionId] = {
       exp: arg.sessionExp,
       tokenExp: arg.tokenExp,
@@ -47,7 +53,12 @@ const config: Config<{ userId: string }, { userId: string }> = {
       userId: arg.extra.userId,
     };
   },
-  insertTokenAndUpdateSession: async (arg) => {
+  insertTokenAndUpdateSession: async (arg: {
+    sessionId: string;
+    tokenHash: string;
+    tokenExp: Date;
+    sessionExp: Date;
+  }) => {
     const session = sessions[arg.sessionId];
     if (session === undefined) {
       throw new Error(`Session not found with id: ${arg.sessionId}`);
@@ -56,7 +67,7 @@ const config: Config<{ userId: string }, { userId: string }> = {
     session.tokenExp = arg.tokenExp;
     session.exp = arg.sessionExp;
   },
-  deleteSession: async (arg) => {
+  deleteSession: async (arg: { tokenHash: string }) => {
     const sessionEntry = Object.entries(sessions).find(([_, session]) =>
       session.tokenHashes.includes(arg.tokenHash),
     );
