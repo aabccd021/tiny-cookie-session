@@ -2,25 +2,26 @@
   "name": "simple-cookie-session",
   "description": "Cookie session management for Node.js",
   "version": "1.0.21",
-  "module": "index.ts",
-  "type": "module",
   "author": "aabccd021",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/aabccd021/simple-cookie-session.git"
-  },
+  "license": "0BSD",
+  "type": "module",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
   "keywords": [
-    "bun",
     "web",
     "cookie",
     "session"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aabccd021/simple-cookie-session.git"
+  },
   "bugs": {
     "url": "https://github.com/aabccd021/simple-cookie-session/issues"
   },
-  "homepage": "https://github.com/aabccd021/simple-cookie-session#readme",
-  "files": [
-    "index.ts"
-  ]
+  "homepage": "https://github.com/aabccd021/simple-cookie-session#readme"
 }
