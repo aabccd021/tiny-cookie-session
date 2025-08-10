@@ -27,6 +27,6 @@
     "index.ts"
   ],
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/node": "^24.2.1"
   }
 }

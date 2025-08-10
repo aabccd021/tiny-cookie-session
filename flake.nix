@@ -56,9 +56,10 @@
       check-tsc = pkgs.runCommand "tsc" { } ''
         cp -L ${./index.ts} ./index.ts
         cp -L ${./tsconfig.json} ./tsconfig.json
-        cp -Lr ${./test} ./test
+        # cp -Lr ${./test} ./test
         cp -Lr ${nodeModules}/node_modules ./node_modules
         ${pkgs.typescript}/bin/tsc
+        ls -la
         touch $out
       '';
 
