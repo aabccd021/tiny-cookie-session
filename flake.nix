@@ -58,7 +58,7 @@
         cp -L ${./tsconfig.json} ./tsconfig.json
         cp -Lr ${./test} ./test
         cp -Lr ${nodeModules}/node_modules ./node_modules
-        ${lib.getExe pkgs.typescript}
+        ${pkgs.typescript}/bin/tsc
         touch $out
       '';
 
