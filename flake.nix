@@ -52,10 +52,7 @@
     in
     {
 
-      packages.x86_64-linux = packages // {
-        gcroot = pkgs.linkFarm "gcroot" packages;
-      };
-
+      packages.x86_64-linux = packages;
       checks.x86_64-linux = packages;
       formatter.x86_64-linux = formatter;
 
