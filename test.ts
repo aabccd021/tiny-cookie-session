@@ -70,7 +70,12 @@ const config = {
   },
 };
 
-testConfig(config, { insertExtra: { userId: "test-user" } });
+testConfig(config, {
+  sessionId: crypto.randomUUID(),
+  insertExtra: {
+    userId: "test-user",
+  },
+});
 // login(config, { extra: { userId: "test-user" }, })
 //
 // logout(config, { token: "test-token" })
