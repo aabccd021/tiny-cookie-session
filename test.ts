@@ -18,13 +18,14 @@ function assertEq<T extends string | boolean | number | undefined | null>(
   }
 }
 
-function createConfig(state: { sessions: Record<string, Session>; date?: Date }) {
+function createConfig(state: { sessions?: Record<string, Session>; date?: Date }) {
+  const sessions = state.sessions ?? {};
   return {
     dateNow: () => state?.date ?? new Date(),
     tokenExpiresIn: 1 * 60 * 1000,
     sessionExpiresIn: 5 * 60 * 60 * 1000,
     selectSession: async (arg: { tokenHash: string }) => {
-      for (const [id, session] of Object.entries(state.sessions)) {
+      for (const [id, session] of Object.entries(sessions)) {
         const [token1Hash, token2Hash] = session.tokenHashes.toReversed();
         if (token1Hash !== undefined && session.tokenHashes.includes(arg.tokenHash)) {
           return {
@@ -49,7 +50,7 @@ function createConfig(state: { sessions: Record<string, Session>; date?: Date })
       tokenHash: string;
       extra: { userId: string };
     }) => {
-      state.sessions[arg.sessionId] = {
+      sessions[arg.sessionId] = {
         exp: arg.sessionExp,
         tokenExp: arg.tokenExp,
         tokenHashes: [arg.tokenHash],
@@ -62,7 +63,7 @@ function createConfig(state: { sessions: Record<string, Session>; date?: Date })
       tokenExp: Date;
       sessionExp: Date;
     }) => {
-      const session = state.sessions[arg.sessionId];
+      const session = sessions[arg.sessionId];
       if (session === undefined) {
         throw new Error(`Session not found with id: ${arg.sessionId}`);
       }
@@ -71,22 +72,22 @@ function createConfig(state: { sessions: Record<string, Session>; date?: Date })
       session.exp = arg.sessionExp;
     },
     deleteSession: async (arg: { tokenHash: string }) => {
-      const sessionEntry = Object.entries(state.sessions).find(([_, session]) =>
+      const sessionEntry = Object.entries(sessions).find(([_, session]) =>
         session.tokenHashes.includes(arg.tokenHash),
       );
       if (sessionEntry === undefined) {
         throw new Error(`Session not found with token: ${arg.tokenHash}`);
       }
       const [sessionId] = sessionEntry;
-      delete state.sessions[sessionId];
+      delete sessions[sessionId];
     },
   };
 }
 
 {
   console.info("# testConfig");
-  const sessions: Record<string, Session> = {};
-  const config = createConfig({ sessions });
+  const state = { sessions: {} };
+  const config = createConfig(state);
   testConfig(config, {
     sessionId: crypto.randomUUID(),
     insertExtra: {
@@ -97,6 +98,30 @@ function createConfig(state: { sessions: Record<string, Session>; date?: Date })
 
 {
   console.info("# login");
+  const state = {
+    sessions: {},
+    date: new Date("2023-10-01T00:00:00Z"),
+  };
+  const config = createConfig(state);
+
+  const cookie = await login(config, {
+    sessionId: "test-session-id",
+    extra: {
+      userId: "test-user-id",
+    },
+  });
+
+  assertEq(cookie.options.httpOnly, true);
+  assertEq(cookie.options.secure, true);
+  assertEq(cookie.options.sameSite, "lax");
+  assertEq(cookie.options.path, "/");
+  assertEq(cookie.options.expires?.toISOString(), "2023-10-01T05:00:00.000Z");
+  assertEq(cookie.value.length, 64);
+  assertEq(/^[a-zA-Z0-9]*$/.test(cookie.value), true, cookie.value);
+}
+
+{
+  console.info("# unknown token");
   const state = {
     sessions: {},
     date: new Date("2023-10-01T00:00:00Z"),
