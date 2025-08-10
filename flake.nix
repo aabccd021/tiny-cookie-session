@@ -16,6 +16,7 @@
         programs.nixfmt.enable = true;
         programs.biome.enable = true;
         programs.biome.settings.formatter.indentStyle = "space";
+        programs.biome.settings.formatter.lineWidth = 100;
       };
 
       check-tsc = pkgs.runCommand "tsc" { } ''
