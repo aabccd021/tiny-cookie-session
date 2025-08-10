@@ -24,15 +24,9 @@ export type CookieOptions = {
 
 export type Cookie = readonly [string, CookieOptions];
 
-export type ExtraData = {
-  readonly insert: unknown;
-  readonly select: unknown;
-};
+export type SelectExtra<T> = T extends { select: infer U } ? U : undefined;
 
-export type DefaultExtraData = {
-  readonly insert: undefined;
-  readonly select: undefined;
-};
+export type InsertExtra<T> = T extends { insert: infer U } ? U : undefined;
 
 export type Session<T> =
   | {
@@ -50,10 +44,6 @@ export type Session<T> =
       readonly token2Hash: string | undefined;
       readonly extra: SelectExtra<T>;
     };
-
-export type SelectExtra<T> = T extends { select: infer U } ? U : undefined;
-
-export type InsertExtra<T> = T extends { insert: infer U } ? U : undefined;
 
 export type Config<T = unknown> = {
   readonly cookieOption?: Omit<CookieOptions, "maxAge" | "expires">;
