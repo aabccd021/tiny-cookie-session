@@ -7,6 +7,13 @@ type Session = {
   userId: string;
 };
 
+function assertEq<T extends string | boolean | number | undefined>(actual: T, expected: T) {
+  if (expected !== actual) {
+    console.error("Expected", expected, "found", actual);
+    throw `Expected ${expected} found ${actual}`;
+  }
+}
+
 function createConfig(sessions: Record<string, Session>) {
   return {
     dateNow: () => new Date(),
@@ -96,8 +103,8 @@ function createConfig(sessions: Record<string, Session>) {
     },
   });
 
-  console.assert(cookie.options.httpOnly === true, "Cookie should be HTTP only");
-  console.assert(cookie.options.secure === true, "Cookie should be secure");
-  console.assert(cookie.options.sameSite === "lax", "Cookie should have strict same-site policy");
-  console.assert(cookie.options.path === "/", "Cookie should be accessible at root path");
+  assertEq(cookie.options.httpOnly, true);
+  assertEq(cookie.options.secure, true);
+  assertEq(cookie.options.sameSite, "lax");
+  assertEq(cookie.options.path, "/");
 }
