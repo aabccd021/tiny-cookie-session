@@ -1,4 +1,4 @@
-import { testConfig } from "./session.js";
+import { login, testConfig } from "./session.js";
 
 type Session = {
   tokenHashes: string[];
@@ -73,7 +73,7 @@ function createConfig(sessions: Record<string, Session>) {
 }
 
 {
-  console.info("testConfig");
+  console.info("# testConfig");
   const sessions: Record<string, Session> = {};
   const config = createConfig(sessions);
   testConfig(config, {
@@ -82,4 +82,22 @@ function createConfig(sessions: Record<string, Session>) {
       userId: "test-user",
     },
   });
+}
+
+{
+  console.info("# login");
+  const sessions: Record<string, Session> = {};
+  const config = createConfig(sessions);
+
+  const cookie = await login(config, {
+    sessionId: "test-session-id",
+    extra: {
+      userId: "test-user-id",
+    },
+  });
+
+  console.assert(cookie.options.httpOnly === true, "Cookie should be HTTP only");
+  console.assert(cookie.options.secure === true, "Cookie should be secure");
+  console.assert(cookie.options.sameSite === "lax", "Cookie should have strict same-site policy");
+  console.assert(cookie.options.path === "/", "Cookie should be accessible at root path");
 }

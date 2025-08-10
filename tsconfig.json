@@ -4,6 +4,7 @@
     "target": "esnext",
     "lib": ["esnext", "webworker"],
     "checkJs": true,
+    "module": "esnext",
 
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
