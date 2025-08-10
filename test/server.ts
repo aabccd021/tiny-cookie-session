@@ -189,7 +189,6 @@ const server = Bun.serve({
         }
 
         const loginCookie = login(config, {
-          sessionId: crypto.randomUUID(),
           extra: { userId },
         });
         return new Response(undefined, {

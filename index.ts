@@ -47,7 +47,7 @@ export type Session<T> =
 
 export type Config<T = unknown> = {
   readonly cookieOption?: Omit<CookieOptions, "maxAge" | "expires">;
-  readonly dateNow?: () => Date;
+  readonly dateNow: () => Date;
   readonly sessionExpiresIn: number;
   readonly tokenExpiresIn: number;
   readonly selectSession: (params: { tokenHash: string }) =>
@@ -74,11 +74,14 @@ export type Config<T = unknown> = {
     readonly newTokenHash: string;
   }) => void;
   readonly deleteSession: (params: { tokenHash: string }) => void;
+  readonly generateSessionId: () => string;
 };
 
 export const defaultConfig = {
   sessionExpiresIn: 30 * 24 * 60 * 60 * 1000,
   tokenExpiresIn: 1 * 60 * 1000,
+  dateNow: () => new Date(),
+  generateSessionId: () => crypto.randomUUID(),
 };
 
 const defaultCookieOption: CookieOptions = {
@@ -141,7 +144,7 @@ function createNewTokenCookie(config: Config): {
 } {
   const token = generateToken();
   const tokenHash = hashToken(token);
-  const now = config.dateNow?.() ?? new Date();
+  const now = config.dateNow();
 
   /*
   We use `sessionExpiresIn` instead of `tokenExpiresIn` here, because we want
@@ -176,15 +179,14 @@ export function logout(config: Config, { token }: { token: string }): Cookie {
 export function login<T = unknown>(
   config: Config<T>,
   {
-    sessionId,
     extra,
   }: {
-    sessionId: string;
     extra: InsertExtra<T>;
   },
 ): Cookie {
   const { cookie, tokenHash } = createNewTokenCookie(config);
-  const now = config.dateNow?.() ?? new Date();
+  const now = config.dateNow();
+  const sessionId = config.generateSessionId();
 
   config.insertSession({
     tokenHash,
@@ -285,7 +287,7 @@ export function consumeSession<T = unknown>(
     };
   }
 
-  const now = config.dateNow?.() ?? new Date();
+  const now = config.dateNow();
 
   if (session.exp < now) {
     config.deleteSession({ tokenHash });
@@ -341,7 +343,7 @@ export function testConfig<T = unknown>(
     throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
   }
 
-  const sessionId = crypto.randomUUID();
+  const sessionId = config.generateSessionId();
   const token1Hash = hashToken(generateToken());
   const token2Hash = hashToken(generateToken());
   const token3Hash = hashToken(generateToken());
