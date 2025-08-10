@@ -15,6 +15,7 @@
         projectRootFile = "flake.nix";
         programs.nixfmt.enable = true;
         programs.biome.enable = true;
+        programs.biome.settings.formatter.indentStyle = "space";
       };
 
       check-tsc = pkgs.runCommand "tsc" { } ''
