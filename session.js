@@ -290,7 +290,7 @@ export async function consumeSession(config, arg) {
  * @template S
  * @template I
  * @param {Config<S, I>} config
- * @param {{insertExtra: I, id: string}} arg
+ * @param {{extra: I, id: string}} arg
  * @returns {Promise<void>}
  */
 export async function testConfig(config, arg) {
@@ -308,7 +308,7 @@ export async function testConfig(config, arg) {
     tokenHash: token3Hash,
     exp: new Date(start.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
-    extra: arg.insertExtra,
+    extra: arg.extra,
   });
 
   await config.insertTokenAndUpdateSession({

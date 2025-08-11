@@ -103,7 +103,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig();
   testConfig(config, {
     id: crypto.randomUUID(),
-    insertExtra: { userId: "test-user" },
+    extra: { userId: "test-user" },
   });
 }
 
