@@ -108,15 +108,13 @@ const logoutCookie = {
   },
 };
 
-const tokenEntropyBit = 256;
-
 /**
  * @returns {string}
  */
 function generateToken() {
   // TODO: Remove when https://tc39.es/proposal-arraybuffer-base64 added to typescript
   // @ts-ignore https://tc39.es/proposal-arraybuffer-base64
-  return crypto.getRandomValues(new Uint8Array(tokenEntropyBit / 8)).toHex();
+  return crypto.getRandomValues(new Uint8Array(32)).toHex();
 }
 
 /**

@@ -13,8 +13,13 @@ function assertEq<T extends string | boolean | number | undefined | null>(
   message?: string,
 ) {
   if (expected !== actual) {
-    console.error("Expected", expected, "found", actual);
-    throw new Error(message ?? "Assertion failed");
+    console.error("Expected", expected);
+    console.error("Found", actual);
+    const err = new Error(message);
+    if ("captureStackTrace" in Error && typeof Error.captureStackTrace === "function") {
+      Error.captureStackTrace(err, assertEq);
+    }
+    throw err;
   }
 }
 
@@ -131,6 +136,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   assertEq(session.cookie.options.secure, true);
   assertEq(session.cookie.options.sameSite, "lax");
   assertEq(session.cookie.options.path, "/");
+  assertEq(session.cookie.options.expires?.toISOString(), undefined);
 }
 
 {
@@ -169,8 +175,6 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   });
   const token = loginCookie.value;
 
-  await consumeSession(config, { token });
-
   state.date = new Date("2023-10-01T00:09:00Z");
   const session = await consumeSession(config, { token });
   if (session.state !== "Active") {
@@ -195,8 +199,6 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
     },
   });
   let token = loginCookie.value;
-
-  await consumeSession(config, { token });
 
   state.date = new Date("2023-10-01T00:11:00Z");
   const session = await consumeSession(config, { token });
@@ -232,8 +234,6 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   });
   let token = loginCookie.value;
 
-  await consumeSession(config, { token });
-
   state.date = new Date("2023-10-01T00:11:00Z");
   let session = await consumeSession(config, { token });
   if (session.state !== "TokenRefreshed") {
@@ -250,4 +250,38 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   assertEq(session.extra.userId, "test-user-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:11:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:21:00.000Z");
+}
+
+{
+  console.info("# consumeSession: state Expired after 6 hours");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const loginCookie = await login(config, {
+    sessionId: "test-session-id",
+    extra: {
+      userId: "test-user-id",
+    },
+  });
+  const token = loginCookie.value;
+
+  await consumeSession(config, { token });
+
+  state.date = new Date("2023-10-01T06:00:00Z");
+  const session = await consumeSession(config, { token });
+  if (session.state !== "Expired") {
+    throw new Error(`session.state === ${session.state}`);
+  }
+
+  assertEq(session.id, "test-session-id");
+  assertEq(session.extra.userId, "test-user-id");
+  assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
+  assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
+  assertEq(session.cookie.value, "");
+  assertEq(session.cookie.options.maxAge, 0);
+  assertEq(session.cookie.options.httpOnly, true);
+  assertEq(session.cookie.options.secure, true);
+  assertEq(session.cookie.options.sameSite, "lax");
+  assertEq(session.cookie.options.path, "/");
+  assertEq(session.cookie.options.expires?.toISOString(), undefined);
 }
