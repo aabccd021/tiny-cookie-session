@@ -212,8 +212,8 @@ export async function consumeSession(config, arg) {
   const isTokenLatest0 = requestTokenHash === session.latestTokenHash[0];
   const isTokenLatest1 = requestTokenHash === session.latestTokenHash[1];
 
-  // 1. exclude hashes to avoid accidentally logging them
-  // 2. explicitly specify the properties to return to avoid returning unnecessary values
+  // Exclude hashes to avoid accidentally logging them,
+  // also explicitly specify the properties to return to avoid returning unnecessary values
   const returnData = {
     id: session.id,
     data: session.data,
