@@ -31,6 +31,8 @@
  * @typedef {Object} NotFoundSession
  * @property {"NotFound"} state
  * @property {Cookie} cookie
+ * @property {Date} now
+ * @property {string} requestTokenHash
  */
 
 /**
@@ -42,6 +44,8 @@
  * @property {Date} exp
  * @property {Date} tokenExp
  * @property {S} extra
+ * @property {Date} now
+ * @property {string} requestTokenHash
  */
 
 /**
@@ -53,6 +57,8 @@
  * @property {Date} exp
  * @property {Date} tokenExp
  * @property {S} extra
+ * @property {Date} now
+ * @property {string} requestTokenHash
  */
 
 /**
@@ -64,6 +70,8 @@
  * @property {Date} exp
  * @property {Date} tokenExp
  * @property {S} extra
+ * @property {Date} now
+ * @property {string} requestTokenHash
  */
 
 /**
@@ -74,6 +82,8 @@
  * @property {Date} exp
  * @property {Date} tokenExp
  * @property {S} extra
+ * @property {Date} now
+ * @property {string} requestTokenHash
  */
 
 /**
@@ -201,11 +211,14 @@ export async function login(config, arg) {
 export async function consumeSession(config, arg) {
   const requestTokenHash = await hashToken(arg.token);
   const session = await config.selectSession({ tokenHash: requestTokenHash });
+  const now = config.dateNow?.() ?? new Date();
 
   if (session === undefined) {
     return {
       state: "NotFound",
       cookie: logoutCookie,
+      now,
+      requestTokenHash,
     };
   }
 
@@ -221,10 +234,11 @@ export async function consumeSession(config, arg) {
       exp: session.exp,
       tokenExp: session.tokenExp,
       extra: session.extra,
+      now,
+      requestTokenHash,
     };
   }
 
-  const now = config.dateNow?.() ?? new Date();
   if (session.exp < now) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
@@ -234,6 +248,8 @@ export async function consumeSession(config, arg) {
       exp: session.exp,
       tokenExp: session.tokenExp,
       extra: session.extra,
+      now,
+      requestTokenHash,
     };
   }
 
@@ -254,6 +270,8 @@ export async function consumeSession(config, arg) {
       exp: sessionExp,
       tokenExp,
       extra: session.extra,
+      now,
+      requestTokenHash,
     };
   }
 
@@ -263,6 +281,8 @@ export async function consumeSession(config, arg) {
     exp: session.exp,
     tokenExp: session.tokenExp,
     extra: session.extra,
+    now,
+    requestTokenHash,
   };
 }
 
