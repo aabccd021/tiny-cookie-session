@@ -117,6 +117,29 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 }
 
 {
+  console.info("# logout");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  let cookie = await login(config, {
+    id: "test-session-id",
+    data: { userId: "test-user-id" },
+  });
+  const token = cookie.value;
+
+  state.date = new Date("2023-10-01T00:01:00Z");
+  cookie = await logout(config, { token });
+
+  assertEq(cookie.value, "");
+  assertEq(cookie.options.maxAge, 0);
+  assertEq(cookie.options.httpOnly, true);
+  assertEq(cookie.options.secure, true);
+  assertEq(cookie.options.sameSite, "lax");
+  assertEq(cookie.options.path, "/");
+  assertEq(cookie.options.expires?.toISOString(), undefined);
+}
+
+{
   console.info("# consumeSession: state NotFound");
   const config = createConfig();
 
@@ -316,8 +339,7 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 }
 
 {
-  // console.info("# consumeSession: state NotFound after logout");
-  console.info("# logout");
+  console.info("# consumeSession: state NotFound after logout");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
@@ -325,16 +347,20 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
     id: "test-session-id",
     data: { userId: "test-user-id" },
   });
-  const token = cookie.value;
+  let token = cookie.value;
 
-  state.date = new Date("2023-10-01T00:01:00Z");
+  state.date = new Date("2023-10-01T00:11:00Z");
   cookie = await logout(config, { token });
+  token = cookie.value;
 
-  assertEq(cookie.value, "");
-  assertEq(cookie.options.maxAge, 0);
-  assertEq(cookie.options.httpOnly, true);
-  assertEq(cookie.options.secure, true);
-  assertEq(cookie.options.sameSite, "lax");
-  assertEq(cookie.options.path, "/");
-  assertEq(cookie.options.expires?.toISOString(), undefined);
+  const session = await consumeSession(config, { token });
+  if (session.state !== "NotFound") throw new Error(session.state);
+
+  assertEq(session.cookie.value, "");
+  assertEq(session.cookie.options.maxAge, 0);
+  assertEq(session.cookie.options.httpOnly, true);
+  assertEq(session.cookie.options.secure, true);
+  assertEq(session.cookie.options.sameSite, "lax");
+  assertEq(session.cookie.options.path, "/");
+  assertEq(session.cookie.options.expires?.toISOString(), undefined);
 }
