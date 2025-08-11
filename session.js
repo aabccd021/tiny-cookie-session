@@ -277,10 +277,12 @@ export async function testConfig(config, argSessions) {
     throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
   }
 
+  const states = [];
+
   for (const argSession of argSessions) {
-    const latestTokenHash0 = await hashToken(generateToken());
-    const latestTokenHash1 = await hashToken(generateToken());
     const latestTokenHash2 = await hashToken(generateToken());
+    const latestTokenHash1 = await hashToken(generateToken());
+    const latestTokenHash0 = await hashToken(generateToken());
 
     const start = new Date();
     await config.insertSession({
@@ -304,6 +306,17 @@ export async function testConfig(config, argSessions) {
       exp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),
       tokenExp: new Date(start.getTime() + 2000 + config.tokenExpiresIn),
     });
+
+    states.push({ start, latestTokenHash0, latestTokenHash1, latestTokenHash2 });
+  }
+
+  for (const argSession of argSessions) {
+    const sessionHashes = states.shift();
+    if (sessionHashes === undefined) {
+      throw new Error("Absurd");
+    }
+
+    const { start, latestTokenHash0, latestTokenHash1, latestTokenHash2 } = sessionHashes;
 
     for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
       const session = await config.selectSession({ tokenHash });
