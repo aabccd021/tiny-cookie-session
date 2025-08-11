@@ -269,76 +269,78 @@ export async function consumeSession(config, arg) {
  * @template S
  * @template I
  * @param {Config<S, I>} config
- * @param {{data: I, id: string}} argSession
+ * @param {{data: I, id: string}[]} argSessions
  * @returns {Promise<void>}
  */
-export async function testConfig(config, argSession) {
+export async function testConfig(config, argSessions) {
   if (config.tokenExpiresIn >= config.sessionExpiresIn) {
     throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
   }
 
-  const latestTokenHash0 = await hashToken(generateToken());
-  const latestTokenHash1 = await hashToken(generateToken());
-  const latestTokenHash2 = await hashToken(generateToken());
+  for (const argSession of argSessions) {
+    const latestTokenHash0 = await hashToken(generateToken());
+    const latestTokenHash1 = await hashToken(generateToken());
+    const latestTokenHash2 = await hashToken(generateToken());
 
-  const start = new Date();
-  await config.insertSession({
-    id: argSession.id,
-    tokenHash: latestTokenHash2,
-    exp: new Date(start.getTime() + config.sessionExpiresIn),
-    tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
-    data: argSession.data,
-  });
+    const start = new Date();
+    await config.insertSession({
+      id: argSession.id,
+      tokenHash: latestTokenHash2,
+      exp: new Date(start.getTime() + config.sessionExpiresIn),
+      tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
+      data: argSession.data,
+    });
 
-  await config.insertTokenAndUpdateSession({
-    id: argSession.id,
-    tokenHash: latestTokenHash1,
-    exp: new Date(start.getTime() + 10000 + config.sessionExpiresIn),
-    tokenExp: new Date(start.getTime() + 1000 + config.tokenExpiresIn),
-  });
+    await config.insertTokenAndUpdateSession({
+      id: argSession.id,
+      tokenHash: latestTokenHash1,
+      exp: new Date(start.getTime() + 10000 + config.sessionExpiresIn),
+      tokenExp: new Date(start.getTime() + 1000 + config.tokenExpiresIn),
+    });
 
-  await config.insertTokenAndUpdateSession({
-    id: argSession.id,
-    tokenHash: latestTokenHash0,
-    exp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),
-    tokenExp: new Date(start.getTime() + 2000 + config.tokenExpiresIn),
-  });
+    await config.insertTokenAndUpdateSession({
+      id: argSession.id,
+      tokenHash: latestTokenHash0,
+      exp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),
+      tokenExp: new Date(start.getTime() + 2000 + config.tokenExpiresIn),
+    });
 
-  for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
-    const session = await config.selectSession({ tokenHash });
-    if (session === undefined) {
-      throw new Error("Session not found");
+    for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
+      const session = await config.selectSession({ tokenHash });
+      if (session === undefined) {
+        throw new Error("Session not found");
+      }
+
+      if (session.id !== argSession.id) {
+        throw new Error("Session id does not match");
+      }
+
+      if (session.latestTokenHash[0] !== latestTokenHash0) {
+        throw new Error("Session latestTokenHash0 does not match");
+      }
+
+      if (session.latestTokenHash[1] !== latestTokenHash1) {
+        throw new Error("Session latestTokenHash1 does not match");
+      }
+
+      const expectedSessionExp = new Date(start.getTime() + 20000 + config.sessionExpiresIn);
+      if (session.exp.getTime() !== expectedSessionExp.getTime()) {
+        throw new Error("Session expired");
+      }
+
+      const expectedTokenExp = new Date(start.getTime() + 2000 + config.tokenExpiresIn);
+      if (session.tokenExp.getTime() !== expectedTokenExp.getTime()) {
+        throw new Error("Token expired");
+      }
     }
 
-    if (session.id !== argSession.id) {
-      throw new Error("Session id does not match");
-    }
-
-    if (session.latestTokenHash[0] !== latestTokenHash0) {
-      throw new Error("Session latestTokenHash0 does not match");
-    }
-
-    if (session.latestTokenHash[1] !== latestTokenHash1) {
-      throw new Error("Session latestTokenHash1 does not match");
-    }
-
-    const expectedSessionExp = new Date(start.getTime() + 20000 + config.sessionExpiresIn);
-    if (session.exp.getTime() !== expectedSessionExp.getTime()) {
-      throw new Error("Session expired");
-    }
-
-    const expectedTokenExp = new Date(start.getTime() + 2000 + config.tokenExpiresIn);
-    if (session.tokenExp.getTime() !== expectedTokenExp.getTime()) {
-      throw new Error("Token expired");
-    }
-  }
-
-  await config.deleteSession({ tokenHash: latestTokenHash0 });
-  for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
-    const session = await config.selectSession({ tokenHash });
-    if (session !== undefined) {
-      console.log(session);
-      throw new Error("Session should not be found");
+    await config.deleteSession({ tokenHash: latestTokenHash0 });
+    for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
+      const session = await config.selectSession({ tokenHash });
+      if (session !== undefined) {
+        console.log(session);
+        throw new Error("Session should not be found");
+      }
     }
   }
 }

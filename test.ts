@@ -90,10 +90,20 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 {
   console.info("# testConfig");
   const config = createConfig();
-  testConfig(config, {
-    id: crypto.randomUUID(),
-    data: { userId: "test-user" },
-  });
+  testConfig(config, [
+    {
+      id: crypto.randomUUID(),
+      data: { userId: "test-user" },
+    },
+    {
+      id: crypto.randomUUID(),
+      data: { userId: "test-user-2" },
+    },
+    {
+      id: crypto.randomUUID(),
+      data: { userId: "test-user-3" },
+    },
+  ]);
 }
 
 {
