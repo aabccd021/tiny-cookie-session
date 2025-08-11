@@ -1,19 +1,6 @@
 import { consumeSession, login, logout, testConfig } from "./session.js";
 
 /**
- * @param {boolean} result
- */
-function assertTrue(result) {
-  if (!result) {
-    const err = new Error();
-    if ("captureStackTrace" in Error && typeof Error.captureStackTrace === "function") {
-      Error.captureStackTrace(err, assertTrue);
-    }
-    throw err;
-  }
-}
-
-/**
  * @typedef {Object} DBSession
  * @property {string[]} tokenHashes
  * @property {Date} tokenExp
@@ -141,9 +128,9 @@ function createConfig(state) {
   });
   const token = cookie.value;
 
-  assertTrue(cookie.options.expires?.toISOString() === "2023-10-01T05:00:00.000Z");
-  assertTrue(token.length === 64);
-  assertTrue(/^[a-zA-Z0-9]*$/.test(token));
+  if (cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+  if (token.length !== 64) throw new Error();
+  if (!/^[a-zA-Z0-9]*$/.test(token)) throw new Error();
 }
 
 {
@@ -160,8 +147,8 @@ function createConfig(state) {
   state.date = new Date("2023-10-01T00:01:00Z");
   cookie = await logout(config, { token });
 
-  assertTrue(cookie.value === "");
-  assertTrue(cookie.options.maxAge === 0);
+  if (cookie.value !== "") throw new Error();
+  if (cookie.options.maxAge !== 0) throw new Error();
 }
 
 {
@@ -171,8 +158,8 @@ function createConfig(state) {
   const session = await consumeSession(config, { token: "unknown-token" });
   if (session.state !== "NotFound") throw new Error();
 
-  assertTrue(session.cookie.value === "");
-  assertTrue(session.cookie.options.maxAge === 0);
+  if (session.cookie.value !== "") throw new Error();
+  if (session.cookie.options.maxAge !== 0) throw new Error();
 }
 
 {
@@ -189,10 +176,10 @@ function createConfig(state) {
   const session = await consumeSession(config, { token });
   if (session.state !== "Active") throw new Error();
 
-  assertTrue(session.id === "test-session-id");
-  assertTrue(session.exp.toISOString() === "2023-10-01T05:00:00.000Z");
-  assertTrue(session.tokenExp.toISOString() === "2023-10-01T00:10:00.000Z");
-  assertTrue(session.data.userId === "test-user-id");
+  if (session.id !== "test-session-id") throw new Error();
+  if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+  if (session.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+  if (session.data.userId !== "test-user-id") throw new Error();
 }
 
 {
@@ -210,10 +197,10 @@ function createConfig(state) {
   const session = await consumeSession(config, { token });
   if (session.state !== "Active") throw new Error();
 
-  assertTrue(session.id === "test-session-id");
-  assertTrue(session.exp.toISOString() === "2023-10-01T05:00:00.000Z");
-  assertTrue(session.tokenExp.toISOString() === "2023-10-01T00:10:00.000Z");
-  assertTrue(session.data.userId === "test-user-id");
+  if (session.id !== "test-session-id") throw new Error();
+  if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+  if (session.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+  if (session.data.userId !== "test-user-id") throw new Error();
 }
 
 {
@@ -234,13 +221,14 @@ function createConfig(state) {
 
   token = session.cookie.value;
 
-  assertTrue(session.id === "test-session-id");
-  assertTrue(session.exp.toISOString() === "2023-10-01T05:11:00.000Z");
-  assertTrue(session.tokenExp.toISOString() === "2023-10-01T00:21:00.000Z");
-  assertTrue(session.data.userId === "test-user-id");
-  assertTrue(token.length === 64);
-  assertTrue(/^[a-zA-Z0-9]*$/.test(token) === true);
-  assertTrue(session.cookie.options.expires?.toISOString() === "2023-10-01T05:11:00.000Z");
+  if (session.id !== "test-session-id") throw new Error();
+  if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
+  if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
+  if (session.data.userId !== "test-user-id") throw new Error();
+  if (token.length !== 64) throw new Error();
+  if (/^[a-zA-Z0-9]*$/.test(token) !== true) throw new Error();
+  if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
+    throw new Error();
 }
 
 {
@@ -263,10 +251,10 @@ function createConfig(state) {
   session = await consumeSession(config, { token });
   if (session.state !== "Active") throw new Error();
 
-  assertTrue(session.id === "test-session-id");
-  assertTrue(session.data.userId === "test-user-id");
-  assertTrue(session.exp.toISOString() === "2023-10-01T05:11:00.000Z");
-  assertTrue(session.tokenExp.toISOString() === "2023-10-01T00:21:00.000Z");
+  if (session.id !== "test-session-id") throw new Error();
+  if (session.data.userId !== "test-user-id") throw new Error();
+  if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
+  if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
 }
 
 {
@@ -284,12 +272,12 @@ function createConfig(state) {
   const session = await consumeSession(config, { token });
   if (session.state !== "Expired") throw new Error();
 
-  assertTrue(session.id === "test-session-id");
-  assertTrue(session.data.userId === "test-user-id");
-  assertTrue(session.exp.toISOString() === "2023-10-01T05:00:00.000Z");
-  assertTrue(session.tokenExp.toISOString() === "2023-10-01T00:10:00.000Z");
-  assertTrue(session.cookie.value === "");
-  assertTrue(session.cookie.options.maxAge === 0);
+  if (session.id !== "test-session-id") throw new Error();
+  if (session.data.userId !== "test-user-id") throw new Error();
+  if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+  if (session.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+  if (session.cookie.value !== "") throw new Error();
+  if (session.cookie.options.maxAge !== 0) throw new Error();
 }
 
 {
@@ -310,8 +298,8 @@ function createConfig(state) {
   session = await consumeSession(config, { token });
   if (session.state !== "NotFound") throw new Error();
 
-  assertTrue(session.cookie.value === "");
-  assertTrue(session.cookie.options.maxAge === 0);
+  if (session.cookie.value !== "") throw new Error();
+  if (session.cookie.options.maxAge !== 0) throw new Error();
 }
 
 {
@@ -357,8 +345,8 @@ function createConfig(state) {
   const session = await consumeSession(config, { token });
   if (session.state !== "NotFound") throw new Error();
 
-  assertTrue(session.cookie.value === "");
-  assertTrue(session.cookie.options.maxAge === 0);
+  if (session.cookie.value !== "") throw new Error();
+  if (session.cookie.options.maxAge !== 0) throw new Error();
 }
 
 {
@@ -411,17 +399,17 @@ function createConfig(state) {
 
   const attackerSession = await consumeSession(config, { token: attackerToken });
   if (attackerSession.state !== "TokenStolen") throw new Error();
-  assertTrue(attackerSession.id === "test-session-id");
-  assertTrue(attackerSession.data.userId === "test-user-id");
-  assertTrue(attackerSession.exp.toISOString() === "2023-10-01T05:22:00.000Z");
-  assertTrue(attackerSession.tokenExp.toISOString() === "2023-10-01T00:32:00.000Z");
-  assertTrue(attackerSession.cookie.value === "");
-  assertTrue(attackerSession.cookie.options.maxAge === 0);
+  if (attackerSession.id !== "test-session-id") throw new Error();
+  if (attackerSession.data.userId !== "test-user-id") throw new Error();
+  if (attackerSession.exp.toISOString() !== "2023-10-01T05:22:00.000Z") throw new Error();
+  if (attackerSession.tokenExp.toISOString() !== "2023-10-01T00:32:00.000Z") throw new Error();
+  if (attackerSession.cookie.value !== "") throw new Error();
+  if (attackerSession.cookie.options.maxAge !== 0) throw new Error();
 
   userSession = await consumeSession(config, { token: userToken });
   if (userSession.state !== "NotFound") throw new Error();
-  assertTrue(userSession.cookie.value === "");
-  assertTrue(userSession.cookie.options.maxAge === 0);
+  if (userSession.cookie.value !== "") throw new Error();
+  if (userSession.cookie.options.maxAge !== 0) throw new Error();
 }
 
 {
@@ -449,17 +437,17 @@ function createConfig(state) {
 
   const userSession = await consumeSession(config, { token: userToken });
   if (userSession.state !== "TokenStolen") throw new Error();
-  assertTrue(userSession.id === "test-session-id");
-  assertTrue(userSession.data.userId === "test-user-id");
-  assertTrue(userSession.exp.toISOString() === "2023-10-01T05:22:00.000Z");
-  assertTrue(userSession.tokenExp.toISOString() === "2023-10-01T00:32:00.000Z");
-  assertTrue(userSession.cookie.value === "");
-  assertTrue(userSession.cookie.options.maxAge === 0);
+  if (userSession.id !== "test-session-id") throw new Error();
+  if (userSession.data.userId !== "test-user-id") throw new Error();
+  if (userSession.exp.toISOString() !== "2023-10-01T05:22:00.000Z") throw new Error();
+  if (userSession.tokenExp.toISOString() !== "2023-10-01T00:32:00.000Z") throw new Error();
+  if (userSession.cookie.value !== "") throw new Error();
+  if (userSession.cookie.options.maxAge !== 0) throw new Error();
 
   attackerSession = await consumeSession(config, { token: userToken });
   if (attackerSession.state !== "NotFound") throw new Error();
-  assertTrue(attackerSession.cookie.value === "");
-  assertTrue(attackerSession.cookie.options.maxAge === 0);
+  if (attackerSession.cookie.value !== "") throw new Error();
+  if (attackerSession.cookie.options.maxAge !== 0) throw new Error();
 }
 
 {
@@ -591,5 +579,5 @@ function createConfig(state) {
     })(),
   ]);
 
-  assertTrue(prevToken !== token);
+  if (prevToken === token) throw new Error();
 }
