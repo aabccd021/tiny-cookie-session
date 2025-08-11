@@ -241,8 +241,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   });
   const token = cookie.value;
 
-  await consumeSession(config, { token });
-
   state.date = new Date("2023-10-01T06:00:00Z");
   const session = await consumeSession(config, { token });
   if (session.state !== "Expired") throw new Error(`Unexpected session.state ${session.state}`);
@@ -270,8 +268,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
     data: { userId: "test-user-id" },
   });
   const token = cookie.value;
-
-  await consumeSession(config, { token });
 
   state.date = new Date("2023-10-01T06:00:00Z");
   let session = await consumeSession(config, { token });
