@@ -1,10 +1,16 @@
 import { consumeSession, login, logout, testConfig } from "./session.js";
 
-function assertEq<T extends string | boolean | number | undefined | null>(
-  actual: T,
-  expected: T,
-  message?: string,
-) {
+/**
+ * Asserts that the actual value equals the expected value.
+ * Throws an AssertionError if the values are not equal.
+ *
+ * @template {string | boolean | number | undefined | null} T
+ * @param {T} actual - The actual value to compare
+ * @param {T} expected - The expected value to compare against
+ * @param {string} [message] - Optional error message to display if assertion fails
+ * @throws {Error} Throws an AssertionError if actual does not equal expected
+ */
+function assertEq(actual, expected, message) {
   if (expected !== actual) {
     console.error("Expected", expected);
     console.error("Found", actual);
@@ -17,26 +23,46 @@ function assertEq<T extends string | boolean | number | undefined | null>(
   }
 }
 
-type DBSession = {
-  tokenHashes: string[];
-  tokenExp: Date;
-  exp: Date;
-  userId: string;
-};
+/**
+ * Represents a database session.
+ *
+ * @typedef {Object} DBSession
+ * @property {string[]} tokenHashes - Array of token hashes associated with the session
+ * @property {Date} tokenExp - Token expiration date
+ * @property {Date} exp - Session expiration date
+ * @property {string} userId - User identifier for the session
+ */
 
-function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Date }) {
+/**
+ * Creates a configuration object for session management.
+ *
+ * @param {Object} [state] - Initial state for the configuration
+ * @param {Record<string, DBSession>} [state.sessions] - Map of session IDs to session data
+ * @param {Date} [state.date] - Current date to use for time-based operations
+ */
+function createConfig(state) {
   const sessions = state?.sessions ?? {};
   return {
     dateNow: () => state?.date ?? new Date(),
     tokenExpiresIn: 10 * 60 * 1000,
     sessionExpiresIn: 5 * 60 * 60 * 1000,
-    selectSession: async (argSession: { tokenHash: string }) => {
+
+    /**
+     * Selects a session based on token hash.
+     *
+     * @async
+     * @param {Object} argSession - Arguments for selecting a session
+     * @param {string} argSession.tokenHash - Hash of the token to look up
+     * @returns {Promise<{id: string, latestTokenHash: readonly [string, string|undefined], exp: Date, tokenExp: Date, data: {userId: string}} | undefined>}
+     *   The session if found, undefined otherwise
+     */
+    selectSession: async (argSession) => {
       for (const [id, session] of Object.entries(sessions)) {
         const [latestTokenHash1, latestTokenHash2] = session.tokenHashes.toReversed();
         if (latestTokenHash1 !== undefined && session.tokenHashes.includes(argSession.tokenHash)) {
           return {
             id,
-            latestTokenHash: [latestTokenHash1, latestTokenHash2] as const,
+            latestTokenHash: [latestTokenHash1, latestTokenHash2],
             exp: session.exp,
             tokenExp: session.tokenExp,
             data: {
@@ -48,13 +74,21 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 
       return undefined;
     },
-    insertSession: async (argSession: {
-      id: string;
-      exp: Date;
-      tokenExp: Date;
-      tokenHash: string;
-      data: { userId: string };
-    }) => {
+
+    /**
+     * Inserts a new session into the database.
+     *
+     * @async
+     * @param {Object} argSession - Session information to insert
+     * @param {string} argSession.id - Session identifier
+     * @param {Date} argSession.exp - Session expiration date
+     * @param {Date} argSession.tokenExp - Token expiration date
+     * @param {string} argSession.tokenHash - Hash of the session token
+     * @param {Object} argSession.data - Additional session data
+     * @param {string} argSession.data.userId - User identifier for the session
+     * @returns {Promise<void>}
+     */
+    insertSession: async (argSession) => {
       sessions[argSession.id] = {
         exp: argSession.exp,
         tokenExp: argSession.tokenExp,
@@ -62,12 +96,20 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
         userId: argSession.data.userId,
       };
     },
-    insertTokenAndUpdateSession: async (argSession: {
-      id: string;
-      exp: Date;
-      tokenHash: string;
-      tokenExp: Date;
-    }) => {
+
+    /**
+     * Inserts a new token and updates the session data.
+     *
+     * @async
+     * @param {Object} argSession - Session information to update
+     * @param {string} argSession.id - Session identifier
+     * @param {Date} argSession.exp - New session expiration date
+     * @param {string} argSession.tokenHash - Hash of the new token
+     * @param {Date} argSession.tokenExp - New token expiration date
+     * @returns {Promise<void>}
+     * @throws {Error} If the session with the given ID does not exist
+     */
+    insertTokenAndUpdateSession: async (argSession) => {
       const session = sessions[argSession.id];
       if (session === undefined) throw new Error(`Session not found with id: ${argSession.id}`);
 
@@ -75,7 +117,17 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
       session.tokenExp = argSession.tokenExp;
       session.exp = argSession.exp;
     },
-    deleteSession: async (argSession: { tokenHash: string }) => {
+
+    /**
+     * Deletes a session based on token hash.
+     *
+     * @async
+     * @param {Object} argSession - Arguments for deleting a session
+     * @param {string} argSession.tokenHash - Hash of the token to look up
+     * @returns {Promise<void>}
+     * @throws {Error} If no session is found with the given token hash
+     */
+    deleteSession: async (argSession) => {
       const sessionEntry = Object.entries(sessions).find(([_, session]) =>
         session.tokenHashes.includes(argSession.tokenHash),
       );
@@ -532,8 +584,8 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   });
   let token = cookie.value;
   const prevToken = token;
-  const tokenRefreshed = Promise.withResolvers<undefined>();
-  const secondRequestFinished = Promise.withResolvers<undefined>();
+  const tokenRefreshed = Promise.withResolvers();
+  const secondRequestFinished = Promise.withResolvers();
 
   state.date = new Date("2023-10-01T00:11:00Z");
 

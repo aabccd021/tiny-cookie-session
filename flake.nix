@@ -29,8 +29,8 @@
 
       test = pkgs.runCommand "test" { } ''
         cp -L ${./session.js} ./session.js
-        cp -L ${./test.ts} ./test.ts
-        ${pkgs.bun}/bin/bun ./test.ts
+        cp -L ${./test.js} ./test.js
+        ${pkgs.bun}/bin/bun ./test.js
         touch "$out"
       '';
 
