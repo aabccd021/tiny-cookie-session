@@ -374,7 +374,7 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   });
   let userToken = userCookie.value;
 
-  const attackerCookie = userToken;
+  const attackerToken = userToken;
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let userSession = await consumeSession(config, { token: userToken });
@@ -386,7 +386,7 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   if (userSession.state !== "TokenRefreshed") throw new Error(userSession.state);
   userToken = userSession.cookie.value;
 
-  const attackerSession = await consumeSession(config, { token: attackerCookie });
+  const attackerSession = await consumeSession(config, { token: attackerToken });
   if (attackerSession.state !== "TokenStolen") throw new Error(attackerSession.state);
   assertEq(attackerSession.id, "test-session-id");
   assertEq(attackerSession.data.userId, "test-user-id");
@@ -400,3 +400,43 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   assertEq(userSession.cookie.value, "");
   assertEq(userSession.cookie.options.maxAge, 0);
 }
+
+{
+  console.info("# consumeSession: state TokenStolen, attacker first, user second");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const userCookie = await login(config, {
+    id: "test-session-id",
+    data: { userId: "test-user-id" },
+  });
+  const userToken = userCookie.value;
+
+  let attackerToken = userToken;
+
+  state.date = new Date("2023-10-01T00:11:00Z");
+  let attackerSession = await consumeSession(config, { token: attackerToken });
+  if (attackerSession.state !== "TokenRefreshed") throw new Error(attackerSession.state);
+  attackerToken = attackerSession.cookie.value;
+
+  state.date = new Date("2023-10-01T00:22:00Z");
+  attackerSession = await consumeSession(config, { token: attackerToken });
+  if (attackerSession.state !== "TokenRefreshed") throw new Error(attackerSession.state);
+  attackerToken = attackerSession.cookie.value;
+
+  const userSession = await consumeSession(config, { token: userToken });
+  if (userSession.state !== "TokenStolen") throw new Error(userSession.state);
+  assertEq(userSession.id, "test-session-id");
+  assertEq(userSession.data.userId, "test-user-id");
+  assertEq(userSession.exp.toISOString(), "2023-10-01T05:22:00.000Z");
+  assertEq(userSession.tokenExp.toISOString(), "2023-10-01T00:32:00.000Z");
+  assertEq(userSession.cookie.value, "");
+  assertEq(userSession.cookie.options.maxAge, 0);
+
+  attackerSession = await consumeSession(config, { token: userToken });
+  if (attackerSession.state !== "NotFound") throw new Error(attackerSession.state);
+  assertEq(attackerSession.cookie.value, "");
+  assertEq(attackerSession.cookie.options.maxAge, 0);
+}
+
+// consume when attacker token is 2
