@@ -221,10 +221,10 @@ export async function consumeSession(config, arg) {
     };
   }
 
-  const isSessionToken0 = requestTokenHash === session.latestTokenHash[0];
-  const isSessionToken1 = requestTokenHash === session.latestTokenHash[1];
+  const isTokenLatest0 = requestTokenHash === session.latestTokenHash[0];
+  const isTokenLatest1 = requestTokenHash === session.latestTokenHash[1];
 
-  if (!isSessionToken0 && !isSessionToken1) {
+  if (!isTokenLatest0 && !isTokenLatest1) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
       state: "TokenStolen",
@@ -252,7 +252,7 @@ export async function consumeSession(config, arg) {
     };
   }
 
-  if (session.tokenExp <= now && isSessionToken0) {
+  if (session.tokenExp <= now && isTokenLatest0) {
     const { cookie, tokenHash } = await createNewTokenCookie(config);
     const exp = new Date(now.getTime() + config.sessionExpiresIn);
     const tokenExp = new Date(now.getTime() + config.tokenExpiresIn);
@@ -297,14 +297,14 @@ export async function testConfig(config, argSession) {
     throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
   }
 
+  const latestTokenHash0 = await hashToken(generateToken());
   const latestTokenHash1 = await hashToken(generateToken());
   const latestTokenHash2 = await hashToken(generateToken());
-  const latestTokenHash3 = await hashToken(generateToken());
 
   const start = new Date();
   await config.insertSession({
     id: argSession.id,
-    tokenHash: latestTokenHash3,
+    tokenHash: latestTokenHash2,
     exp: new Date(start.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
     data: argSession.data,
@@ -312,19 +312,19 @@ export async function testConfig(config, argSession) {
 
   await config.insertTokenAndUpdateSession({
     id: argSession.id,
-    tokenHash: latestTokenHash2,
+    tokenHash: latestTokenHash1,
     exp: new Date(start.getTime() + 10000 + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + 1000 + config.tokenExpiresIn),
   });
 
   await config.insertTokenAndUpdateSession({
     id: argSession.id,
-    tokenHash: latestTokenHash1,
+    tokenHash: latestTokenHash0,
     exp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + 2000 + config.tokenExpiresIn),
   });
 
-  for (const tokenHash of [latestTokenHash1, latestTokenHash2, latestTokenHash3]) {
+  for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
     const session = await config.selectSession({ tokenHash });
     if (session === undefined) {
       throw new Error("Session not found");
@@ -334,12 +334,12 @@ export async function testConfig(config, argSession) {
       throw new Error("Session id does not match");
     }
 
-    if (session.latestTokenHash[0] !== latestTokenHash1) {
-      throw new Error("Session latestTokenHash1 does not match");
+    if (session.latestTokenHash[0] !== latestTokenHash0) {
+      throw new Error("Session latestTokenHash0 does not match");
     }
 
-    if (session.latestTokenHash[1] !== latestTokenHash2) {
-      throw new Error("Session latestTokenHash2 does not match");
+    if (session.latestTokenHash[1] !== latestTokenHash1) {
+      throw new Error("Session latestTokenHash1 does not match");
     }
 
     const expectedSessionExp = new Date(start.getTime() + 20000 + config.sessionExpiresIn);
@@ -353,8 +353,8 @@ export async function testConfig(config, argSession) {
     }
   }
 
-  await config.deleteSession({ tokenHash: latestTokenHash1 });
-  for (const tokenHash of [latestTokenHash1, latestTokenHash2, latestTokenHash3]) {
+  await config.deleteSession({ tokenHash: latestTokenHash0 });
+  for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
     const session = await config.selectSession({ tokenHash });
     if (session !== undefined) {
       console.log(session);
