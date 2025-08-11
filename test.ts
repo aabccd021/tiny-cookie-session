@@ -7,19 +7,28 @@ type Session = {
   userId: string;
 };
 
+function assertionError(
+  actual: unknown,
+  expected: unknown,
+  message: string | undefined,
+  traceFrom?: unknown,
+): Error {
+  const err = new Error(message);
+  if ("captureStackTrace" in Error && typeof Error.captureStackTrace === "function") {
+    Error.captureStackTrace(err, traceFrom ?? assertionError);
+  }
+  err.name = "AssertionError";
+  err.message = `Expected ${expected}, but found ${actual}. ${message ?? ""}`;
+  return err;
+}
+
 function assertEq<T extends string | boolean | number | undefined | null>(
   actual: T,
   expected: T,
   message?: string,
 ) {
-  if (expected !== actual) {
-    console.error("Expected", expected);
-    console.error("Found", actual);
-    const err = new Error(message);
-    if ("captureStackTrace" in Error && typeof Error.captureStackTrace === "function") {
-      Error.captureStackTrace(err, assertEq);
-    }
-    throw err;
+  if (actual !== expected) {
+    throw assertionError(actual, expected, message, assertEq);
   }
 }
 
@@ -222,7 +231,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 }
 
 {
-  console.info("# consumeSession: state Active after refreshed");
+  console.info("# consumeSession: state Active after TokenRefreshed");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
@@ -277,6 +286,42 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   assertEq(session.extra.userId, "test-user-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
+  assertEq(session.cookie.value, "");
+  assertEq(session.cookie.options.maxAge, 0);
+  assertEq(session.cookie.options.httpOnly, true);
+  assertEq(session.cookie.options.secure, true);
+  assertEq(session.cookie.options.sameSite, "lax");
+  assertEq(session.cookie.options.path, "/");
+  assertEq(session.cookie.options.expires?.toISOString(), undefined);
+}
+
+{
+  console.info("# consumeSession: state NotFound after Expired");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const loginCookie = await login(config, {
+    sessionId: "test-session-id",
+    extra: {
+      userId: "test-user-id",
+    },
+  });
+  const token = loginCookie.value;
+
+  await consumeSession(config, { token });
+
+  state.date = new Date("2023-10-01T06:00:00Z");
+  let session = await consumeSession(config, { token });
+  if (session.state !== "Expired") {
+    throw new Error(`session.state === ${session.state}`);
+  }
+
+  state.date = new Date("2023-10-01T06:01:00Z");
+  session = await consumeSession(config, { token });
+  if (session.state !== "NotFound") {
+    throw new Error(`session.state === ${session.state}`);
+  }
+
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
   assertEq(session.cookie.options.httpOnly, true);
