@@ -38,18 +38,18 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
     dateNow: () => state?.date ?? new Date(),
     tokenExpiresIn: 10 * 60 * 1000,
     sessionExpiresIn: 5 * 60 * 60 * 1000,
-    selectSession: async (session: { tokenHash: string }) => {
-      for (const [id, dbSession] of Object.entries(sessions)) {
-        const [token1Hash, token2Hash] = dbSession.tokenHashes.toReversed();
-        if (token1Hash !== undefined && dbSession.tokenHashes.includes(session.tokenHash)) {
+    selectSession: async (argSession: { tokenHash: string }) => {
+      for (const [id, session] of Object.entries(sessions)) {
+        const [token1Hash, token2Hash] = session.tokenHashes.toReversed();
+        if (token1Hash !== undefined && session.tokenHashes.includes(argSession.tokenHash)) {
           return {
             id,
             token1Hash,
             token2Hash,
-            exp: dbSession.exp,
-            tokenExp: dbSession.tokenExp,
+            exp: session.exp,
+            tokenExp: session.tokenExp,
             extra: {
-              userId: dbSession.userId,
+              userId: session.userId,
             },
           };
         }
@@ -57,42 +57,42 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
       return undefined;
     },
-    insertSession: async (session: {
+    insertSession: async (argSession: {
       id: string;
       exp: Date;
       tokenExp: Date;
       tokenHash: string;
       extra: { userId: string };
     }) => {
-      sessions[session.id] = {
-        exp: session.exp,
-        tokenExp: session.tokenExp,
-        tokenHashes: [session.tokenHash],
-        userId: session.extra.userId,
+      sessions[argSession.id] = {
+        exp: argSession.exp,
+        tokenExp: argSession.tokenExp,
+        tokenHashes: [argSession.tokenHash],
+        userId: argSession.extra.userId,
       };
     },
-    insertTokenAndUpdateSession: async (session: {
+    insertTokenAndUpdateSession: async (argSession: {
       id: string;
       exp: Date;
       tokenHash: string;
       tokenExp: Date;
     }) => {
-      const dbSession = sessions[session.id];
-      if (dbSession === undefined) {
-        throw new Error(`Session not found with id: ${session.id}`);
+      const session = sessions[argSession.id];
+      if (session === undefined) {
+        throw new Error(`Session not found with id: ${argSession.id}`);
       }
-      dbSession.tokenHashes.push(session.tokenHash);
-      dbSession.tokenExp = session.tokenExp;
-      dbSession.exp = session.exp;
+      session.tokenHashes.push(argSession.tokenHash);
+      session.tokenExp = argSession.tokenExp;
+      session.exp = argSession.exp;
     },
-    deleteSession: async (session: { tokenHash: string }) => {
-      const dbSessionEntry = Object.entries(sessions).find(([_, dbSession]) =>
-        dbSession.tokenHashes.includes(session.tokenHash),
+    deleteSession: async (argSession: { tokenHash: string }) => {
+      const sessionEntry = Object.entries(sessions).find(([_, session]) =>
+        session.tokenHashes.includes(argSession.tokenHash),
       );
-      if (dbSessionEntry === undefined) {
-        throw new Error(`Session not found with token: ${session.tokenHash}`);
+      if (sessionEntry === undefined) {
+        throw new Error(`Session not found with token: ${argSession.tokenHash}`);
       }
-      const [id] = dbSessionEntry;
+      const [id] = sessionEntry;
       delete sessions[id];
     },
   };

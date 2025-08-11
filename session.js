@@ -290,10 +290,10 @@ export async function consumeSession(config, arg) {
  * @template S
  * @template I
  * @param {Config<S, I>} config
- * @param {{extra: I, id: string}} arg
+ * @param {{extra: I, id: string}} argSession
  * @returns {Promise<void>}
  */
-export async function testConfig(config, arg) {
+export async function testConfig(config, argSession) {
   if (config.tokenExpiresIn >= config.sessionExpiresIn) {
     throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
   }
@@ -304,22 +304,22 @@ export async function testConfig(config, arg) {
 
   const start = new Date();
   await config.insertSession({
-    id: arg.id,
+    id: argSession.id,
     tokenHash: token3Hash,
     exp: new Date(start.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
-    extra: arg.extra,
+    extra: argSession.extra,
   });
 
   await config.insertTokenAndUpdateSession({
-    id: arg.id,
+    id: argSession.id,
     tokenHash: token2Hash,
     exp: new Date(start.getTime() + 10000 + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + 1000 + config.tokenExpiresIn),
   });
 
   await config.insertTokenAndUpdateSession({
-    id: arg.id,
+    id: argSession.id,
     tokenHash: token1Hash,
     exp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + 2000 + config.tokenExpiresIn),
@@ -331,7 +331,7 @@ export async function testConfig(config, arg) {
       throw new Error("Session not found");
     }
 
-    if (session.id !== arg.id) {
+    if (session.id !== argSession.id) {
       throw new Error("Session id does not match");
     }
 
