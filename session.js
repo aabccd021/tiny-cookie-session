@@ -122,7 +122,7 @@ const logoutCookie = {
  * @returns {string}
  */
 function generateToken() {
-  // TODO: Remove when https://tc39.es/proposal-arraybuffer-base64 added to typescript
+  // TODO: Remove ts-ignore when https://tc39.es/proposal-arraybuffer-base64 added to typescript
   // @ts-ignore https://tc39.es/proposal-arraybuffer-base64
   return crypto.getRandomValues(new Uint8Array(32)).toHex();
 }
@@ -134,7 +134,7 @@ function generateToken() {
 async function hashToken(token) {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  // TODO: Remove when https://tc39.es/proposal-arraybuffer-base64 added to typescript
+  // TODO: Remove ts-ignore when https://tc39.es/proposal-arraybuffer-base64 added to typescript
   // @ts-ignore
   return new Uint8Array(hashBuffer).toHex();
 }
