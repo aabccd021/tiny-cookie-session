@@ -286,3 +286,34 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   assertEq(session.cookie.options.path, "/");
   assertEq(session.cookie.options.expires?.toISOString(), undefined);
 }
+
+{
+  console.info("# consumeSession: state Active after refresed twice");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const cookie = await login(config, {
+    id: "test-session-id",
+    data: { userId: "test-user-id" },
+  });
+  let token = cookie.value;
+
+  state.date = new Date("2023-10-01T00:11:00Z");
+  let session = await consumeSession(config, { token });
+  if (session.state !== "TokenRefreshed")
+    throw new Error(`Unexpected session.state ${session.state}`);
+  token = session.cookie.value;
+
+  state.date = new Date("2023-10-01T00:22:00Z");
+  session = await consumeSession(config, { token });
+  if (session.state !== "TokenRefreshed")
+    throw new Error(`Unexpected session.state ${session.state}`);
+  token = session.cookie.value;
+
+  session = await consumeSession(config, { token });
+  if (session.state !== "Active") throw new Error(`Unexpected session.state ${session.state}`);
+  assertEq(session.id, "test-session-id");
+  assertEq(session.data.userId, "test-user-id");
+  assertEq(session.exp.toISOString(), "2023-10-01T05:22:00.000Z");
+  assertEq(session.tokenExp.toISOString(), "2023-10-01T00:32:00.000Z");
+}
