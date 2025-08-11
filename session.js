@@ -23,7 +23,7 @@
  * @property {Date} tokenExp
  * @property {string} token1Hash
  * @property {string|undefined} token2Hash
- * @property {S} extra
+ * @property {S} data
  */
 
 /**
@@ -43,7 +43,7 @@
  * @property {string} id
  * @property {Date} exp
  * @property {Date} tokenExp
- * @property {S} extra
+ * @property {S} data
  * @property {Date} now
  * @property {string} requestTokenHash
  */
@@ -56,7 +56,7 @@
  * @property {string} id
  * @property {Date} exp
  * @property {Date} tokenExp
- * @property {S} extra
+ * @property {S} data
  * @property {Date} now
  * @property {string} requestTokenHash
  */
@@ -69,7 +69,7 @@
  * @property {string} id
  * @property {Date} exp
  * @property {Date} tokenExp
- * @property {S} extra
+ * @property {S} data
  * @property {Date} now
  * @property {string} requestTokenHash
  */
@@ -81,7 +81,7 @@
  * @property {string} id
  * @property {Date} exp
  * @property {Date} tokenExp
- * @property {S} extra
+ * @property {S} data
  * @property {Date} now
  * @property {string} requestTokenHash
  */
@@ -99,7 +99,7 @@
  * @property {number} sessionExpiresIn
  * @property {number} tokenExpiresIn
  * @property {function({tokenHash: string}): Promise<SessionSelect<S>|undefined>} selectSession
- * @property {function({id: string, exp: Date, tokenHash: string, tokenExp: Date, extra: I}): Promise<void>} insertSession
+ * @property {function({id: string, exp: Date, tokenHash: string, tokenExp: Date, data: I}): Promise<void>} insertSession
  * @property {function({id: string, exp: Date, tokenExp: Date, tokenHash: string}): Promise<void>} insertTokenAndUpdateSession
  * @property {function({tokenHash: string}): Promise<void>} deleteSession
  */
@@ -184,7 +184,7 @@ export async function logout(config, arg) {
  * @template S
  * @template I
  * @param {Config<S, I>} config
- * @param {{extra: I, id: string}} arg
+ * @param {{data: I, id: string}} arg
  * @returns {Promise<Cookie>}
  */
 export async function login(config, arg) {
@@ -196,7 +196,7 @@ export async function login(config, arg) {
     id: arg.id,
     exp: new Date(now.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(now.getTime() + config.tokenExpiresIn),
-    extra: arg.extra,
+    data: arg.data,
   });
   return cookie;
 }
@@ -233,7 +233,7 @@ export async function consumeSession(config, arg) {
       id: session.id,
       exp: session.exp,
       tokenExp: session.tokenExp,
-      extra: session.extra,
+      data: session.data,
       now,
       requestTokenHash,
     };
@@ -247,7 +247,7 @@ export async function consumeSession(config, arg) {
       id: session.id,
       exp: session.exp,
       tokenExp: session.tokenExp,
-      extra: session.extra,
+      data: session.data,
       now,
       requestTokenHash,
     };
@@ -266,7 +266,7 @@ export async function consumeSession(config, arg) {
     return {
       state: "TokenRefreshed",
       id: session.id,
-      extra: session.extra,
+      data: session.data,
       cookie,
       exp,
       tokenExp,
@@ -280,7 +280,7 @@ export async function consumeSession(config, arg) {
     id: session.id,
     exp: session.exp,
     tokenExp: session.tokenExp,
-    extra: session.extra,
+    data: session.data,
     now,
     requestTokenHash,
   };
@@ -290,7 +290,7 @@ export async function consumeSession(config, arg) {
  * @template S
  * @template I
  * @param {Config<S, I>} config
- * @param {{extra: I, id: string}} argSession
+ * @param {{data: I, id: string}} argSession
  * @returns {Promise<void>}
  */
 export async function testConfig(config, argSession) {
@@ -308,7 +308,7 @@ export async function testConfig(config, argSession) {
     tokenHash: token3Hash,
     exp: new Date(start.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
-    extra: argSession.extra,
+    data: argSession.data,
   });
 
   await config.insertTokenAndUpdateSession({

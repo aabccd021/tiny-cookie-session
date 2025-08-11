@@ -48,7 +48,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
             token2Hash,
             exp: session.exp,
             tokenExp: session.tokenExp,
-            extra: {
+            data: {
               userId: session.userId,
             },
           };
@@ -62,13 +62,13 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
       exp: Date;
       tokenExp: Date;
       tokenHash: string;
-      extra: { userId: string };
+      data: { userId: string };
     }) => {
       sessions[argSession.id] = {
         exp: argSession.exp,
         tokenExp: argSession.tokenExp,
         tokenHashes: [argSession.tokenHash],
-        userId: argSession.extra.userId,
+        userId: argSession.data.userId,
       };
     },
     insertTokenAndUpdateSession: async (argSession: {
@@ -103,7 +103,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig();
   testConfig(config, {
     id: crypto.randomUUID(),
-    extra: { userId: "test-user" },
+    data: { userId: "test-user" },
   });
 }
 
@@ -113,7 +113,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   const loginCookie = await login(config, {
     id: "test-session-id",
-    extra: { userId: "test-user-id" },
+    data: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 
@@ -150,7 +150,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   const loginCookie = await login(config, {
     id: "test-session-id",
-    extra: { userId: "test-user-id" },
+    data: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 
@@ -162,7 +162,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
-  assertEq(session.extra.userId, "test-user-id");
+  assertEq(session.data.userId, "test-user-id");
 }
 
 {
@@ -172,7 +172,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   const loginCookie = await login(config, {
     id: "test-session-id",
-    extra: { userId: "test-user-id" },
+    data: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 
@@ -185,7 +185,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
-  assertEq(session.extra.userId, "test-user-id");
+  assertEq(session.data.userId, "test-user-id");
 }
 
 {
@@ -195,7 +195,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   const loginCookie = await login(config, {
     id: "test-session-id",
-    extra: { userId: "test-user-id" },
+    data: { userId: "test-user-id" },
   });
   let token = loginCookie.value;
 
@@ -210,7 +210,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:11:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:21:00.000Z");
-  assertEq(session.extra.userId, "test-user-id");
+  assertEq(session.data.userId, "test-user-id");
   assertEq(token.length, 64);
   assertEq(/^[a-zA-Z0-9]*$/.test(token), true, token);
   assertEq(session.cookie.options.httpOnly, true);
@@ -227,7 +227,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   const loginCookie = await login(config, {
     id: "test-session-id",
-    extra: { userId: "test-user-id" },
+    data: { userId: "test-user-id" },
   });
   let token = loginCookie.value;
 
@@ -244,7 +244,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   }
 
   assertEq(session.id, "test-session-id");
-  assertEq(session.extra.userId, "test-user-id");
+  assertEq(session.data.userId, "test-user-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:11:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:21:00.000Z");
 }
@@ -256,7 +256,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   const loginCookie = await login(config, {
     id: "test-session-id",
-    extra: { userId: "test-user-id" },
+    data: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 
@@ -269,7 +269,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   }
 
   assertEq(session.id, "test-session-id");
-  assertEq(session.extra.userId, "test-user-id");
+  assertEq(session.data.userId, "test-user-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
   assertEq(session.cookie.value, "");
@@ -288,7 +288,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   const loginCookie = await login(config, {
     id: "test-session-id",
-    extra: { userId: "test-user-id" },
+    data: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 
