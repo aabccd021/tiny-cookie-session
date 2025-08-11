@@ -38,18 +38,18 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
     dateNow: () => state?.date ?? new Date(),
     tokenExpiresIn: 10 * 60 * 1000,
     sessionExpiresIn: 5 * 60 * 60 * 1000,
-    selectSession: async (arg: { tokenHash: string }) => {
-      for (const [id, session] of Object.entries(sessions)) {
-        const [token1Hash, token2Hash] = session.tokenHashes.toReversed();
-        if (token1Hash !== undefined && session.tokenHashes.includes(arg.tokenHash)) {
+    selectSession: async (session: { tokenHash: string }) => {
+      for (const [id, dbSession] of Object.entries(sessions)) {
+        const [token1Hash, token2Hash] = dbSession.tokenHashes.toReversed();
+        if (token1Hash !== undefined && dbSession.tokenHashes.includes(session.tokenHash)) {
           return {
             id,
             token1Hash,
             token2Hash,
-            exp: session.exp,
-            tokenExp: session.tokenExp,
+            exp: dbSession.exp,
+            tokenExp: dbSession.tokenExp,
             extra: {
-              userId: session.userId,
+              userId: dbSession.userId,
             },
           };
         }
@@ -57,43 +57,43 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
       return undefined;
     },
-    insertSession: async (arg: {
-      sessionId: string;
-      sessionExp: Date;
+    insertSession: async (session: {
+      id: string;
+      exp: Date;
       tokenExp: Date;
       tokenHash: string;
       extra: { userId: string };
     }) => {
-      sessions[arg.sessionId] = {
-        exp: arg.sessionExp,
-        tokenExp: arg.tokenExp,
-        tokenHashes: [arg.tokenHash],
-        userId: arg.extra.userId,
+      sessions[session.id] = {
+        exp: session.exp,
+        tokenExp: session.tokenExp,
+        tokenHashes: [session.tokenHash],
+        userId: session.extra.userId,
       };
     },
-    insertTokenAndUpdateSession: async (arg: {
-      sessionId: string;
+    insertTokenAndUpdateSession: async (session: {
+      id: string;
+      exp: Date;
       tokenHash: string;
       tokenExp: Date;
-      sessionExp: Date;
     }) => {
-      const session = sessions[arg.sessionId];
-      if (session === undefined) {
-        throw new Error(`Session not found with id: ${arg.sessionId}`);
+      const dbSession = sessions[session.id];
+      if (dbSession === undefined) {
+        throw new Error(`Session not found with id: ${session.id}`);
       }
-      session.tokenHashes.push(arg.tokenHash);
-      session.tokenExp = arg.tokenExp;
-      session.exp = arg.sessionExp;
+      dbSession.tokenHashes.push(session.tokenHash);
+      dbSession.tokenExp = session.tokenExp;
+      dbSession.exp = session.exp;
     },
-    deleteSession: async (arg: { tokenHash: string }) => {
-      const sessionEntry = Object.entries(sessions).find(([_, session]) =>
-        session.tokenHashes.includes(arg.tokenHash),
+    deleteSession: async (session: { tokenHash: string }) => {
+      const dbSessionEntry = Object.entries(sessions).find(([_, dbSession]) =>
+        dbSession.tokenHashes.includes(session.tokenHash),
       );
-      if (sessionEntry === undefined) {
-        throw new Error(`Session not found with token: ${arg.tokenHash}`);
+      if (dbSessionEntry === undefined) {
+        throw new Error(`Session not found with token: ${session.tokenHash}`);
       }
-      const [sessionId] = sessionEntry;
-      delete sessions[sessionId];
+      const [id] = dbSessionEntry;
+      delete sessions[id];
     },
   };
 }
@@ -102,10 +102,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   console.info("# testConfig");
   const config = createConfig();
   testConfig(config, {
-    sessionId: crypto.randomUUID(),
-    insertExtra: {
-      userId: "test-user",
-    },
+    id: crypto.randomUUID(),
+    insertExtra: { userId: "test-user" },
   });
 }
 
@@ -114,10 +112,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig({ date: new Date("2023-10-01T00:00:00Z") });
 
   const loginCookie = await login(config, {
-    sessionId: "test-session-id",
-    extra: {
-      userId: "test-user-id",
-    },
+    id: "test-session-id",
+    extra: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 
@@ -153,10 +149,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig({ date: new Date("2023-10-01T00:00:00Z") });
 
   const loginCookie = await login(config, {
-    sessionId: "test-session-id",
-    extra: {
-      userId: "test-user-id",
-    },
+    id: "test-session-id",
+    extra: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 
@@ -177,10 +171,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig(state);
 
   const loginCookie = await login(config, {
-    sessionId: "test-session-id",
-    extra: {
-      userId: "test-user-id",
-    },
+    id: "test-session-id",
+    extra: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 
@@ -202,10 +194,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig(state);
 
   const loginCookie = await login(config, {
-    sessionId: "test-session-id",
-    extra: {
-      userId: "test-user-id",
-    },
+    id: "test-session-id",
+    extra: { userId: "test-user-id" },
   });
   let token = loginCookie.value;
 
@@ -236,10 +226,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig(state);
 
   const loginCookie = await login(config, {
-    sessionId: "test-session-id",
-    extra: {
-      userId: "test-user-id",
-    },
+    id: "test-session-id",
+    extra: { userId: "test-user-id" },
   });
   let token = loginCookie.value;
 
@@ -267,10 +255,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig(state);
 
   const loginCookie = await login(config, {
-    sessionId: "test-session-id",
-    extra: {
-      userId: "test-user-id",
-    },
+    id: "test-session-id",
+    extra: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 
@@ -301,10 +287,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig(state);
 
   const loginCookie = await login(config, {
-    sessionId: "test-session-id",
-    extra: {
-      userId: "test-user-id",
-    },
+    id: "test-session-id",
+    extra: { userId: "test-user-id" },
   });
   const token = loginCookie.value;
 

@@ -99,8 +99,8 @@
  * @property {number} sessionExpiresIn
  * @property {number} tokenExpiresIn
  * @property {function({tokenHash: string}): Promise<SessionSelect<S>|undefined>} selectSession
- * @property {function({sessionId: string, sessionExp: Date, tokenHash: string, tokenExp: Date, extra: I}): Promise<void>} insertSession
- * @property {function({sessionId: string, sessionExp: Date, tokenExp: Date, tokenHash: string}): Promise<void>} insertTokenAndUpdateSession
+ * @property {function({id: string, exp: Date, tokenHash: string, tokenExp: Date, extra: I}): Promise<void>} insertSession
+ * @property {function({id: string, exp: Date, tokenExp: Date, tokenHash: string}): Promise<void>} insertTokenAndUpdateSession
  * @property {function({tokenHash: string}): Promise<void>} deleteSession
  */
 
@@ -184,7 +184,7 @@ export async function logout(config, arg) {
  * @template S
  * @template I
  * @param {Config<S, I>} config
- * @param {{extra: I, sessionId: string}} arg
+ * @param {{extra: I, id: string}} arg
  * @returns {Promise<Cookie>}
  */
 export async function login(config, arg) {
@@ -193,8 +193,8 @@ export async function login(config, arg) {
 
   config.insertSession({
     tokenHash,
-    sessionId: arg.sessionId,
-    sessionExp: new Date(now.getTime() + config.sessionExpiresIn),
+    id: arg.id,
+    exp: new Date(now.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(now.getTime() + config.tokenExpiresIn),
     extra: arg.extra,
   });
@@ -255,21 +255,21 @@ export async function consumeSession(config, arg) {
 
   if (session.tokenExp <= now && isSessionToken1) {
     const { cookie, tokenHash } = await createNewTokenCookie(config);
-    const sessionExp = new Date(now.getTime() + config.sessionExpiresIn);
+    const exp = new Date(now.getTime() + config.sessionExpiresIn);
     const tokenExp = new Date(now.getTime() + config.tokenExpiresIn);
     config.insertTokenAndUpdateSession({
-      sessionId: session.id,
+      id: session.id,
       tokenHash,
-      sessionExp,
+      exp,
       tokenExp,
     });
     return {
       state: "TokenRefreshed",
-      cookie,
       id: session.id,
-      exp: sessionExp,
-      tokenExp,
       extra: session.extra,
+      cookie,
+      exp,
+      tokenExp,
       now,
       requestTokenHash,
     };
@@ -290,7 +290,7 @@ export async function consumeSession(config, arg) {
  * @template S
  * @template I
  * @param {Config<S, I>} config
- * @param {{insertExtra: I, sessionId: string}} arg
+ * @param {{insertExtra: I, id: string}} arg
  * @returns {Promise<void>}
  */
 export async function testConfig(config, arg) {
@@ -304,24 +304,24 @@ export async function testConfig(config, arg) {
 
   const start = new Date();
   await config.insertSession({
-    sessionId: arg.sessionId,
+    id: arg.id,
     tokenHash: token3Hash,
-    sessionExp: new Date(start.getTime() + config.sessionExpiresIn),
+    exp: new Date(start.getTime() + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
     extra: arg.insertExtra,
   });
 
   await config.insertTokenAndUpdateSession({
-    sessionId: arg.sessionId,
-    sessionExp: new Date(start.getTime() + 10000 + config.sessionExpiresIn),
+    id: arg.id,
     tokenHash: token2Hash,
+    exp: new Date(start.getTime() + 10000 + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + 1000 + config.tokenExpiresIn),
   });
 
   await config.insertTokenAndUpdateSession({
-    sessionId: arg.sessionId,
-    sessionExp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),
+    id: arg.id,
     tokenHash: token1Hash,
+    exp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),
     tokenExp: new Date(start.getTime() + 2000 + config.tokenExpiresIn),
   });
 
@@ -331,7 +331,7 @@ export async function testConfig(config, arg) {
       throw new Error("Session not found");
     }
 
-    if (session.id !== arg.sessionId) {
+    if (session.id !== arg.id) {
       throw new Error("Session id does not match");
     }
 
