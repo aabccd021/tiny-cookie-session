@@ -1,9 +1,9 @@
 # simple-cookie-session
 
 todo:
-- remove default config
-- catch config throw
-- add tests
+- test token stolen
+- test race condition
+- catch when selectSession throws
 
 Cookie session management for javascript servers.
 
