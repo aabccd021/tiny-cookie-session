@@ -364,7 +364,7 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 }
 
 {
-  console.info("# consumeSession: state TokenStolen, user first, attacker second");
+  console.info("# consumeSession: state TokenStolen, user, user, attacker, user");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
@@ -402,7 +402,7 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 }
 
 {
-  console.info("# consumeSession: state TokenStolen, attacker first, user second");
+  console.info("# consumeSession: state TokenStolen, attacker, attacker, user, attacker");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
