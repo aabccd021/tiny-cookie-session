@@ -165,11 +165,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
       userId: "test-user-id",
     },
   });
-
   await consumeSession(config, { token: loginCookie.value });
-
   state.date = new Date("2023-10-01T00:09:00Z");
-
   const session = await consumeSession(config, { token: loginCookie.value });
 
   if (session.state !== "Active") {
@@ -192,17 +189,13 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
       userId: "test-user-id",
     },
   });
-
   await consumeSession(config, { token: loginCookie.value });
-
   state.date = new Date("2023-10-01T00:11:00Z");
-
   const session = await consumeSession(config, { token: loginCookie.value });
 
   if (session.state !== "TokenRefreshed") {
     throw new Error(`session.state === ${session.state}`);
   }
-
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:11:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:21:00.000Z");
