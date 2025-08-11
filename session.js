@@ -30,8 +30,6 @@
  * @typedef {Object} NotFoundSession
  * @property {"NotFound"} state
  * @property {Cookie} cookie
- * @property {Date} now
- * @property {string} requestTokenHash
  */
 
 /**
@@ -43,8 +41,6 @@
  * @property {Date} exp
  * @property {Date} tokenExp
  * @property {S} data
- * @property {Date} now
- * @property {string} requestTokenHash
  */
 
 /**
@@ -56,8 +52,6 @@
  * @property {Date} exp
  * @property {Date} tokenExp
  * @property {S} data
- * @property {Date} now
- * @property {string} requestTokenHash
  */
 
 /**
@@ -69,8 +63,6 @@
  * @property {Date} exp
  * @property {Date} tokenExp
  * @property {S} data
- * @property {Date} now
- * @property {string} requestTokenHash
  */
 
 /**
@@ -81,8 +73,6 @@
  * @property {Date} exp
  * @property {Date} tokenExp
  * @property {S} data
- * @property {Date} now
- * @property {string} requestTokenHash
  */
 
 /**
@@ -216,8 +206,6 @@ export async function consumeSession(config, arg) {
     return {
       state: "NotFound",
       cookie: logoutCookie,
-      now,
-      requestTokenHash,
     };
   }
 
@@ -230,11 +218,9 @@ export async function consumeSession(config, arg) {
       state: "TokenStolen",
       cookie: logoutCookie,
       id: session.id,
+      data: session.data,
       exp: session.exp,
       tokenExp: session.tokenExp,
-      data: session.data,
-      now,
-      requestTokenHash,
     };
   }
 
@@ -244,11 +230,9 @@ export async function consumeSession(config, arg) {
       state: "Expired",
       cookie: logoutCookie,
       id: session.id,
+      data: session.data,
       exp: session.exp,
       tokenExp: session.tokenExp,
-      data: session.data,
-      now,
-      requestTokenHash,
     };
   }
 
@@ -264,24 +248,20 @@ export async function consumeSession(config, arg) {
     });
     return {
       state: "TokenRefreshed",
+      cookie,
       id: session.id,
       data: session.data,
-      cookie,
       exp,
       tokenExp,
-      now,
-      requestTokenHash,
     };
   }
 
   return {
     state: "Active",
     id: session.id,
+    data: session.data,
     exp: session.exp,
     tokenExp: session.tokenExp,
-    data: session.data,
-    now,
-    requestTokenHash,
   };
 }
 
