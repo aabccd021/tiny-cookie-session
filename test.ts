@@ -41,12 +41,11 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
     sessionExpiresIn: 5 * 60 * 60 * 1000,
     selectSession: async (argSession: { tokenHash: string }) => {
       for (const [id, session] of Object.entries(sessions)) {
-        const [token1Hash, token2Hash] = session.tokenHashes.toReversed();
-        if (token1Hash !== undefined && session.tokenHashes.includes(argSession.tokenHash)) {
+        const [latestTokenHash1, latestTokenHash2] = session.tokenHashes.toReversed();
+        if (latestTokenHash1 !== undefined && session.tokenHashes.includes(argSession.tokenHash)) {
           return {
             id,
-            token1Hash,
-            token2Hash,
+            latestTokenHash: [latestTokenHash1, latestTokenHash2] as const,
             exp: session.exp,
             tokenExp: session.tokenExp,
             data: {
