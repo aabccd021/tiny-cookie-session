@@ -194,7 +194,7 @@ function createConfig(state) {
 }
 
 {
-  console.info("# consumeSession: state NotFound");
+  console.info("# consumeSession: state NotFound for unknown token");
   const config = createConfig();
 
   const session = await consumeSession(config, { token: "unknown-token" });
@@ -205,7 +205,7 @@ function createConfig(state) {
 }
 
 {
-  console.info("# consumeSession: state Active");
+  console.info("# consumeSession: state Active after login");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
