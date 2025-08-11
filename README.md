@@ -1,7 +1,6 @@
 # simple-cookie-session
 
 todo:
-- test race condition
 - catch when selectSession throws
 
 Cookie session management for javascript servers.
