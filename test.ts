@@ -98,7 +98,8 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 
 {
   console.info("# login");
-  const config = createConfig({ date: new Date("2023-10-01T00:00:00Z") });
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
 
   const cookie = await login(config, {
     id: "test-session-id",
@@ -133,7 +134,8 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 
 {
   console.info("# consumeSession: state Active");
-  const config = createConfig({ date: new Date("2023-10-01T00:00:00Z") });
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
 
   const cookie = await login(config, {
     id: "test-session-id",
@@ -273,7 +275,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   let session = await consumeSession(config, { token });
   if (session.state !== "Expired") throw new Error(`Unexpected session.state ${session.state}`);
 
-  state.date = new Date("2023-10-01T06:01:00Z");
   session = await consumeSession(config, { token });
   if (session.state !== "NotFound") throw new Error(`Unexpected session.state ${session.state}`);
 
