@@ -308,6 +308,7 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 
   session = await consumeSession(config, { token });
   if (session.state !== "Active") throw new Error(session.state);
+
   assertEq(session.id, "test-session-id");
   assertEq(session.data.userId, "test-user-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:22:00.000Z");
