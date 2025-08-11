@@ -89,7 +89,7 @@
  * @property {number} tokenExpiresIn
  * @property {function({tokenHash: string}): Promise<SessionSelect<S>|undefined>} selectSession
  * @property {function({id: string, exp: Date, tokenHash: string, tokenExp: Date, data: I}): Promise<void>} insertSession
- * @property {function({id: string, exp: Date, tokenExp: Date, tokenHash: string}): Promise<void>} insertTokenAndUpdateSession
+ * @property {function({id: string, exp: Date, tokenExp: Date, tokenHash: string}): Promise<void>} updateSession
  * @property {function({tokenHash: string}): Promise<void>} deleteSession
  */
 
@@ -242,7 +242,7 @@ export async function consumeSession(config, arg) {
     const { cookie, tokenHash } = await createNewTokenCookie(config);
     const exp = new Date(now.getTime() + config.sessionExpiresIn);
     const tokenExp = new Date(now.getTime() + config.tokenExpiresIn);
-    config.insertTokenAndUpdateSession({
+    config.updateSession({
       id: session.id,
       tokenHash,
       exp,
@@ -292,14 +292,14 @@ export async function testConfig(config, argSessions) {
       data: argSession.data,
     });
 
-    await config.insertTokenAndUpdateSession({
+    await config.updateSession({
       id: argSession.id,
       tokenHash: latestTokenHash1,
       exp: new Date(start.getTime() + 10000 + config.sessionExpiresIn),
       tokenExp: new Date(start.getTime() + 1000 + config.tokenExpiresIn),
     });
 
-    await config.insertTokenAndUpdateSession({
+    await config.updateSession({
       id: argSession.id,
       tokenHash: latestTokenHash0,
       exp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),

@@ -109,7 +109,7 @@ function createConfig(state) {
      * @returns {Promise<void>}
      * @throws {Error} If the session with the given ID does not exist
      */
-    insertTokenAndUpdateSession: async (argSession) => {
+    updateSession: async (argSession) => {
       const session = sessions[argSession.id];
       if (session === undefined) throw new Error(`Session not found with id: ${argSession.id}`);
 
