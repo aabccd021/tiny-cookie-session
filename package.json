@@ -1,23 +1,10 @@
 {
   "name": "simple-cookie-session",
-  "description": "Cookie session management for Node.js",
   "version": "1.0.21",
-  "author": "aabccd021",
   "license": "0BSD",
   "type": "module",
   "module": "index.js",
-  "types": "index.d.ts",
   "files": [
-    "index.js",
-    "index.d.ts"
-  ],
-  "keywords": [
-    "web",
-    "cookie",
-    "session"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/aabccd021/simple-cookie-session.git"
-  }
+    "index.js"
+  ]
 }
