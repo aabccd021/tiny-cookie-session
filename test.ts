@@ -100,17 +100,17 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   console.info("# login");
   const config = createConfig({ date: new Date("2023-10-01T00:00:00Z") });
 
-  const loginCookie = await login(config, {
+  const cookie = await login(config, {
     id: "test-session-id",
     data: { userId: "test-user-id" },
   });
-  const token = loginCookie.value;
+  const token = cookie.value;
 
-  assertEq(loginCookie.options.httpOnly, true);
-  assertEq(loginCookie.options.secure, true);
-  assertEq(loginCookie.options.sameSite, "lax");
-  assertEq(loginCookie.options.path, "/");
-  assertEq(loginCookie.options.expires?.toISOString(), "2023-10-01T05:00:00.000Z");
+  assertEq(cookie.options.httpOnly, true);
+  assertEq(cookie.options.secure, true);
+  assertEq(cookie.options.sameSite, "lax");
+  assertEq(cookie.options.path, "/");
+  assertEq(cookie.options.expires?.toISOString(), "2023-10-01T05:00:00.000Z");
   assertEq(token.length, 64);
   assertEq(/^[a-zA-Z0-9]*$/.test(token), true, token);
 }
@@ -135,11 +135,11 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   console.info("# consumeSession: state Active");
   const config = createConfig({ date: new Date("2023-10-01T00:00:00Z") });
 
-  const loginCookie = await login(config, {
+  const cookie = await login(config, {
     id: "test-session-id",
     data: { userId: "test-user-id" },
   });
-  const token = loginCookie.value;
+  const token = cookie.value;
 
   const session = await consumeSession(config, { token });
   if (session.state !== "Active") throw new Error(`Unexpected session.state ${session.state}`);
@@ -155,11 +155,11 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
-  const loginCookie = await login(config, {
+  const cookie = await login(config, {
     id: "test-session-id",
     data: { userId: "test-user-id" },
   });
-  const token = loginCookie.value;
+  const token = cookie.value;
 
   state.date = new Date("2023-10-01T00:09:00Z");
   const session = await consumeSession(config, { token });
@@ -176,11 +176,11 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
-  const loginCookie = await login(config, {
+  const cookie = await login(config, {
     id: "test-session-id",
     data: { userId: "test-user-id" },
   });
-  let token = loginCookie.value;
+  let token = cookie.value;
 
   state.date = new Date("2023-10-01T00:11:00Z");
   const session = await consumeSession(config, { token });
@@ -208,11 +208,11 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
-  const loginCookie = await login(config, {
+  const cookie = await login(config, {
     id: "test-session-id",
     data: { userId: "test-user-id" },
   });
-  let token = loginCookie.value;
+  let token = cookie.value;
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let session = await consumeSession(config, { token });
@@ -235,11 +235,11 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
-  const loginCookie = await login(config, {
+  const cookie = await login(config, {
     id: "test-session-id",
     data: { userId: "test-user-id" },
   });
-  const token = loginCookie.value;
+  const token = cookie.value;
 
   await consumeSession(config, { token });
 
@@ -265,11 +265,11 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
-  const loginCookie = await login(config, {
+  const cookie = await login(config, {
     id: "test-session-id",
     data: { userId: "test-user-id" },
   });
-  const token = loginCookie.value;
+  const token = cookie.value;
 
   await consumeSession(config, { token });
 
