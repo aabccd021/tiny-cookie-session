@@ -120,11 +120,15 @@ function createConfig(state) {
   testConfig(config, [
     {
       id: crypto.randomUUID(),
-      data: { userId: "test-user" },
+      data: { userId: "test-user-1" },
     },
     {
       id: crypto.randomUUID(),
       data: { userId: "test-user-2" },
+    },
+    {
+      id: crypto.randomUUID(),
+      data: { userId: "test-user-3" },
     },
     {
       id: crypto.randomUUID(),
