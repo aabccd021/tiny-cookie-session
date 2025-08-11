@@ -212,27 +212,29 @@ export async function consumeSession(config, arg) {
   const isTokenLatest0 = requestTokenHash === session.latestTokenHash[0];
   const isTokenLatest1 = requestTokenHash === session.latestTokenHash[1];
 
+  // exclude hashes to avoid accidentally logging them
+  const sessionData = {
+    id: session.id,
+    data: session.data,
+    exp: session.exp,
+    tokenExp: session.tokenExp,
+  };
+
   if (!isTokenLatest0 && !isTokenLatest1) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
+      ...sessionData,
       state: "TokenStolen",
       cookie: logoutCookie,
-      id: session.id,
-      data: session.data,
-      exp: session.exp,
-      tokenExp: session.tokenExp,
     };
   }
 
   if (session.exp < now) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
+      ...sessionData,
       state: "Expired",
       cookie: logoutCookie,
-      id: session.id,
-      data: session.data,
-      exp: session.exp,
-      tokenExp: session.tokenExp,
     };
   }
 
@@ -247,21 +249,17 @@ export async function consumeSession(config, arg) {
       tokenExp,
     });
     return {
+      ...sessionData,
       state: "TokenRefreshed",
       cookie,
-      id: session.id,
-      data: session.data,
       exp,
       tokenExp,
     };
   }
 
   return {
+    ...sessionData,
     state: "Active",
-    id: session.id,
-    data: session.data,
-    exp: session.exp,
-    tokenExp: session.tokenExp,
   };
 }
 
