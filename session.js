@@ -17,7 +17,7 @@
 
 /**
  * @template S
- * @typedef {Object} SessionData
+ * @typedef {Object} SessionSelect
  * @property {string} id
  * @property {Date} exp
  * @property {Date} tokenExp
@@ -31,7 +31,6 @@
  * @typedef {Object} NotFoundSession
  * @property {"NotFound"} state
  * @property {Cookie} cookie
- * @property {string} requestTokenHash
  */
 
 /**
@@ -39,8 +38,10 @@
  * @typedef {Object} TokenStolenSession
  * @property {"TokenStolen"} state
  * @property {Cookie} cookie
- * @property {string} requestTokenHash
- * @property {SessionData<S>} data
+ * @property {string} id
+ * @property {Date} exp
+ * @property {Date} tokenExp
+ * @property {S} extra
  */
 
 /**
@@ -48,26 +49,31 @@
  * @typedef {Object} ExpiredSession
  * @property {"Expired"} state
  * @property {Cookie} cookie
- * @property {string} requestTokenHash
- * @property {SessionData<S>} data
- * @property {Date} now
+ * @property {string} id
+ * @property {Date} exp
+ * @property {Date} tokenExp
+ * @property {S} extra
  */
 
 /**
  * @template S
  * @typedef {Object} TokenRefreshedSession
  * @property {"TokenRefreshed"} state
- * @property {SessionData<S>} data
  * @property {Cookie} cookie
- * @property {Date} now
+ * @property {string} id
+ * @property {Date} exp
+ * @property {Date} tokenExp
+ * @property {S} extra
  */
 
 /**
  * @template S
  * @typedef {Object} ActiveSession
  * @property {"Active"} state
- * @property {SessionData<S>} data
- * @property {Date} now
+ * @property {string} id
+ * @property {Date} exp
+ * @property {Date} tokenExp
+ * @property {S} extra
  */
 
 /**
@@ -82,7 +88,7 @@
  * @property {function(): Date} [ dateNow ]
  * @property {number} sessionExpiresIn
  * @property {number} tokenExpiresIn
- * @property {function({tokenHash: string}): Promise<SessionData<S>|undefined>} selectSession
+ * @property {function({tokenHash: string}): Promise<SessionSelect<S>|undefined>} selectSession
  * @property {function({sessionId: string, sessionExp: Date, tokenHash: string, tokenExp: Date, extra: I}): Promise<void>} insertSession
  * @property {function({sessionId: string, sessionExp: Date, tokenExp: Date, tokenHash: string}): Promise<void>} insertTokenAndUpdateSession
  * @property {function({tokenHash: string}): Promise<void>} deleteSession
@@ -202,7 +208,6 @@ export async function consumeSession(config, arg) {
     return {
       state: "NotFound",
       cookie: logoutCookie,
-      requestTokenHash,
     };
   }
 
@@ -214,8 +219,10 @@ export async function consumeSession(config, arg) {
     return {
       state: "TokenStolen",
       cookie: logoutCookie,
-      requestTokenHash,
-      data: session,
+      id: session.id,
+      exp: session.exp,
+      tokenExp: session.tokenExp,
+      extra: session.extra,
     };
   }
 
@@ -225,9 +232,10 @@ export async function consumeSession(config, arg) {
     return {
       state: "Expired",
       cookie: logoutCookie,
-      requestTokenHash,
-      data: session,
-      now,
+      id: session.id,
+      exp: session.exp,
+      tokenExp: session.tokenExp,
+      extra: session.extra,
     };
   }
 
@@ -244,22 +252,19 @@ export async function consumeSession(config, arg) {
     return {
       state: "TokenRefreshed",
       cookie,
-      now,
-      data: {
-        id: session.id,
-        exp: sessionExp,
-        tokenExp,
-        token1Hash: tokenHash,
-        token2Hash: session.token1Hash,
-        extra: session.extra,
-      },
+      id: session.id,
+      exp: sessionExp,
+      tokenExp,
+      extra: session.extra,
     };
   }
 
   return {
     state: "Active",
-    data: session,
-    now,
+    id: session.id,
+    exp: session.exp,
+    tokenExp: session.tokenExp,
+    extra: session.extra,
   };
 }
 

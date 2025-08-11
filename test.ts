@@ -22,7 +22,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const sessions = state?.sessions ?? {};
   return {
     dateNow: () => state?.date ?? new Date(),
-    tokenExpiresIn: 1 * 60 * 1000,
+    tokenExpiresIn: 10 * 60 * 1000,
     sessionExpiresIn: 5 * 60 * 60 * 1000,
     selectSession: async (arg: { tokenHash: string }) => {
       for (const [id, session] of Object.entries(sessions)) {
@@ -116,22 +116,40 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 }
 
 {
-  console.info("# consumeSession: unknown token");
+  console.info("# consumeSession: state NotFound");
   const config = createConfig();
 
   const session = await consumeSession(config, { token: "unknown-token" });
 
   if (session.state !== "NotFound") {
-    throw new Error("Expected session state to be NotFound");
+    throw new Error(`session.state === ${session.state}`);
   }
-  assertEq(
-    session.requestTokenHash,
-    "9206c2394794b8fc97fcd896f95e40028ab7a15c10279446c23fbdd4b4ae7a1e",
-  );
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
   assertEq(session.cookie.options.httpOnly, true);
   assertEq(session.cookie.options.secure, true);
   assertEq(session.cookie.options.sameSite, "lax");
   assertEq(session.cookie.options.path, "/");
+}
+
+{
+  console.info("# consumeSession: state Active");
+  const config = createConfig({ date: new Date("2023-10-01T00:00:00Z") });
+
+  const loginCookie = await login(config, {
+    sessionId: "test-session-id",
+    extra: {
+      userId: "test-user-id",
+    },
+  });
+
+  const session = await consumeSession(config, { token: loginCookie.value });
+
+  if (session.state !== "Active") {
+    throw new Error(`session.state === ${session.state}`);
+  }
+  assertEq(session.id, "test-session-id");
+  assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
+  assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
+  assertEq(session.extra.userId, "test-user-id");
 }
