@@ -279,6 +279,7 @@ export async function testConfig(config, argSessions) {
 
   const states = [];
 
+  // Simulate innserting multiple sessions
   for (const argSession of argSessions) {
     const latestTokenHash2 = await hashToken(generateToken());
     const latestTokenHash1 = await hashToken(generateToken());
@@ -310,6 +311,7 @@ export async function testConfig(config, argSessions) {
     states.push({ start, latestTokenHash0, latestTokenHash1, latestTokenHash2 });
   }
 
+  // Simulate session selection and deletion
   for (const argSession of argSessions) {
     const sessionHashes = states.shift();
     if (sessionHashes === undefined) {
