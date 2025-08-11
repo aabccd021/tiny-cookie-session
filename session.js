@@ -352,8 +352,7 @@ export async function testConfig(config, argSessions) {
     for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
       const session = await config.selectSession({ tokenHash });
       if (session !== undefined) {
-        console.log(session);
-        throw new Error("Session should not be found");
+        throw new Error("Session should not be found after deletion");
       }
     }
   }

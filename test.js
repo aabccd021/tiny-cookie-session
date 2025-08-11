@@ -172,7 +172,7 @@ function createConfig(state) {
   const config = createConfig();
 
   const session = await consumeSession(config, { token: "unknown-token" });
-  if (session.state !== "NotFound") throw new Error(session.state);
+  if (session.state !== "NotFound") throw new Error();
 
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
@@ -190,7 +190,7 @@ function createConfig(state) {
   const token = cookie.value;
 
   const session = await consumeSession(config, { token });
-  if (session.state !== "Active") throw new Error(session.state);
+  if (session.state !== "Active") throw new Error();
 
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
@@ -211,7 +211,7 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T00:09:00Z");
   const session = await consumeSession(config, { token });
-  if (session.state !== "Active") throw new Error(session.state);
+  if (session.state !== "Active") throw new Error();
 
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
@@ -233,7 +233,7 @@ function createConfig(state) {
   state.date = new Date("2023-10-01T00:11:00Z");
   const session = await consumeSession(config, { token });
 
-  if (session.state !== "TokenRefreshed") throw new Error(session.state);
+  if (session.state !== "TokenRefreshed") throw new Error();
 
   token = session.cookie.value;
 
@@ -259,12 +259,12 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let session = await consumeSession(config, { token });
-  if (session.state !== "TokenRefreshed") throw new Error(session.state);
+  if (session.state !== "TokenRefreshed") throw new Error();
 
   token = session.cookie.value;
 
   session = await consumeSession(config, { token });
-  if (session.state !== "Active") throw new Error(session.state);
+  if (session.state !== "Active") throw new Error();
 
   assertEq(session.id, "test-session-id");
   assertEq(session.data.userId, "test-user-id");
@@ -285,7 +285,7 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T06:00:00Z");
   const session = await consumeSession(config, { token });
-  if (session.state !== "Expired") throw new Error(session.state);
+  if (session.state !== "Expired") throw new Error();
 
   assertEq(session.id, "test-session-id");
   assertEq(session.data.userId, "test-user-id");
@@ -308,10 +308,10 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T06:00:00Z");
   let session = await consumeSession(config, { token });
-  if (session.state !== "Expired") throw new Error(session.state);
+  if (session.state !== "Expired") throw new Error();
 
   session = await consumeSession(config, { token });
-  if (session.state !== "NotFound") throw new Error(session.state);
+  if (session.state !== "NotFound") throw new Error();
 
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
@@ -330,16 +330,16 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let session = await consumeSession(config, { token });
-  if (session.state !== "TokenRefreshed") throw new Error(session.state);
+  if (session.state !== "TokenRefreshed") throw new Error();
   token = session.cookie.value;
 
   state.date = new Date("2023-10-01T00:22:00Z");
   session = await consumeSession(config, { token });
-  if (session.state !== "TokenRefreshed") throw new Error(session.state);
+  if (session.state !== "TokenRefreshed") throw new Error();
   token = session.cookie.value;
 
   session = await consumeSession(config, { token });
-  if (session.state !== "Active") throw new Error(session.state);
+  if (session.state !== "Active") throw new Error();
 }
 
 {
@@ -358,7 +358,7 @@ function createConfig(state) {
   token = cookie.value;
 
   const session = await consumeSession(config, { token });
-  if (session.state !== "NotFound") throw new Error(session.state);
+  if (session.state !== "NotFound") throw new Error();
 
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
@@ -386,7 +386,7 @@ function createConfig(state) {
   });
 
   const session = await consumeSession(config, { token: cookie.value });
-  if (session.state !== "Active") throw new Error(session.state);
+  if (session.state !== "Active") throw new Error();
 }
 
 {
@@ -539,11 +539,11 @@ function createConfig(state) {
   state.date = new Date("2023-10-01T00:11:00Z");
 
   let session = await consumeSession(config, { token: prevToken });
-  if (session.state !== "TokenRefreshed") throw new Error(session.state);
+  if (session.state !== "TokenRefreshed") throw new Error();
   token = session.cookie.value;
 
   session = await consumeSession(config, { token: prevToken });
-  if (session.state !== "Active") throw new Error(session.state);
+  if (session.state !== "Active") throw new Error();
 }
 
 {
@@ -574,7 +574,7 @@ function createConfig(state) {
       if (session.state === "TokenRefreshed") {
         token = session.cookie.value;
       } else if (session.state !== "Active") {
-        throw new Error(session.state);
+        throw new Error();
       }
     })(),
 
@@ -587,7 +587,7 @@ function createConfig(state) {
       if (session.state === "TokenRefreshed") {
         token = session.cookie.value;
       } else if (session.state !== "Active") {
-        throw new Error(session.state);
+        throw new Error();
       }
 
       secondRequestFinished.resolve(undefined);
