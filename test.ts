@@ -364,7 +364,7 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 }
 
 {
-  console.info("# consumeSession: state TokenStolen, user, user, attacker, user");
+  console.info("# consumeSession: state TokenStolen, user, user, attacker");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
@@ -402,7 +402,7 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 }
 
 {
-  console.info("# consumeSession: state TokenStolen, attacker, attacker, user, attacker");
+  console.info("# consumeSession: state TokenStolen, attacker, attacker, user");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
@@ -439,4 +439,31 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   assertEq(attackerSession.cookie.options.maxAge, 0);
 }
 
-// consume when attacker token is 2
+{
+  console.info("# consumeSession: state TokenStolen, attacker, user, attacker, user");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const userCookie = await login(config, {
+    id: "test-session-id",
+    data: { userId: "test-user-id" },
+  });
+  const userToken = userCookie.value;
+  let attackerToken = userToken;
+
+  state.date = new Date("2023-10-01T00:11:00Z");
+  let attackerSession = await consumeSession(config, { token: attackerToken });
+  if (attackerSession.state !== "TokenRefreshed") throw new Error(attackerSession.state);
+  attackerToken = attackerSession.cookie.value;
+
+  state.date = new Date("2023-10-01T00:22:00Z");
+  let userSession = await consumeSession(config, { token: userToken });
+  if (userSession.state !== "Active") throw new Error(userSession.state);
+
+  attackerSession = await consumeSession(config, { token: attackerToken });
+  if (attackerSession.state !== "TokenRefreshed") throw new Error(attackerSession.state);
+  attackerToken = attackerSession.cookie.value;
+
+  userSession = await consumeSession(config, { token: userToken });
+  if (userSession.state !== "TokenStolen") throw new Error(userSession.state);
+}
