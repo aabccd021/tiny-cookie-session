@@ -9,6 +9,7 @@ function assertEq<T extends string | boolean | number | undefined | null>(
     console.error("Expected", expected);
     console.error("Found", actual);
     const err = new Error(message);
+    err.name = "AssertionError";
     if ("captureStackTrace" in Error && typeof Error.captureStackTrace === "function") {
       Error.captureStackTrace(err, assertEq);
     }
@@ -409,4 +410,42 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   assertEq(cookie.options.sameSite, "lax");
   assertEq(cookie.options.path, "/");
   assertEq(cookie.options.expires?.toISOString(), "2023-10-01T05:14:00.000Z");
+}
+
+{
+  console.info("# consumeSession: state TokenStolen, user first, attacker second");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const userCookie = await login(config, {
+    id: "test-session-id",
+    data: { userId: "test-user-id" },
+  });
+  let userToken = userCookie.value;
+
+  const attackerCookie = userToken;
+
+  state.date = new Date("2023-10-01T00:11:00Z");
+  let userSession = await consumeSession(config, { token: userToken });
+  if (userSession.state !== "TokenRefreshed") throw new Error(userSession.state);
+  userToken = userSession.cookie.value;
+
+  state.date = new Date("2023-10-01T00:22:00Z");
+  userSession = await consumeSession(config, { token: userToken });
+  if (userSession.state !== "TokenRefreshed") throw new Error(userSession.state);
+  userToken = userSession.cookie.value;
+
+  const attackerSession = await consumeSession(config, { token: attackerCookie });
+  if (attackerSession.state !== "TokenStolen") throw new Error(attackerSession.state);
+  assertEq(attackerSession.id, "test-session-id");
+  assertEq(attackerSession.data.userId, "test-user-id");
+  assertEq(attackerSession.exp.toISOString(), "2023-10-01T05:22:00.000Z");
+  assertEq(attackerSession.tokenExp.toISOString(), "2023-10-01T00:32:00.000Z");
+  assertEq(attackerSession.cookie.value, "");
+  assertEq(attackerSession.cookie.options.maxAge, 0);
+  assertEq(attackerSession.cookie.options.httpOnly, true);
+  assertEq(attackerSession.cookie.options.secure, true);
+  assertEq(attackerSession.cookie.options.sameSite, "lax");
+  assertEq(attackerSession.cookie.options.path, "/");
+  assertEq(attackerSession.cookie.options.expires?.toISOString(), undefined);
 }
