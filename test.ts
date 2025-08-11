@@ -467,3 +467,32 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   userSession = await consumeSession(config, { token: userToken });
   if (userSession.state !== "TokenStolen") throw new Error(userSession.state);
 }
+
+{
+  console.info("# consumeSession: state TokenStolen, user, attacker, user, attacker");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const userCookie = await login(config, {
+    id: "test-session-id",
+    data: { userId: "test-user-id" },
+  });
+  let userToken = userCookie.value;
+  const attackerToken = userToken;
+
+  state.date = new Date("2023-10-01T00:11:00Z");
+  let userSession = await consumeSession(config, { token: userToken });
+  if (userSession.state !== "TokenRefreshed") throw new Error(userSession.state);
+  userToken = userSession.cookie.value;
+
+  state.date = new Date("2023-10-01T00:22:00Z");
+  let attackerSession = await consumeSession(config, { token: attackerToken });
+  if (attackerSession.state !== "Active") throw new Error(attackerSession.state);
+
+  userSession = await consumeSession(config, { token: userToken });
+  if (userSession.state !== "TokenRefreshed") throw new Error(userSession.state);
+  userToken = userSession.cookie.value;
+
+  attackerSession = await consumeSession(config, { token: attackerToken });
+  if (attackerSession.state !== "TokenStolen") throw new Error(attackerSession.state);
+}
