@@ -99,20 +99,21 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   console.info("# login");
   const config = createConfig({ date: new Date("2023-10-01T00:00:00Z") });
 
-  const cookie = await login(config, {
+  const loginCookie = await login(config, {
     sessionId: "test-session-id",
     extra: {
       userId: "test-user-id",
     },
   });
+  const token = loginCookie.value;
 
-  assertEq(cookie.options.httpOnly, true);
-  assertEq(cookie.options.secure, true);
-  assertEq(cookie.options.sameSite, "lax");
-  assertEq(cookie.options.path, "/");
-  assertEq(cookie.options.expires?.toISOString(), "2023-10-01T05:00:00.000Z");
-  assertEq(cookie.value.length, 64);
-  assertEq(/^[a-zA-Z0-9]*$/.test(cookie.value), true, cookie.value);
+  assertEq(loginCookie.options.httpOnly, true);
+  assertEq(loginCookie.options.secure, true);
+  assertEq(loginCookie.options.sameSite, "lax");
+  assertEq(loginCookie.options.path, "/");
+  assertEq(loginCookie.options.expires?.toISOString(), "2023-10-01T05:00:00.000Z");
+  assertEq(token.length, 64);
+  assertEq(/^[a-zA-Z0-9]*$/.test(token), true, token);
 }
 
 {
@@ -120,10 +121,10 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig();
 
   const session = await consumeSession(config, { token: "unknown-token" });
-
   if (session.state !== "NotFound") {
     throw new Error(`session.state === ${session.state}`);
   }
+
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
   assertEq(session.cookie.options.httpOnly, true);
@@ -142,12 +143,13 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
       userId: "test-user-id",
     },
   });
+  const token = loginCookie.value;
 
-  const session = await consumeSession(config, { token: loginCookie.value });
-
+  const session = await consumeSession(config, { token });
   if (session.state !== "Active") {
     throw new Error(`session.state === ${session.state}`);
   }
+
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
@@ -165,13 +167,16 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
       userId: "test-user-id",
     },
   });
-  await consumeSession(config, { token: loginCookie.value });
-  state.date = new Date("2023-10-01T00:09:00Z");
-  const session = await consumeSession(config, { token: loginCookie.value });
+  const token = loginCookie.value;
 
+  await consumeSession(config, { token });
+
+  state.date = new Date("2023-10-01T00:09:00Z");
+  const session = await consumeSession(config, { token });
   if (session.state !== "Active") {
     throw new Error(`session.state === ${session.state}`);
   }
+
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
@@ -189,22 +194,60 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
       userId: "test-user-id",
     },
   });
-  await consumeSession(config, { token: loginCookie.value });
+  let token = loginCookie.value;
+
+  await consumeSession(config, { token });
+
   state.date = new Date("2023-10-01T00:11:00Z");
-  const session = await consumeSession(config, { token: loginCookie.value });
+  const session = await consumeSession(config, { token });
 
   if (session.state !== "TokenRefreshed") {
     throw new Error(`session.state === ${session.state}`);
   }
+  token = session.cookie.value;
+
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:11:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:21:00.000Z");
   assertEq(session.extra.userId, "test-user-id");
-  assertEq(session.cookie.value.length, 64);
-  assertEq(/^[a-zA-Z0-9]*$/.test(session.cookie.value), true, session.cookie.value);
+  assertEq(token.length, 64);
+  assertEq(/^[a-zA-Z0-9]*$/.test(token), true, token);
   assertEq(session.cookie.options.httpOnly, true);
   assertEq(session.cookie.options.secure, true);
   assertEq(session.cookie.options.sameSite, "lax");
   assertEq(session.cookie.options.path, "/");
   assertEq(session.cookie.options.expires?.toISOString(), "2023-10-01T05:11:00.000Z");
+}
+
+{
+  console.info("# consumeSession: state Active after refreshed");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const loginCookie = await login(config, {
+    sessionId: "test-session-id",
+    extra: {
+      userId: "test-user-id",
+    },
+  });
+  let token = loginCookie.value;
+
+  await consumeSession(config, { token });
+
+  state.date = new Date("2023-10-01T00:11:00Z");
+  let session = await consumeSession(config, { token });
+  if (session.state !== "TokenRefreshed") {
+    throw new Error(`session.state === ${session.state}`);
+  }
+  token = session.cookie.value;
+
+  session = await consumeSession(config, { token });
+  if (session.state !== "Active") {
+    throw new Error(`session.state === ${session.state}`);
+  }
+
+  assertEq(session.id, "test-session-id");
+  assertEq(session.extra.userId, "test-user-id");
+  assertEq(session.exp.toISOString(), "2023-10-01T05:11:00.000Z");
+  assertEq(session.tokenExp.toISOString(), "2023-10-01T00:21:00.000Z");
 }
