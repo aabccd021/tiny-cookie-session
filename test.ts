@@ -1,12 +1,5 @@
 import { consumeSession, login, testConfig } from "./session.js";
 
-type Session = {
-  tokenHashes: string[];
-  tokenExp: Date;
-  exp: Date;
-  userId: string;
-};
-
 function assertEq<T extends string | boolean | number | undefined | null>(
   actual: T,
   expected: T,
@@ -23,7 +16,14 @@ function assertEq<T extends string | boolean | number | undefined | null>(
   }
 }
 
-function createConfig(state?: { sessions?: Record<string, Session>; date?: Date }) {
+type DBSession = {
+  tokenHashes: string[];
+  tokenExp: Date;
+  exp: Date;
+  userId: string;
+};
+
+function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Date }) {
   const sessions = state?.sessions ?? {};
   return {
     dateNow: () => state?.date ?? new Date(),
