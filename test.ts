@@ -10,15 +10,16 @@ type Session = {
 function assertionError(
   actual: unknown,
   expected: unknown,
-  message: string | undefined,
+  message?: string,
   traceFrom?: unknown,
 ): Error {
   const err = new Error(message);
+  err.name = "AssertionError";
   if ("captureStackTrace" in Error && typeof Error.captureStackTrace === "function") {
     Error.captureStackTrace(err, traceFrom ?? assertionError);
   }
-  err.name = "AssertionError";
-  err.message = `Expected ${expected}, but found ${actual}. ${message ?? ""}`;
+  console.error("Expected:", expected);
+  console.error("Actual:", actual);
   return err;
 }
 
@@ -297,13 +298,13 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   state.date = new Date("2023-10-01T06:00:00Z");
   let session = await consumeSession(config, { token });
   if (session.state !== "Expired") {
-    throw new Error(`session.state === ${session.state}`);
+    throw assertionError(session.state, "Expired");
   }
 
   state.date = new Date("2023-10-01T06:01:00Z");
   session = await consumeSession(config, { token });
   if (session.state !== "NotFound") {
-    throw new Error(`session.state === ${session.state}`);
+    throw assertionError(session.state, "NotFound", "Expected session to be NotFound");
   }
 
   assertEq(session.cookie.value, "");
