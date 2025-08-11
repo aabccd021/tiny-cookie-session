@@ -496,3 +496,77 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   attackerSession = await consumeSession(config, { token: attackerToken });
   if (attackerSession.state !== "TokenStolen") throw new Error(attackerSession.state);
 }
+
+{
+  console.info("# consumeSession: state Active with second last token");
+
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const cookie = await login(config, {
+    id: "test-session-id",
+    data: { userId: "test-user-id" },
+  });
+  let token = cookie.value;
+  const prevToken = token;
+
+  state.date = new Date("2023-10-01T00:11:00Z");
+
+  let session = await consumeSession(config, { token: prevToken });
+  if (session.state !== "TokenRefreshed") throw new Error(session.state);
+  token = session.cookie.value;
+
+  session = await consumeSession(config, { token: prevToken });
+  if (session.state !== "Active") throw new Error(session.state);
+}
+
+{
+  console.info("# consumeSession: state Active on race condition");
+
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const cookie = await login(config, {
+    id: "test-session-id",
+    data: { userId: "test-user-id" },
+  });
+  let token = cookie.value;
+  const prevToken = token;
+  const tokenRefreshed = Promise.withResolvers<undefined>();
+  const secondRequestFinished = Promise.withResolvers<undefined>();
+
+  state.date = new Date("2023-10-01T00:11:00Z");
+
+  await Promise.all([
+    (async () => {
+      const session = await consumeSession(config, { token });
+
+      tokenRefreshed.resolve(undefined);
+      await secondRequestFinished.promise;
+
+      // emulate set-token
+      if (session.state === "TokenRefreshed") {
+        token = session.cookie.value;
+      } else if (session.state !== "Active") {
+        throw new Error(session.state);
+      }
+    })(),
+
+    (async () => {
+      await tokenRefreshed.promise;
+
+      const session = await consumeSession(config, { token });
+
+      // emulate set-token
+      if (session.state === "TokenRefreshed") {
+        token = session.cookie.value;
+      } else if (session.state !== "Active") {
+        throw new Error(session.state);
+      }
+
+      secondRequestFinished.resolve(undefined);
+    })(),
+  ]);
+
+  assertEq(prevToken !== token, true);
+}

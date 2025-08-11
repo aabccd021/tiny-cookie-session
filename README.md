@@ -1,7 +1,6 @@
 # simple-cookie-session
 
 todo:
-- test token stolen
 - test race condition
 - catch when selectSession throws
 
