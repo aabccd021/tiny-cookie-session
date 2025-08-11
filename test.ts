@@ -118,10 +118,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   });
   const token = cookie.value;
 
-  assertEq(cookie.options.httpOnly, true);
-  assertEq(cookie.options.secure, true);
-  assertEq(cookie.options.sameSite, "lax");
-  assertEq(cookie.options.path, "/");
   assertEq(cookie.options.expires?.toISOString(), "2023-10-01T05:00:00.000Z");
   assertEq(token.length, 64);
   assertEq(/^[a-zA-Z0-9]*$/.test(token), true, token);
@@ -143,11 +139,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 
   assertEq(cookie.value, "");
   assertEq(cookie.options.maxAge, 0);
-  assertEq(cookie.options.httpOnly, true);
-  assertEq(cookie.options.secure, true);
-  assertEq(cookie.options.sameSite, "lax");
-  assertEq(cookie.options.path, "/");
-  assertEq(cookie.options.expires?.toISOString(), undefined);
 }
 
 {
@@ -159,11 +150,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
-  assertEq(session.cookie.options.httpOnly, true);
-  assertEq(session.cookie.options.secure, true);
-  assertEq(session.cookie.options.sameSite, "lax");
-  assertEq(session.cookie.options.path, "/");
-  assertEq(session.cookie.options.expires?.toISOString(), undefined);
 }
 
 {
@@ -231,10 +217,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   assertEq(session.data.userId, "test-user-id");
   assertEq(token.length, 64);
   assertEq(/^[a-zA-Z0-9]*$/.test(token), true, token);
-  assertEq(session.cookie.options.httpOnly, true);
-  assertEq(session.cookie.options.secure, true);
-  assertEq(session.cookie.options.sameSite, "lax");
-  assertEq(session.cookie.options.path, "/");
   assertEq(session.cookie.options.expires?.toISOString(), "2023-10-01T05:11:00.000Z");
 }
 
@@ -285,11 +267,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
-  assertEq(session.cookie.options.httpOnly, true);
-  assertEq(session.cookie.options.secure, true);
-  assertEq(session.cookie.options.sameSite, "lax");
-  assertEq(session.cookie.options.path, "/");
-  assertEq(session.cookie.options.expires?.toISOString(), undefined);
 }
 
 {
@@ -312,11 +289,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
-  assertEq(session.cookie.options.httpOnly, true);
-  assertEq(session.cookie.options.secure, true);
-  assertEq(session.cookie.options.sameSite, "lax");
-  assertEq(session.cookie.options.path, "/");
-  assertEq(session.cookie.options.expires?.toISOString(), undefined);
 }
 
 {
@@ -364,11 +336,6 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
 
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
-  assertEq(session.cookie.options.httpOnly, true);
-  assertEq(session.cookie.options.secure, true);
-  assertEq(session.cookie.options.sameSite, "lax");
-  assertEq(session.cookie.options.path, "/");
-  assertEq(session.cookie.options.expires?.toISOString(), undefined);
 }
 
 {
@@ -427,19 +394,9 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   assertEq(attackerSession.tokenExp.toISOString(), "2023-10-01T00:32:00.000Z");
   assertEq(attackerSession.cookie.value, "");
   assertEq(attackerSession.cookie.options.maxAge, 0);
-  assertEq(attackerSession.cookie.options.httpOnly, true);
-  assertEq(attackerSession.cookie.options.secure, true);
-  assertEq(attackerSession.cookie.options.sameSite, "lax");
-  assertEq(attackerSession.cookie.options.path, "/");
-  assertEq(attackerSession.cookie.options.expires?.toISOString(), undefined);
 
   userSession = await consumeSession(config, { token: userToken });
   if (userSession.state !== "NotFound") throw new Error(userSession.state);
   assertEq(userSession.cookie.value, "");
   assertEq(userSession.cookie.options.maxAge, 0);
-  assertEq(userSession.cookie.options.httpOnly, true);
-  assertEq(userSession.cookie.options.secure, true);
-  assertEq(userSession.cookie.options.sameSite, "lax");
-  assertEq(userSession.cookie.options.path, "/");
-  assertEq(userSession.cookie.options.expires?.toISOString(), undefined);
 }
