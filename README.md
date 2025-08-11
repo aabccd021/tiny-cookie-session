@@ -1,6 +1,9 @@
 # simple-cookie-session
 
 todo:
+- test token refreshed 2 times
+- test logout -> not found
+- test logout -> login -> active
 - test token stolen
 - test race condition
 - catch when selectSession throws
