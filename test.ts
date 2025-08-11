@@ -120,7 +120,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const config = createConfig();
 
   const session = await consumeSession(config, { token: "unknown-token" });
-  if (session.state !== "NotFound") throw new Error(session.state);
+  if (session.state !== "NotFound") throw new Error(`Unexpected session.state ${session.state}`);
 
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
@@ -142,7 +142,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   const token = loginCookie.value;
 
   const session = await consumeSession(config, { token });
-  if (session.state !== "Active") throw new Error(session.state);
+  if (session.state !== "Active") throw new Error(`Unexpected session.state ${session.state}`);
 
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
@@ -163,7 +163,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   state.date = new Date("2023-10-01T00:09:00Z");
   const session = await consumeSession(config, { token });
-  if (session.state !== "Active") throw new Error(session.state);
+  if (session.state !== "Active") throw new Error(`Unexpected session.state ${session.state}`);
 
   assertEq(session.id, "test-session-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
@@ -185,7 +185,8 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   state.date = new Date("2023-10-01T00:11:00Z");
   const session = await consumeSession(config, { token });
 
-  if (session.state !== "TokenRefreshed") throw new Error(session.state);
+  if (session.state !== "TokenRefreshed")
+    throw new Error(`Unexpected session.state ${session.state}`);
 
   token = session.cookie.value;
 
@@ -215,12 +216,13 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let session = await consumeSession(config, { token });
-  if (session.state !== "TokenRefreshed") throw new Error(session.state);
+  if (session.state !== "TokenRefreshed")
+    throw new Error(`Unexpected session.state ${session.state}`);
 
   token = session.cookie.value;
 
   session = await consumeSession(config, { token });
-  if (session.state !== "Active") throw new Error(session.state);
+  if (session.state !== "Active") throw new Error(`Unexpected session.state ${session.state}`);
 
   assertEq(session.id, "test-session-id");
   assertEq(session.data.userId, "test-user-id");
@@ -243,7 +245,7 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   state.date = new Date("2023-10-01T06:00:00Z");
   const session = await consumeSession(config, { token });
-  if (session.state !== "Expired") throw new Error(session.state);
+  if (session.state !== "Expired") throw new Error(`Unexpected session.state ${session.state}`);
 
   assertEq(session.id, "test-session-id");
   assertEq(session.data.userId, "test-user-id");
@@ -273,11 +275,11 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
 
   state.date = new Date("2023-10-01T06:00:00Z");
   let session = await consumeSession(config, { token });
-  if (session.state !== "Expired") throw new Error(session.state);
+  if (session.state !== "Expired") throw new Error(`Unexpected session.state ${session.state}`);
 
   state.date = new Date("2023-10-01T06:01:00Z");
   session = await consumeSession(config, { token });
-  if (session.state !== "NotFound") throw new Error(session.state);
+  if (session.state !== "NotFound") throw new Error(`Unexpected session.state ${session.state}`);
 
   assertEq(session.cookie.value, "");
   assertEq(session.cookie.options.maxAge, 0);
