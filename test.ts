@@ -1,4 +1,4 @@
-import { consumeSession, login, testConfig } from "./session.js";
+import { consumeSession, login, logout, testConfig } from "./session.js";
 
 function assertEq<T extends string | boolean | number | undefined | null>(
   actual: T,
@@ -313,4 +313,28 @@ function createConfig(state?: { sessions?: Record<string, DBSession>; date?: Dat
   assertEq(session.data.userId, "test-user-id");
   assertEq(session.exp.toISOString(), "2023-10-01T05:22:00.000Z");
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:32:00.000Z");
+}
+
+{
+  // console.info("# consumeSession: state NotFound after logout");
+  console.info("# logout");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  let cookie = await login(config, {
+    id: "test-session-id",
+    data: { userId: "test-user-id" },
+  });
+  const token = cookie.value;
+
+  state.date = new Date("2023-10-01T00:01:00Z");
+  cookie = await logout(config, { token });
+
+  assertEq(cookie.value, "");
+  assertEq(cookie.options.maxAge, 0);
+  assertEq(cookie.options.httpOnly, true);
+  assertEq(cookie.options.secure, true);
+  assertEq(cookie.options.sameSite, "lax");
+  assertEq(cookie.options.path, "/");
+  assertEq(cookie.options.expires?.toISOString(), undefined);
 }
