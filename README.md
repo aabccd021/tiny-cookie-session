@@ -1,7 +1,6 @@
 # simple-cookie-session
 
 todo:
-- test logout -> not found
 - test logout -> login -> active
 - test token stolen
 - test race condition
