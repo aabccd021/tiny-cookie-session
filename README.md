@@ -31,6 +31,8 @@ not implemented in this library because not security relevant.
 
 - By periodically refreshing the session cookie, you can detect cookie theft faster
 
+## Delete cookie after browser close
+
 ## LICENCE
 
 ```

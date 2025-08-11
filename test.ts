@@ -153,3 +153,65 @@ function createConfig(state?: { sessions?: Record<string, Session>; date?: Date 
   assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
   assertEq(session.extra.userId, "test-user-id");
 }
+
+{
+  console.info("# consumeSession: state Active after 9 minutes");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const loginCookie = await login(config, {
+    sessionId: "test-session-id",
+    extra: {
+      userId: "test-user-id",
+    },
+  });
+
+  await consumeSession(config, { token: loginCookie.value });
+
+  state.date = new Date("2023-10-01T00:09:00Z");
+
+  const session = await consumeSession(config, { token: loginCookie.value });
+
+  if (session.state !== "Active") {
+    throw new Error(`session.state === ${session.state}`);
+  }
+  assertEq(session.id, "test-session-id");
+  assertEq(session.exp.toISOString(), "2023-10-01T05:00:00.000Z");
+  assertEq(session.tokenExp.toISOString(), "2023-10-01T00:10:00.000Z");
+  assertEq(session.extra.userId, "test-user-id");
+}
+
+{
+  console.info("# consumeSession: state TokenRefreshed after 11 minutes");
+  const state = { date: new Date("2023-10-01T00:00:00Z") };
+  const config = createConfig(state);
+
+  const loginCookie = await login(config, {
+    sessionId: "test-session-id",
+    extra: {
+      userId: "test-user-id",
+    },
+  });
+
+  await consumeSession(config, { token: loginCookie.value });
+
+  state.date = new Date("2023-10-01T00:11:00Z");
+
+  const session = await consumeSession(config, { token: loginCookie.value });
+
+  if (session.state !== "TokenRefreshed") {
+    throw new Error(`session.state === ${session.state}`);
+  }
+
+  assertEq(session.id, "test-session-id");
+  assertEq(session.exp.toISOString(), "2023-10-01T05:11:00.000Z");
+  assertEq(session.tokenExp.toISOString(), "2023-10-01T00:21:00.000Z");
+  assertEq(session.extra.userId, "test-user-id");
+  assertEq(session.cookie.value.length, 64);
+  assertEq(/^[a-zA-Z0-9]*$/.test(session.cookie.value), true, session.cookie.value);
+  assertEq(session.cookie.options.httpOnly, true);
+  assertEq(session.cookie.options.secure, true);
+  assertEq(session.cookie.options.sameSite, "lax");
+  assertEq(session.cookie.options.path, "/");
+  assertEq(session.cookie.options.expires?.toISOString(), "2023-10-01T05:11:00.000Z");
+}
