@@ -212,8 +212,9 @@ export async function consumeSession(config, arg) {
   const isTokenLatest0 = requestTokenHash === session.latestTokenHash[0];
   const isTokenLatest1 = requestTokenHash === session.latestTokenHash[1];
 
-  // exclude hashes to avoid accidentally logging them
-  const sessionData = {
+  // 1. exclude hashes to avoid accidentally logging them
+  // 2. explicitly specify the properties to return to avoid returning unnecessary values
+  const returnData = {
     id: session.id,
     data: session.data,
     exp: session.exp,
@@ -223,7 +224,7 @@ export async function consumeSession(config, arg) {
   if (!isTokenLatest0 && !isTokenLatest1) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
-      ...sessionData,
+      ...returnData,
       state: "TokenStolen",
       cookie: logoutCookie,
     };
@@ -232,7 +233,7 @@ export async function consumeSession(config, arg) {
   if (session.exp < now) {
     config.deleteSession({ tokenHash: requestTokenHash });
     return {
-      ...sessionData,
+      ...returnData,
       state: "Expired",
       cookie: logoutCookie,
     };
@@ -249,7 +250,7 @@ export async function consumeSession(config, arg) {
       tokenExp,
     });
     return {
-      ...sessionData,
+      ...returnData,
       state: "TokenRefreshed",
       cookie,
       exp,
@@ -258,7 +259,7 @@ export async function consumeSession(config, arg) {
   }
 
   return {
-    ...sessionData,
+    ...returnData,
     state: "Active",
   };
 }
