@@ -1,4 +1,4 @@
-# simple-cookie-session
+# tiny-session
 
 todo:
 - catch when selectSession throws
