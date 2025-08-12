@@ -49,8 +49,8 @@
       };
 
       packages = {
-        publish = publish;
         formatting = treefmtEval.config.build.check self;
+        publish = publish;
         tsc = tsc;
         test = test;
       };
@@ -64,11 +64,8 @@
 
       devShells.x86_64-linux.default = pkgs.mkShellNoCC {
         buildInputs = [
-          pkgs.bun
-          pkgs.biome
-          pkgs.typescript
-          pkgs.vscode-langservers-extracted
           pkgs.nixd
+          pkgs.typescript
           pkgs.typescript-language-server
         ];
       };
