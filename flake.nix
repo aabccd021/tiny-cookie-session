@@ -21,16 +21,16 @@
       };
 
       tsc = pkgs.runCommand "tsc" { } ''
-        cp -L ${./session.js} ./session.js
+        cp -L ${./tiny-session.js} ./tiny-session.js
         cp -L ${./tsconfig.json} ./tsconfig.json
         mkdir --parents "$out"  
         ${pkgs.typescript}/bin/tsc --outDir "$out"
       '';
 
       test = pkgs.runCommand "test" { } ''
-        cp -L ${./session.js} ./session.js
-        cp -L ${./test.js} ./test.js
-        ${pkgs.bun}/bin/bun ./test.js
+        cp -L ${./tiny-session.js} ./tiny-session.js
+        cp -L ${./tiny-session.test.js} ./tiny-session.test.js
+        ${pkgs.bun}/bin/bun ./tiny-session.test.js
         touch "$out"
       '';
 
