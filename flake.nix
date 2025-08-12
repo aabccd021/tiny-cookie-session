@@ -34,8 +34,21 @@
         touch "$out"
       '';
 
+      publish = pkgs.writeShellApplication {
+        name = "publish";
+        runtimeInputs = [ pkgs.nodejs ];
+        text = ''
+          export NPM_CONFIG_USERCONFIG="/tmp/.npmrc"
+          if [ ! -f "$NPM_CONFIG_USERCONFIG" ]; then
+            npm login
+          fi
+          npm publish
+        '';
+      };
+
       packages = {
         formatting = treefmtEval.config.build.check self;
+        publish = publish;
         tsc = tsc;
         test = test;
       };
