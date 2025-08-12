@@ -6,6 +6,9 @@
     "checkJs": true,
     "module": "esnext",
 
+    // Outputs
+    "noEmit": true,
+
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
