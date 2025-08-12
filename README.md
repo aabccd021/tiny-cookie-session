@@ -1,8 +1,5 @@
 # tiny-session
 
-todo:
-- catch when selectSession throws
-
 Cookie session management for javascript servers.
 
 ## Notes
