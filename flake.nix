@@ -34,23 +34,8 @@
         touch "$out"
       '';
 
-      publish = pkgs.writeShellApplication {
-        name = "publish";
-        runtimeInputs = [ pkgs.bun ];
-        text = ''
-          repo_root=$(git rev-parse --show-toplevel)
-          export NPM_CONFIG_USERCONFIG="$repo_root/.npmrc"
-          if [ ! -f "$NPM_CONFIG_USERCONFIG" ]; then
-            bunx npm login
-          fi
-          nix flake check
-          bun publish
-        '';
-      };
-
       packages = {
         formatting = treefmtEval.config.build.check self;
-        publish = publish;
         tsc = tsc;
         test = test;
       };
