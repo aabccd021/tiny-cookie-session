@@ -2,9 +2,9 @@
   "compilerOptions": {
     // Environment Settings
     "target": "esnext",
-    "lib": ["esnext", "webworker"],
+    "module": "preserve",
+    "moduleDetection": "force",
     "checkJs": true,
-    "module": "esnext",
 
     // Outputs
     "noEmit": true,
