@@ -1,7 +1,7 @@
 {
   "name": "simple-cookie-session",
   "version": "1.0.22",
-  "license": "0BSD",
+  "license": "BSD-0",
   "type": "module",
   "module": "tiny-session.js",
   "files": [
