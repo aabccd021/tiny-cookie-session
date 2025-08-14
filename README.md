@@ -14,53 +14,38 @@ it falls short of DBSC in virtually every other aspect - including security, sto
 When Device Bound Session Credentials are available in your environment,
 they should always be your preferred choice.
 
-
-## Comparison of Cookie-Based Session Management Methods
+## Comparison of Cookie-Based Session Management Approaches
 
 ### Long-lived session id
 
-The server generates a long-lived session id and stores it in a cookie.
-
-After the cookie is stolen, the attacker can use it until the session expires or manually logged out.
-
-Both the attacker and the legitimate user can use the same session at the same time.
-
-The server can't even tell which request is made by the attacker and which is made by the legitimate user.
+- The server generates a long-lived session id and stores it in a cookie.
+- After the cookie is stolen, the attacker can use it until the session expires or manually logged out.
+- Both the attacker and the user can use the same session at the same time.
+- The server can't even tell which request is made by the attacker and which is made by the user.
 
 ### Simple token rotation
 
-A session is associated with a short-lived token that is rotated periodically.
-
-Only the latest token is stored in the database.
-
-After the token is stolen, the attacker can use it until at least the next rotation.
-
-If the attacker manages to do next rotation before the legitimate user,
-they took over the session and can continue using it indefinitely.
-leaving the legitimate user with an misterious logout.
-
-The user can use "log out other devices" feature to manually inspect the list of devices and log out 
-any suspicious ones.
+- A session is associated with a short-lived token that is rotated periodically.
+- Only the latest token is stored in the database.
+- After the token is stolen, the attacker can use it until at least the next rotation.
+- If the attacker manages to do next rotation before the user, it means they took over the session and can continue using it indefinitely.
+- The user is left with a misterious log out.
+- The user can use "log out other devices" feature to manually inspect the list of devices and log out any suspicious ones.
 
 ### tiny-cookie-session
 
-A session is associated with a short-lived token that is rotated periodically.
-
-All previous tokens are stored in the database.
-
-After the token is stolen, the attacker can use it until at least the next rotation.
-
-The moment the legitimate user accesses the system again,
-both the attacker and the legitimate user are logged out.
+- A session is associated with a short-lived token that is rotated periodically.
+- All previous tokens are stored in the database.
+- After the token is stolen, the attacker can use it until at least the next rotation.
+- The attacker can use the session until the next time the user accesses the system.
+- When the user (with old token) accesses the system again, both the attacker and the user will be logged out.
 
 ### Device Bound Session Credentials (DBSC)
 
-A session is associated with a short-lived token that is rotated periodically,
-and can only be rotated by the legitimate user.
-
-After the token is stolen, the attacker can use it until the next rotation.
-
-The legitimate user notices nothing and can continue using the system as usual.
+- A session is associated with a short-lived token that is rotated periodically, and can only be rotated by the user.
+- Only the latest token is stored in the database.
+- After the token is stolen, the attacker can use it until the next rotation.
+- The user notices nothing and can continue using the system as usual.
 
 ## Installation
 
@@ -641,7 +626,7 @@ function setupTokenGarbageCollection(db) {
 
 ## "Log Out Other Devices" Feature
 
-By implmenting a "log out other devices" feature, 
+By implmenting a "log out other devices" feature,
 you can enhance security by allowing users to manually invalidate unwanted sessions,
 especially if you limit the number of stored tokens.
 
@@ -651,17 +636,20 @@ Consider following configurations:
 - Token storage limit = 2016 tokens
 - `sessionExpiresIn` = 10 minutes × 2016 = 20,160 minutes (14 days)
 
-If the user is inactive for less than 14 days, 
+Note that since the cookie's `Expires` attribute has the same value as `exp` stored in the database,
+it will get deleted from the browser after 14 days of inactivity.
+
+If the user is inactive for less than 14 days,
 this library will detect cookie theft as usual then logs out both the user and the attacker.
 
-If the user is inactive for more than 14 days and then logs back in,
-we can show a "log out other devices" option.
+If the user is inactive for more than 14 days, the cookie will be deleted from the browser.
+When they logs back in, we can show a "log out other devices" option.
 Then the user can manually inspect the list of devices and log out any suspicious ones.
 
 Although obviously, this would be less automated and less secure than the first scenario.
 
 Also you need to carefully design when the "log out other devices" option should be shown to the user.
-Otherwise, the attacker could use the "log out other devices" option to log out the legitimate user.
+Otherwise, the attacker could use the "log out other devices" option to log out the user.
 
 Note that in both scenarios, the attacker was able to use the stolen token (valid session) while the user was inactive.
 
@@ -690,7 +678,7 @@ async function forceLogoutAll() {
 
 You can further improve security by implementing a service worker that continuously rotates the session token in the background.
 This reduces the window of opportunity for an attacker using a stolen token,
-as the legitimate user's browser will constantly rotate tokens even when the page is closed.
+as the user's browser will constantly rotate tokens even when the page is closed.
 Although, of course you need to consider the cost of constantly rotating tokens.
 
 ## Cookie Theft Detection
@@ -704,28 +692,28 @@ We detect cookie theft when there's a request with a token that is associated wi
 The system stores all tokens that have ever been issued for a session (unless you implement token garbage collection).
 When a token is used, the system checks if it's one of the two most recent tokens:
 
-- If it is, the request is considered legitimate (either the current or immediately previous token)
+- If it is, the request is considered (either the current or immediately previous token)
 - If not, the system concludes the token was stolen and invalidates the entire session
 
-Only either the legitimate user or the attacker can have the latest token at any given time.
-If a non-latest token is used, it means someone is using an old token - either the legitimate user or an attacker.
+Only either the user or the attacker can have the latest token at any given time.
+If a non-latest token is used, it means someone is using an old token - either the user or an attacker.
 
 See [index.test.js](./index.test.js) for detailed tests of the cookie theft detection mechanism.
 
 When cookie theft is detected, the entire session is invalidated,
-forcing both the legitimate user and the attacker to re-authenticate.
+forcing both the user and the attacker to re-authenticate.
 
 This library can detect cookie theft after it has occurred and limit the attacker's window of opportunity.
 
 ### Handling Race Conditions
 
-To prevent legitimate users from being accidentally logged out during concurrent requests,
+To prevent users from being accidentally logged out during concurrent requests,
 we consider both the current and previous token to be valid.
 
 This handles cases like:
 
-- User loads a page (using token A)  
-- First request from that page causes token rotation (token A → token B)  
+- User loads a page (using token A)
+- First request from that page causes token rotation (token A → token B)
 - Second request still uses token A (concurrent with the first request)
 
 Without keeping the previous token valid, the second request would be incorrectly flagged as theft.
@@ -804,8 +792,8 @@ if (!token) return new Response("Invalid cookie", { status: 401 });
 
 While tiny-cookie-session provides cookie theft detection, be aware of these limitations:
 
-1. An attacker can use a stolen cookie until the legitimate user accesses the system again
-2. If the legitimate user never logs back in, the attacker's session may remain active
+1. An attacker can use a stolen cookie until the user accesses the system again
+2. If the user never logs back in, the attacker's session may remain active
 3. Constant theft (e.g., via persistent background malware) can't be prevented by any cookie-based mechanism
 
 ## Delete cookie after browser close
