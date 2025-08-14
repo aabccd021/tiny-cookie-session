@@ -4,14 +4,12 @@
 
 This library offers security features similar to
 [Device Bound Session Credentials](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials),
-but it's designed to be more widely accessible.
+but doesn't require specialized secure hardware (like TPM chips) or specific browser support to function.
 
-Unlike DBSC, it doesn't require specialized secure hardware (like TPM chips) or specific browser support to function.
+However, this library falls short of DBSC in virtually every other aspect including security,
+storage efficiency, user experience.
 
-However, it's important to note that while this library is more accessible,
-it falls short of DBSC in virtually every other aspect - including security, storage efficiency, and overall functionality.
-
-When Device Bound Session Credentials are available in your environment,
+When DBSC are available in your environment,
 they should always be your preferred choice.
 
 ## Comparison of Cookie-Based Session Management Approaches
