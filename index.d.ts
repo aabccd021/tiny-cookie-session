@@ -44,8 +44,8 @@ export type ExpiredSession<S> = {
   data: S;
 };
 
-export type TokenRefreshedSession<S> = {
-  state: "TokenRefreshed";
+export type TokenRotatedSession<S> = {
+  state: "TokenRotated";
   cookie: Cookie;
   id: string;
   exp: Date;
@@ -65,7 +65,7 @@ export type Session<S> =
   | NotFoundSession<S>
   | TokenStolenSession<S>
   | ExpiredSession<S>
-  | TokenRefreshedSession<S>
+  | TokenRotatedSession<S>
   | ActiveSession<S>;
 
 export type Config<S, I> = {

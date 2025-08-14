@@ -147,7 +147,7 @@ export const consumeSession = async (config, arg) => {
     });
     return {
       ...returnData,
-      state: "TokenRefreshed",
+      state: "TokenRotated",
       cookie,
       exp,
       tokenExp,

@@ -204,7 +204,7 @@ function createConfig(state) {
 }
 
 {
-  console.info("# consumeSession: state TokenRefreshed after 11 minutes");
+  console.info("# consumeSession: state TokenRotated after 11 minutes");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
@@ -217,7 +217,7 @@ function createConfig(state) {
   state.date = new Date("2023-10-01T00:11:00Z");
   const session = await consumeSession(config, { token });
 
-  if (session.state !== "TokenRefreshed") throw new Error();
+  if (session.state !== "TokenRotated") throw new Error();
 
   token = session.cookie.value;
 
@@ -232,7 +232,7 @@ function createConfig(state) {
 }
 
 {
-  console.info("# consumeSession: state Active after TokenRefreshed");
+  console.info("# consumeSession: state Active after TokenRotated");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
@@ -244,7 +244,7 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let session = await consumeSession(config, { token });
-  if (session.state !== "TokenRefreshed") throw new Error();
+  if (session.state !== "TokenRotated") throw new Error();
 
   token = session.cookie.value;
 
@@ -303,7 +303,7 @@ function createConfig(state) {
 }
 
 {
-  console.info("# consumeSession: state Active after TokenRefreshed twice");
+  console.info("# consumeSession: state Active after TokenRotated twice");
   const state = { date: new Date("2023-10-01T00:00:00Z") };
   const config = createConfig(state);
 
@@ -315,12 +315,12 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let session = await consumeSession(config, { token });
-  if (session.state !== "TokenRefreshed") throw new Error();
+  if (session.state !== "TokenRotated") throw new Error();
   token = session.cookie.value;
 
   state.date = new Date("2023-10-01T00:22:00Z");
   session = await consumeSession(config, { token });
-  if (session.state !== "TokenRefreshed") throw new Error();
+  if (session.state !== "TokenRotated") throw new Error();
   token = session.cookie.value;
 
   session = await consumeSession(config, { token });
@@ -389,12 +389,12 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let userSession = await consumeSession(config, { token: userToken });
-  if (userSession.state !== "TokenRefreshed") throw new Error();
+  if (userSession.state !== "TokenRotated") throw new Error();
   userToken = userSession.cookie.value;
 
   state.date = new Date("2023-10-01T00:22:00Z");
   userSession = await consumeSession(config, { token: userToken });
-  if (userSession.state !== "TokenRefreshed") throw new Error();
+  if (userSession.state !== "TokenRotated") throw new Error();
   userToken = userSession.cookie.value;
 
   const attackerSession = await consumeSession(config, { token: attackerToken });
@@ -427,12 +427,12 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let attackerSession = await consumeSession(config, { token: attackerToken });
-  if (attackerSession.state !== "TokenRefreshed") throw new Error();
+  if (attackerSession.state !== "TokenRotated") throw new Error();
   attackerToken = attackerSession.cookie.value;
 
   state.date = new Date("2023-10-01T00:22:00Z");
   attackerSession = await consumeSession(config, { token: attackerToken });
-  if (attackerSession.state !== "TokenRefreshed") throw new Error();
+  if (attackerSession.state !== "TokenRotated") throw new Error();
   attackerToken = attackerSession.cookie.value;
 
   const userSession = await consumeSession(config, { token: userToken });
@@ -464,7 +464,7 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let attackerSession = await consumeSession(config, { token: attackerToken });
-  if (attackerSession.state !== "TokenRefreshed") throw new Error();
+  if (attackerSession.state !== "TokenRotated") throw new Error();
   attackerToken = attackerSession.cookie.value;
 
   state.date = new Date("2023-10-01T00:22:00Z");
@@ -472,7 +472,7 @@ function createConfig(state) {
   if (userSession.state !== "Active") throw new Error();
 
   attackerSession = await consumeSession(config, { token: attackerToken });
-  if (attackerSession.state !== "TokenRefreshed") throw new Error();
+  if (attackerSession.state !== "TokenRotated") throw new Error();
   attackerToken = attackerSession.cookie.value;
 
   userSession = await consumeSession(config, { token: userToken });
@@ -493,7 +493,7 @@ function createConfig(state) {
 
   state.date = new Date("2023-10-01T00:11:00Z");
   let userSession = await consumeSession(config, { token: userToken });
-  if (userSession.state !== "TokenRefreshed") throw new Error();
+  if (userSession.state !== "TokenRotated") throw new Error();
   userToken = userSession.cookie.value;
 
   state.date = new Date("2023-10-01T00:22:00Z");
@@ -501,7 +501,7 @@ function createConfig(state) {
   if (attackerSession.state !== "Active") throw new Error();
 
   userSession = await consumeSession(config, { token: userToken });
-  if (userSession.state !== "TokenRefreshed") throw new Error();
+  if (userSession.state !== "TokenRotated") throw new Error();
   userToken = userSession.cookie.value;
 
   attackerSession = await consumeSession(config, { token: attackerToken });
@@ -524,7 +524,7 @@ function createConfig(state) {
   state.date = new Date("2023-10-01T00:11:00Z");
 
   let session = await consumeSession(config, { token: prevToken });
-  if (session.state !== "TokenRefreshed") throw new Error();
+  if (session.state !== "TokenRotated") throw new Error();
   token = session.cookie.value;
 
   session = await consumeSession(config, { token: prevToken });
@@ -543,7 +543,7 @@ function createConfig(state) {
   });
   let token = cookie.value;
   const prevToken = token;
-  const tokenRefreshed = Promise.withResolvers();
+  const tokenRotated = Promise.withResolvers();
   const secondRequestFinished = Promise.withResolvers();
 
   state.date = new Date("2023-10-01T00:11:00Z");
@@ -552,11 +552,11 @@ function createConfig(state) {
     (async () => {
       const session = await consumeSession(config, { token });
 
-      tokenRefreshed.resolve(undefined);
+      tokenRotated.resolve(undefined);
       await secondRequestFinished.promise;
 
       // emulate set-token
-      if (session.state === "TokenRefreshed") {
+      if (session.state === "TokenRotated") {
         token = session.cookie.value;
       } else if (session.state !== "Active") {
         throw new Error();
@@ -564,12 +564,12 @@ function createConfig(state) {
     })(),
 
     (async () => {
-      await tokenRefreshed.promise;
+      await tokenRotated.promise;
 
       const session = await consumeSession(config, { token });
 
       // emulate set-token
-      if (session.state === "TokenRefreshed") {
+      if (session.state === "TokenRotated") {
         token = session.cookie.value;
       } else if (session.state !== "Active") {
         throw new Error();
