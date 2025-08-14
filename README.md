@@ -13,9 +13,8 @@ bun install tiny-cookie-session@github:aabccd021/tiny-cookie-session
 ## Configuration
 
 This library requires a storage adapter configuration that implements four core functions: `selectSession`, `insertSession`, `updateSession`, and `deleteSession`.
-You can connect to any database or storage system by implementing these functions according to your needs.
 
-### Bun SQLite Configuration
+### Bun SQLite Configuration Example
 
 ```js
 import { Database } from "bun:sqlite";
@@ -76,6 +75,7 @@ const sessionConfig = {
       .all({ sessionId: session.id });
 
     if (!tokens.length) return undefined;
+    if (!tokens[0]) throw new Error("Expected at least one token");
 
     return {
       id: session.id,
@@ -156,7 +156,7 @@ const sessionConfig = {
 };
 ```
 
-### In-Memory Store Configuration
+### In-Memory Store Configuration Example
 
 ```js
 import { login, logout, consumeSession, testConfig } from "tiny-cookie-session";
@@ -223,6 +223,8 @@ const config = {
 };
 ```
 
+See [test](./index.test.js) for actual implementation and testing of the in-memory store.
+
 ## Testing Configuration
 
 The `testConfig` function helps verify that your storage implementation works correctly with tiny-cookie-session:
@@ -243,8 +245,17 @@ await testConfig(config, [
 ]);
 ```
 
+You can also test a single user with multiple sessions to thoroughly test your implementation:
+
+```js
+await testConfig(config, [
+  { id: crypto.randomUUID(), data: { userId: "same-user" } },
+  { id: crypto.randomUUID(), data: { userId: "same-user" } },
+  { id: crypto.randomUUID(), data: { userId: "same-user" } },
+]);
+```
+
 This function tests your implementation by simulating session operations like insertion, token rotation, and deletion.
-Provide multiple test sessions with unique IDs to ensure your implementation handles various scenarios correctly.
 Note that failed tests may leave data in your storage, so avoid running this in production.
 
 ## How to decide `sessionExpiresIn`
@@ -264,7 +275,9 @@ Shorter token expiration times:
 - Increase storage requirements for token history
 - May cause unexpected logouts if requests take longer than the expiration time
 
-A typical value is 10-15 minutes, balancing security and user experience.
+For example, if `tokenExpiresIn` is set to 15 minutes, and a user is continuously active for 3 hours, the system will store 12 tokens for that session.
+If the user remains active for days or weeks without logging out, the number of stored tokens will continue to grow.
+Consider implementing token garbage collection (see below) if you use short token expiration times with long-lived sessions.
 
 ## Basic Usage
 
@@ -386,6 +399,25 @@ This library focuses solely on session management and doesn't handle cookie pars
 You'll need to use your platform's cookie handling capabilities or a dedicated cookie library.
 
 ```js
+// Using the `cookie` library
+import cookie from "cookie";
+
+// When logging in
+const sessionCookie = await login(config, { id: sessionId, data: { userId } });
+const cookieStr = cookie.serialize(
+  "session",
+  sessionCookie.value,
+  sessionCookie.options,
+);
+response.setHeader("Set-Cookie", cookieStr);
+
+// When consuming a session
+const cookies = cookie.parse(request.headers.cookie || "");
+const token = cookies.session;
+const userSession = await consumeSession(config, { token });
+```
+
+```js
 // Using Bun.CookieMap and Bun.Cookie
 // When logging in
 const sessionCookie = await login(config, { id: sessionId, data: { userId } });
@@ -404,7 +436,7 @@ const userSession = await consumeSession(config, { token });
 
 ## Passing Custom Data
 
-You can use different data structures for session insertion and selection, allowing for flexible storage patterns:
+You can use different data structures for session insertion and selection, which is useful if your session table has non-nullable columns that must be provided when creating a session:
 
 ```js
 // Configuration with different data types for insert and select
@@ -478,7 +510,8 @@ if (userSession.state === "Active" || userSession.state === "TokenRefreshed") {
 
 ## Garbage Collecting Expired Sessions
 
-Implement a scheduled task to remove expired sessions from your database:
+As sessions expire, they should be removed from your database to prevent it from growing indefinitely.
+Since this library doesn't automatically delete expired sessions for inactive users, you'll need to implement your own garbage collection mechanism:
 
 ```js
 function setupSessionGarbageCollection(db) {
@@ -488,26 +521,70 @@ function setupSessionGarbageCollection(db) {
       const now = Date.now();
 
       // Delete all expired sessions
-      db.query(
-        `
+      const result = db
+        .query(
+          `
       DELETE FROM session
       WHERE expiration_time < $now
     `,
-      ).run({ now });
+        )
+        .run({ now });
 
-      console.log("Session garbage collection completed");
+      console.log(
+        `Session garbage collection completed: ${result.changes} sessions deleted`,
+      );
     },
     60 * 60 * 1000,
   ); // 1 hour
 }
-
-// Initialize garbage collection
-setupSessionGarbageCollection(db);
 ```
+
+Consider the following when implementing session garbage collection:
+
+- Run it during off-peak hours to minimize database load
+- Consider using a separate worker process for large applications
+- Monitor the number of deleted sessions to detect anomalies
+- Add a date index on the expiration_time column for better performance
+
+## Garbage Collecting Old Tokens
+
+For long-lived sessions with frequent token rotation, you may want to limit the number of tokens stored per session:
+
+```js
+function setupTokenGarbageCollection(db) {
+  // Run token garbage collection every day
+  setInterval(
+    () => {
+      // Keep only the 100 most recent tokens for each session
+      db.query(
+        `
+      DELETE FROM session_token
+      WHERE rowid NOT IN (
+        SELECT rowid FROM (
+          SELECT rowid, session_id
+          FROM session_token
+          ORDER BY expiration_time DESC
+        ) GROUP BY session_id HAVING COUNT(*) <= 100
+      )
+    `,
+      ).run();
+
+      console.log("Token garbage collection completed");
+    },
+    24 * 60 * 60 * 1000,
+  ); // 24 hours
+}
+```
+
+Note that limiting stored tokens creates a security trade-off:
+
+- If an attacker steals a very old token that has been garbage collected, the theft won't be detected
+- However, since the token is old, it would be rejected anyway as "not found"
+- The main risk is if the attacker steals a token just before it's garbage collected
 
 ## Force Logout Sessions
 
-Unlike JWT, where tokens remain valid until they expire, this library allows you to immediately invalidate sessions:
+This library allows you to immediately invalidate sessions by deleting them from the storage backend:
 
 ```js
 // Force logout a specific user
@@ -528,44 +605,33 @@ async function forceLogoutAll() {
 
 ## Cookie Theft Mitigation
 
-This library implements an advanced cookie theft detection mechanism based on token rotation and history tracking.
+This library implements a cookie theft detection mechanism based on token rotation and history tracking.
 
 ### How the Detection Works
 
-1. **Token Rotation**: Each session has a token that expires quickly (e.g., every 10 minutes), even though the overall session lasts longer (e.g., 5 hours).
-2. **Token History**: When a token is refreshed, we keep track of both the new and previous tokens.
-3. **Theft Detection Logic**: We monitor token usage patterns:
-   - If the two most recent tokens are being used from different locations/browsers, we detect this as potential theft.
-   - When detected, we invalidate the entire session, forcing both the legitimate user and the attacker to re-authenticate.
+We detect cookie theft when there's a request with a token that is associated with a valid session but is not one of the two most recently issued tokens for that session.
 
-### Real-World Example
+The library stores all tokens that have ever been issued for a session (unless you implement token garbage collection), and it knows which ones are the most recent.
 
-Consider this scenario:
+See [index.test.js](./index.test.js) for detailed tests of the cookie theft detection mechanism.
 
-1. Alice logs in from her computer, receiving token A.
-2. The token is refreshed during normal usage, giving Alice token B.
-3. Mallory (attacker) somehow steals token A from Alice's computer.
-4. Alice continues using the application with token B, getting a new token C when B expires.
-5. Mallory attempts to use the stolen token A.
-6. The system detects that token A is being used while newer tokens (B and C) have been issued.
-7. The system immediately invalidates the entire session.
-8. Both Alice and Mallory are logged out and must re-authenticate.
-
-This approach prevents attackers from using stolen session cookies, even if they manage to steal them through methods like XSS, malware, or physical access to devices.
+When cookie theft is detected, the entire session is invalidated, forcing both the legitimate user and the attacker to re-authenticate. This library doesn't prevent cookie theft itself but can detect it after it has occurred and limit the attacker's window of opportunity.
 
 ### Handling Race Conditions
 
-To prevent legitimate users from being accidentally logged out during concurrent requests, we allow both the current and previous token to be valid simultaneously. This handles cases like:
+To prevent legitimate users from being accidentally logged out during concurrent requests, we consider both the current and previous token to be valid. This handles cases like:
 
-1. User loads a page (using token A)
-2. First API request from that page causes token rotation (token A → token B)
-3. Second API request still uses token A (concurrent with the first request)
+```
+User loads a page (using token A)
+First API request from that page causes token rotation (token A → token B)
+Second API request still uses token A (concurrent with the first request)
+```
 
 Without keeping the previous token valid, the second request would be incorrectly flagged as theft.
 
 ## Device Bound Session Credentials
 
-Device Bound Session Credentials (DBSC) is an emerging standard developed by Google that cryptographically binds cookies to specific devices using secure hardware.
+Device Bound Session Credentials (DBSC) is an emerging standard that cryptographically binds cookies to specific devices using secure hardware.
 
 For more information about DBSC, see:
 
@@ -574,44 +640,56 @@ For more information about DBSC, see:
 
 ### tiny-cookie-session vs DBSC
 
-| Feature                   | tiny-cookie-session                        | DBSC                                    |
-| ------------------------- | ------------------------------------------ | --------------------------------------- |
-| **Theft response**        | Invalidates all sessions (user + attacker) | Only invalidates the attacker's session |
-| **Storage requirements**  | Stores token history                       | Single token storage                    |
-| **Hardware requirements** | Works on any device                        | Requires secure hardware (TPM/SE)       |
-| **Implementation**        | Single authentication flow                 | Requires challenge-response flow        |
-| **Browser support**       | Universal                                  | Chrome-only (currently)                 |
+| Feature                    | tiny-cookie-session                           | DBSC                                                 |
+| -------------------------- | --------------------------------------------- | ---------------------------------------------------- |
+| **Theft response**         | Invalidates all sessions (user + attacker)    | Only invalidates the attacker's session              |
+| **Storage requirements**   | Stores token history                          | Single token storage                                 |
+| **Hardware requirements**  | Works on any device                           | Requires secure hardware (TPM/SE)                    |
+| **Implementation**         | Single authentication flow                    | Requires challenge-response flow                     |
+| **Browser support**        | Universal                                     | Chrome-only (currently)                              |
+| **Theft detection timing** | Requires both user and attacker to use tokens | Invalidates stolen tokens automatically when expired |
 
-tiny-cookie-session provides strong security across all platforms and browsers, while DBSC offers even stronger protection but requires specific hardware and browser support.
+Key differences in security model:
 
-### Using tiny-cookie-session with DBSC
+- tiny-cookie-session will invalidate both the attacker and the user on cookie theft since there is no way to know which one is the valid user.
+- DBSC will only invalidate the attacker, since only the valid user can finish the cryptographic challenge.
+- tiny-cookie-session requires both the user and the attacker to consume the token first to detect and invalidate the session.
+- DBSC will invalidate the session as soon as the stolen token is expired, even if it was just stolen.
 
-If your application supports devices with DBSC capabilities, you can implement both systems for maximum security:
-
-- Use tiny-cookie-session as your baseline authentication system
-- Add DBSC as an enhancement for supported browsers/devices
-
-This provides universal compatibility while leveraging the additional security of DBSC where available.
+Neither tiny-cookie-session nor DBSC can prevent constant theft by persistent background malware.
 
 ## Session Token Security
 
 This library uses 256 bits of entropy for session tokens, exceeding industry recommendations:
 
 - OWASP recommends at least 64 bits of entropy ([OWASP Guidelines](https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length))
-- Remix uses 64 bits
-- Lucia uses 160 bits
-- Auth.js uses 256 bits
+- Remix uses 64 bits of entropy ([Remix Source](https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L45))
+- Lucia uses 160 bits of entropy in their SQLite example ([Lucia Source](https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88))
+- Auth.js uses 256 bits of entropy in their tests ([Auth.js Source](https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/test/actions/session.test.ts#L146))
 
-The high entropy ensures that tokens cannot be brute-forced, and the token hashing provides additional protection if the database is compromised.
+Since the token itself is already a random string with high entropy (unlike a password), we don't need additional processing like salting or peppering.
+
+Doing SHA-256 for every request might seem like a lot, but it's not any more taxing than doing cookie signing, which is a common practice in web services.
 
 ## CSRF Protection
 
 This library focuses solely on session management and does not implement CSRF protection.
-Implement CSRF protection at the application level before processing session data.
+You should implement CSRF protection at the application level before processing session data.
+
+Common CSRF protection mechanisms include:
+
+1. **CSRF tokens**: Include a token in forms and validate it on submission
+2. **SameSite cookies**: Set cookies with SameSite=Lax or Strict (default with this library)
+3. **Origin/Referer checking**: Verify that requests come from your domain
+4. **Double Submit Cookie**: Send a token in both cookie and request body/header
+
+Without CSRF protection, authenticated users could be tricked into performing actions they didn't intend.
 
 ## Signed Cookies
 
-While this library doesn't sign cookies directly, you can implement cookie signing as an additional layer in your application:
+This library doesn't sign cookies directly. The main benefit of signed cookies is preventing cookie tampering without reaching the storage backend, but this isn't essentially required for this library to work.
+
+You can implement cookie signing as an additional layer in your application if desired:
 
 ```js
 // Example of adding cookie signing (pseudocode)
@@ -626,22 +704,15 @@ if (!token) return new Response("Invalid cookie", { status: 401 });
 
 ## Security Limitations
 
-While tiny-cookie-session provides robust protection against cookie theft, be aware of these limitations:
+While tiny-cookie-session provides cookie theft detection, be aware of these limitations:
 
 1. An attacker can use a stolen cookie until the legitimate user accesses the system again
 2. If the legitimate user never logs back in, the attacker's session may remain active
-3. Constant theft (e.g., via persistent malware) can't be prevented by any cookie-based mechanism
-
-For the highest level of security, combine this library with:
-
-- Short session expiration times
-- Regular re-authentication for sensitive operations
-- HTTPS for all connections
-- Content Security Policy to prevent XSS
+3. Constant theft (e.g., via persistent background malware) can't be prevented by any cookie-based mechanism
 
 ## Delete cookie after browser close
 
-To create session cookies that are removed when the browser closes (rather than persistent cookies), remove the expiration attributes:
+To create session cookies that are removed when the browser closes (equivalent to when "Remember me" is not checked), remove the expiration attributes:
 
 ```js
 // When logging in
@@ -709,8 +780,4 @@ FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY
 DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
 AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-```
-
-```
-
 ```
