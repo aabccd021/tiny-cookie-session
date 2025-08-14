@@ -11,7 +11,7 @@ However, this library falls short of DBSC in every other aspect, so DBSC should 
 ### Long-lived session ID
 
 - The server generates a long-lived session ID and stores it in a cookie.
-- If the cookie is stolen, the attacker can use it until the session expires or the user logs out manually.
+- If the cookie is stolen, an attacker can use it until the session expires or the user logs out manually.
 - Both the attacker and the user can use the same session simultaneously.
 - The server cannot distinguish between requests made by the attacker and those made by the user.
 
@@ -19,22 +19,20 @@ However, this library falls short of DBSC in every other aspect, so DBSC should 
 
 - Each session is associated with a short-lived token that is rotated periodically.
 - Only the latest token is stored in the database.
-- If the token is stolen, the attacker can use it until at least the next rotation.
-- If the attacker manages to rotate the token before the user, they take over the session and can continue using it indefinitely.
+- If the token is stolen and the attacker manages to rotate the token before the user does, they take over the session and can continue using it indefinitely.
 - The user may experience a mysterious logout.
 - The user can use a "log out other devices" feature to manually inspect the list of devices and log out any suspicious ones.
 
 ### tiny-cookie-session
 
 - Each session is associated with a short-lived token that is rotated periodically.
-- All previous tokens are stored in the database.
-- If the token is stolen, the attacker can use it until at least the next rotation.
-- The attacker can use the session until the next time the user accesses the system.
-- When the user (with the old token) accesses the system again, both the attacker and the user will be logged out.
+- All previous tokens (belonging to active sessions) are stored in the database.
+- If the token is stolen, the attacker can use the session until the next time the user uses the session.
+- When the user uses the session, both the attacker and the user will be logged out.
 
 ### Device Bound Session Credentials (DBSC)
 
-- Each session is associated with a short-lived token that is rotated periodically, and can only be rotated by the user.
+- Each session is associated with a short-lived token that can only be rotated by the user.
 - Only the latest token is stored in the database.
 - If the token is stolen, the attacker can use it until the next rotation.
 - The user notices nothing and can continue using the system as usual.
