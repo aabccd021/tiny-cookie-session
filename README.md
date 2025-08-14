@@ -1,16 +1,14 @@
 # tiny-cookie-session
 
-**tiny-cookie-session** is a tiny cookie-based session management library with cookie theft detection.
+**tiny-cookie-session** is a cookie-based session management library that comes with cookie theft detection.
 
 This library offers security features similar to
 [Device Bound Session Credentials](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials),
 but doesn't require specialized secure hardware (like TPM chips) or specific browser support to function.
 
-However, this library falls short of DBSC in virtually every other aspect including security,
-storage efficiency, user experience.
-
-When DBSC are available in your environment,
-they should always be your preferred choice.
+However, this library falls short of DBSC in every other aspects including security, storage
+efficiency, user experience.
+So DBSC should always be preferred when available.
 
 ## Comparison of Cookie-Based Session Management Approaches
 
