@@ -37,6 +37,16 @@ async function createNewTokenCookie(config) {
   const tokenHash = await hashToken(token);
   const now = config.dateNow?.() ?? new Date();
 
+  /*
+  We use `sessionExpiresIn` instead of `tokenExpiresIn` here, because we want
+  the cookie to expire when the session expires, not when the token expires.
+
+  This allows the user to stay logged in as long as the session is valid, even
+  if the token is rotated frequently.
+
+  We primarily use short-lived tokens to detect cookie theft, and not to limit
+  the session duration.
+  */
   const expires = new Date(now.getTime() + config.sessionExpiresIn);
 
   /** @type {import("./index").Cookie} */
@@ -95,6 +105,11 @@ export const consumeSession = async (config, arg) => {
     };
   }
 
+  /*
+  No need to use `crypto.timingSafeEqual` here because we are comparing hashes of high entropy 
+  tokens.
+  https://security.stackexchange.com/questions/237116/using-timingsafeequal#comment521092_237133
+  */
   const isTokenLatest0 = requestTokenHash === session.latestTokenHash[0];
   const isTokenLatest1 = requestTokenHash === session.latestTokenHash[1];
 
