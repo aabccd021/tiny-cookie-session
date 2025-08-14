@@ -2,16 +2,16 @@
 
 **tiny-cookie-session** is a tiny cookie-based session management library with cookie theft detection.
 
-This library offers security features similar to 
-[Device Bound Session Credentials](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials), 
-but it's designed to be more widely accessible. 
+This library offers security features similar to
+[Device Bound Session Credentials](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials),
+but it's designed to be more widely accessible.
 
 Unlike DBSC, it doesn't require specialized secure hardware (like TPM chips) or specific browser support to function.
 
-However, it's important to note that while this library is more accessible, 
+However, it's important to note that while this library is more accessible,
 it falls short of DBSC in virtually every other aspect - including security, storage efficiency, and overall functionality.
 
-When Device Bound Session Credentials are available in your environment, 
+When Device Bound Session Credentials are available in your environment,
 they should always be your preferred choice.
 
 ## Installation
@@ -597,24 +597,26 @@ You can limit number of stored tokens, and still detect cookie theft,
 by providing the user an option to "log out other devices".
 
 Consider this configuration:
+
 - `tokenExpiresIn` = 10 minutes
 - Token storage limit = 2016 tokens
 - `sessionExpiresIn` = 10 minutes × 2016 = 20,160 minutes (14 days)
 
 This also means:
+
 - User will be logged out after 14 days of inactivity, because the cookie is deleted from the browser
 
 Now we have two scenarios for cookie theft detection:
 
-1. When the user is inactive for less than 14 days, 
-the token is still available on the database,
-then the server will detect this as cookie theft and will invalidate the session.
-Both the user and the attacker will be logged out.
+1. When the user is inactive for less than 14 days,
+   the token is still available on the database,
+   then the server will detect this as cookie theft and will invalidate the session.
+   Both the user and the attacker will be logged out.
 
 2. When the user is inactive for more than 14 days and then logs back in,
-we will inform the user that they can "log out other devices".
-Then the user will manually inspect the list of devices and log out any suspicious ones.
-Although obviously, this would be less automatic and less secure than the first scenario.
+   we will inform the user that they can "log out other devices".
+   Then the user will manually inspect the list of devices and log out any suspicious ones.
+   Although obviously, this would be less automatic and less secure than the first scenario.
 
 Also you would need to carefully consider when the "log out other devices" option should be available.
 Otherwise, the attacker could use the "log out other devices" option to log out the legitimate user.
@@ -644,8 +646,8 @@ async function forceLogoutAll() {
 
 ## Enhanced Security with Service Workers
 
-You can further improve security by implementing a service worker that continuously rotates the session token in the background. 
-This reduces the window of opportunity for an attacker using a stolen token, 
+You can further improve security by implementing a service worker that continuously rotates the session token in the background.
+This reduces the window of opportunity for an attacker using a stolen token,
 as the legitimate user's browser will constantly rotate tokens even when the page is closed.
 Although, of course you need to consider the cost of constantly rotating tokens.
 
@@ -657,32 +659,32 @@ This library implements a cookie theft detection mechanism based on token rotati
 
 We detect cookie theft when there's a request with a token that is associated with a valid session but is not one of the two most recently issued tokens for that session.
 
-The system stores all tokens that have ever been issued for a session (unless you implement token garbage collection). 
+The system stores all tokens that have ever been issued for a session (unless you implement token garbage collection).
 When a token is used, the system checks if it's one of the two most recent tokens:
 
 - If it is, the request is considered legitimate (either the current or immediately previous token)
 - If not, the system concludes the token was stolen and invalidates the entire session
 
-Only either the legitimate user or the attacker can have the latest token at any given time. 
+Only either the legitimate user or the attacker can have the latest token at any given time.
 If a non-latest token is used, it means someone is using an old token - either the legitimate user or an attacker.
 
 See [index.test.js](./index.test.js) for detailed tests of the cookie theft detection mechanism.
 
-When cookie theft is detected, the entire session is invalidated, 
-forcing both the legitimate user and the attacker to re-authenticate. 
+When cookie theft is detected, the entire session is invalidated,
+forcing both the legitimate user and the attacker to re-authenticate.
 
 This library can detect cookie theft after it has occurred and limit the attacker's window of opportunity.
 
 ### Handling Race Conditions
 
-To prevent legitimate users from being accidentally logged out during concurrent requests, 
-we consider both the current and previous token to be valid. 
+To prevent legitimate users from being accidentally logged out during concurrent requests,
+we consider both the current and previous token to be valid.
 
 This handles cases like:
 
-User loads a page (using token A)  
-First request from that page causes token rotation (token A → token B)  
-Second request still uses token A (concurrent with the first request)
+- User loads a page (using token A)  
+- First request from that page causes token rotation (token A → token B)  
+- Second request still uses token A (concurrent with the first request)
 
 Without keeping the previous token valid, the second request would be incorrectly flagged as theft.
 
@@ -694,8 +696,6 @@ For more information about DBSC, see:
 
 - [Fighting Cookie Theft using Device-Bound Session Credentials](https://blog.chromium.org/2024/04/fighting-cookie-theft-using-device.html)
 - [Device-Bound Session Credentials Documentation](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials)
-- [DBSC Standard Specification](https://w3c.github.io/webappsec-device-bound-session-credentials/)
-- [W3C Web Application Security Working Group](https://www.w3.org/groups/wg/webappsec)
 
 ### tiny-cookie-session vs DBSC
 
@@ -715,10 +715,10 @@ Key differences in security model:
 - tiny-cookie-session requires both the user and the attacker to use the token first to detect and invalidate the session.
 - DBSC will invalidate the session as soon as the stolen token is expired, even if it was just stolen.
 
-While DBSC provides superior security when available, 
-tiny-cookie-session provides cookie theft detection across all platforms and browsers. 
+While DBSC provides superior security when available,
+tiny-cookie-session provides cookie theft detection across all platforms and browsers.
 
-For applications requiring maximum security across diverse client environments, 
+For applications requiring maximum security across diverse client environments,
 using tiny-cookie-session as a fallback when DBSC isn't available offers the best of both approaches.
 
 ## Session Token Security
@@ -741,8 +741,8 @@ You should implement CSRF protection for the whole application and before using 
 
 ## Signed Cookies
 
-This library doesn't sign cookies directly. 
-The main benefit of signed cookies is preventing cookie tampering without reaching the storage backend, 
+This library doesn't sign cookies directly.
+The main benefit of signed cookies is preventing cookie tampering without reaching the storage backend,
 but this isn't essentially required for this library to work or to provide security.
 
 You can implement cookie signing as an additional layer in your application if desired:
