@@ -2,44 +2,41 @@
 
 **tiny-cookie-session** is a cookie-based session management library that detects cookie theft.
 
-This library attempts to mitigate cookie theft as done by
-[Device Bound Session Credentials](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials),
-making it more accessible by not requiring specialized secure hardware (e.g. TPM).
+This library aims to mitigate cookie theft in a manner similar to [Device Bound Session Credentials (DBSC)](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials), while being more accessible by not requiring specialized secure hardware (e.g., TPM).
 
-Nevertheless, this library falls short of DBSC in every other aspects,
-so DBSC should always be preferred when available.
+However, this library falls short of DBSC in every other aspect, so DBSC should always be preferred when available.
 
 ## Comparison of Cookie-Based Session Management Approaches
 
-### Long-lived session id
+### Long-lived session ID
 
-- The server generates a long-lived session id and stores it in a cookie.
-- After the cookie is stolen, the attacker can use it until the session expires or manually logged out.
-- Both the attacker and the user can use the same session at the same time.
-- The server can't even tell which request is made by the attacker and which is made by the user.
+- The server generates a long-lived session ID and stores it in a cookie.
+- If the cookie is stolen, the attacker can use it until the session expires or the user logs out manually.
+- Both the attacker and the user can use the same session simultaneously.
+- The server cannot distinguish between requests made by the attacker and those made by the user.
 
 ### Simple token rotation
 
-- A session is associated with a short-lived token that is rotated periodically.
+- Each session is associated with a short-lived token that is rotated periodically.
 - Only the latest token is stored in the database.
-- After the token is stolen, the attacker can use it until at least the next rotation.
-- If the attacker manages to do next rotation before the user, it means they took over the session and can continue using it indefinitely.
-- The user is left with a misterious log out.
-- The user can use "log out other devices" feature to manually inspect the list of devices and log out any suspicious ones.
+- If the token is stolen, the attacker can use it until at least the next rotation.
+- If the attacker manages to rotate the token before the user, they take over the session and can continue using it indefinitely.
+- The user may experience a mysterious logout.
+- The user can use a "log out other devices" feature to manually inspect the list of devices and log out any suspicious ones.
 
 ### tiny-cookie-session
 
-- A session is associated with a short-lived token that is rotated periodically.
+- Each session is associated with a short-lived token that is rotated periodically.
 - All previous tokens are stored in the database.
-- After the token is stolen, the attacker can use it until at least the next rotation.
+- If the token is stolen, the attacker can use it until at least the next rotation.
 - The attacker can use the session until the next time the user accesses the system.
-- When the user (with old token) accesses the system again, both the attacker and the user will be logged out.
+- When the user (with the old token) accesses the system again, both the attacker and the user will be logged out.
 
 ### Device Bound Session Credentials (DBSC)
 
-- A session is associated with a short-lived token that is rotated periodically, and can only be rotated by the user.
+- Each session is associated with a short-lived token that is rotated periodically, and can only be rotated by the user.
 - Only the latest token is stored in the database.
-- After the token is stolen, the attacker can use it until the next rotation.
+- If the token is stolen, the attacker can use it until the next rotation.
 - The user notices nothing and can continue using the system as usual.
 
 ## Installation
@@ -298,7 +295,7 @@ await testConfig(config, [
 This function tests your implementation by simulating session operations like insertion, token rotation, and deletion.
 Note that failed tests may leave data in your storage, so avoid running this in production.
 
-## How to decide `sessionExpiresIn` and `tokenExpiresIn`
+## Choosing `sessionExpiresIn` and `tokenExpiresIn`
 
 ### Session Expiration Time
 
@@ -306,12 +303,12 @@ The session expires after a period of inactivity equal to `sessionExpiresIn`.
 This is similar to "log out after X minutes of inactivity."
 For example, with `sessionExpiresIn: 30 * 60 * 1000` (30 minutes), a user can remain logged in indefinitely by making requests at least every 29 minutes.
 
-Expiration time will be extended both in the database `exp` and in the cookie `Expires`.
+The expiration time will be extended both in the database's `exp` column and in the cookie's `Expires` attribute.
 
 Your choice for session expiration time should balance security and user experience:
 
-- Shorter session durations increase security but force users to log in more frequently
-- Longer session durations improve user experience but increase the risk if credentials are stolen
+- Shorter session durations increase security but require users to log in more frequently.
+- Longer session durations improve user experience but increase the risk if credentials are stolen.
 
 ### Token Expiration Time
 
@@ -320,8 +317,8 @@ When a token expires but the session is still valid, the system generates a new 
 
 Your choice for token expiration time affects:
 
-- **Security vs. Storage Trade-off**: Shorter token expiration times help detect cookie theft faster but increase storage requirements
-- **User Experience**: Excessively short token lifetimes may cause unexpected logouts if requests take longer than the token expiration time
+- **Security vs. Storage Trade-off**: Shorter token expiration times help detect cookie theft faster but increase storage requirements.
+- **User Experience**: Excessively short token lifetimes may cause unexpected logouts if requests take longer than the token expiration time.
 
 For example, if `tokenExpiresIn` is set to 15 minutes, and a user is continuously active for 3 hours, the system will store 12 tokens for that session.
 
@@ -482,9 +479,7 @@ const userSession = await useSession(config, { token });
 
 ## Passing Custom Data
 
-You can insert/select extra data associated with your session,
-which is useful if your session table has non-nullable columns that must be provided when creating a session,
-or you want to fetch a lot of data at once because you are using a latency sensitive database:
+You can insert or select extra data associated with your session, which is useful if your session table has non-nullable columns that must be provided when creating a session, or if you want to fetch additional data at once (for example, when using a latency-sensitive database):
 
 ```js
 // Configuration with different data types for insert and select
@@ -587,7 +582,7 @@ function setupSessionGarbageCollection(db) {
 }
 ```
 
-Garbage collecting expired sessions is always safe and has no security implications since those sessions would be rejected as "Expired" anyway if a user tried to use them.
+Garbage collecting expired sessions is always safe and has no security implications, since those sessions would be rejected as "Expired" anyway if a user tried to use them.
 
 ## Limiting Stored Tokens
 
@@ -621,30 +616,24 @@ function setupTokenGarbageCollection(db) {
 
 ## "Log Out Other Devices" Feature
 
-By implmenting a "log out other devices" feature,
-you can enhance security by allowing users to manually invalidate unwanted sessions,
-especially if you limit the number of stored tokens.
+By implementing a "log out other devices" feature, you can enhance security by allowing users to manually invalidate unwanted sessions, especially if you limit the number of stored tokens.
 
-Consider following configurations:
+Consider the following configuration:
 
 - `tokenExpiresIn` = 10 minutes
 - Token storage limit = 2016 tokens
 - `sessionExpiresIn` = 10 minutes × 2016 = 20,160 minutes (14 days)
 
-Note that since the cookie's `Expires` attribute has the same value as `exp` stored in the database,
-it will get deleted from the browser after 14 days of inactivity.
+Note that since the cookie's `Expires` attribute has the same value as `exp` stored in the database, it will be deleted from the browser after 14 days of inactivity.
 
-If the user is inactive for less than 14 days,
-this library will detect cookie theft as usual then logs out both the user and the attacker.
+If the user is inactive for less than 14 days, this library will detect cookie theft as usual and log out both the user and the attacker.
 
 If the user is inactive for more than 14 days, the cookie will be deleted from the browser.
-When they logs back in, we can show a "log out other devices" option.
-Then the user can manually inspect the list of devices and log out any suspicious ones.
+When they log back in, you can show a "log out other devices" option, allowing the user to manually inspect the list of devices and log out any suspicious ones.
 
-Although obviously, this would be less automated and less secure than the first scenario.
+Of course, this is less automated and less secure than the first scenario.
 
-Also you need to carefully design when the "log out other devices" option should be shown to the user.
-Otherwise, the attacker could use the "log out other devices" option to log out the user.
+You should also carefully design when the "log out other devices" option should be shown to the user. Otherwise, an attacker could use this option to log out the user.
 
 Note that in both scenarios, the attacker was able to use the stolen token (valid session) while the user was inactive.
 
@@ -669,47 +658,38 @@ async function forceLogoutAll() {
 }
 ```
 
-## Enhanced Security with Service Workers
-
-You can further improve security by implementing a service worker that continuously rotates the session token in the background.
-This reduces the window of opportunity for an attacker using a stolen token,
-as the user's browser will constantly rotate tokens even when the page is closed.
-Although, of course you need to consider the cost of constantly rotating tokens.
-
 ## Cookie Theft Detection
 
 This library implements a cookie theft detection mechanism based on token rotation.
 
 ### How the Detection Works
 
-We detect cookie theft when there's a request with a token that is associated with a valid session but is not one of the two most recently issued tokens for that session.
+Cookie theft is detected when a request contains a token that is associated with a valid session, but is not one of the two most recently issued tokens for that session.
 
 The system stores all tokens that have ever been issued for a session (unless you implement token garbage collection).
 When a token is used, the system checks if it's one of the two most recent tokens:
 
-- If it is, the request is considered (either the current or immediately previous token)
-- If not, the system concludes the token was stolen and invalidates the entire session
+- If it is, the request is considered valid (either the current or immediately previous token).
+- If not, the system concludes the token was stolen and invalidates the entire session.
 
-Only either the user or the attacker can have the latest token at any given time.
-If a non-latest token is used, it means someone is using an old token - either the user or an attacker.
+Only the user or the attacker can have the latest token at any given time.
+If a non-latest token is used, it means someone is using an old token, either the user or an attacker.
 
 See [index.test.js](./index.test.js) for detailed tests of the cookie theft detection mechanism.
 
-When cookie theft is detected, the entire session is invalidated,
-forcing both the user and the attacker to re-authenticate.
+When cookie theft is detected, the entire session is invalidated, forcing both the user and the attacker to re-authenticate.
 
 This library can detect cookie theft after it has occurred and limit the attacker's window of opportunity.
 
 ### Handling Race Conditions
 
-To prevent users from being accidentally logged out during concurrent requests,
-we consider both the current and previous token to be valid.
+To prevent users from being accidentally logged out during concurrent requests, both the current and previous tokens are considered valid.
 
 This handles cases like:
 
-- User loads a page (using token A)
-- First request from that page causes token rotation (token A → token B)
-- Second request still uses token A (concurrent with the first request)
+- The user loads a page (using token A).
+- The first request from that page causes token rotation (token A → token B).
+- A second request still uses token A (concurrent with the first request).
 
 Without keeping the previous token valid, the second request would be incorrectly flagged as theft.
 
@@ -740,12 +720,6 @@ Key differences in security model:
 - tiny-cookie-session requires both the user and the attacker to use the token first to detect and invalidate the session.
 - DBSC will invalidate the session as soon as the stolen token is expired, even if it was just stolen.
 
-While DBSC provides superior security when available,
-tiny-cookie-session provides cookie theft detection across all platforms and browsers.
-
-For applications requiring maximum security across diverse client environments,
-using tiny-cookie-session as a fallback when DBSC isn't available offers the best of both approaches.
-
 ## Session Token Security
 
 This library uses 256 bits of entropy for session tokens, exceeding industry recommendations:
@@ -757,18 +731,17 @@ This library uses 256 bits of entropy for session tokens, exceeding industry rec
 
 Since the token itself is already a random string with high entropy (unlike a password), we don't need additional processing like salting or peppering.
 
-Doing SHA-256 for every request might seem like a lot, but it's not any more taxing than doing cookie signing, which is a common practice in web services.
+Performing SHA-256 for every request might seem expensive, but it's no more demanding than cookie signing, which is a common practice in web services.
 
 ## CSRF Protection
 
 This library focuses solely on session management and does not implement CSRF protection.
-You should implement CSRF protection for the whole application and before using any functions from this library.
+You should implement CSRF protection for your entire application before using any functions from this library.
 
 ## Signed Cookies
 
 This library doesn't sign cookies directly.
-The main benefit of signed cookies is preventing cookie tampering without reaching the storage backend,
-but this isn't essentially required for this library to work or to provide security.
+The main benefit of signed cookies is preventing cookie tampering without reaching the storage backend, but this isn't strictly required for this library to work or to provide security.
 
 You can implement cookie signing as an additional layer in your application if desired:
 
@@ -787,11 +760,11 @@ if (!token) return new Response("Invalid cookie", { status: 401 });
 
 While tiny-cookie-session provides cookie theft detection, be aware of these limitations:
 
-1. An attacker can use a stolen cookie until the user accesses the system again
-2. If the user never logs back in, the attacker's session may remain active
-3. Constant theft (e.g., via persistent background malware) can't be prevented by any cookie-based mechanism
+1. An attacker can use a stolen cookie until the user accesses the system again.
+2. If the user never logs back in, the attacker's session may remain active.
+3. Constant theft (e.g., via persistent background malware) can't be prevented by any cookie-based mechanism.
 
-## Delete cookie after browser close
+## Deleting Cookie After Browser Closes
 
 To create session cookies that are removed when the browser closes (equivalent to when "Remember me" is not checked), remove the expiration attributes:
 
@@ -828,7 +801,7 @@ if (userSession.state === "TokenRotated") {
 ## Development
 
 ```sh
-# install nix with flake enabled
+# install nix with flakes enabled
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm
 
 # clone and enter the repository
