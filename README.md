@@ -554,13 +554,13 @@ cookie theft by making the stolen cookies unusable on different devices. For mor
 
 Here's how tiny-cookie-session compares to DBSC:
 
-| Feature | tiny-cookie-session | DBSC | |---------|---------------------|------| | **Invalidation
-on theft** | Invalidates both attacker and user sessions | Only invalidates attacker's session | |
-**Token storage** | Requires storing all past tokens of active sessions | Only needs to store a
-single token | | **Client requirements** | No special hardware required | Requires secure storage
-(TPM/SE) for private key | | **Implementation complexity** | Simple integration with existing
-endpoints | Requires additional endpoints for token creation/updating | | **Browser support** | All
-browsers | Only Chrome (as of 2025) |
+| Feature | tiny-cookie-session | DBSC |
+|---------|---------------------|------|
+| **Invalidation on theft** | Invalidates both attacker and user sessions | Only invalidates attacker's session |
+| **Token storage** | Requires storing all past tokens of active sessions | Only needs to store a single token |
+| **Client requirements** | No special hardware required | Requires secure storage (TPM/SE) for private key |
+| **Implementation complexity** | Simple integration with existing endpoints | Requires additional endpoints for token creation/updating |
+| **Browser support** | All browsers | Only Chrome (as of 2025) |
 
 tiny-cookie-session will invalidate both the attacker and the user on cookie theft since there is no
 way to know which one is the valid user. DBSC will only invalidate the attacker, since only the
@@ -639,7 +639,7 @@ malicious background process. No software mechanism in the world can prevent tha
 To make your session cookie get deleted when the browser is closed (equivalent to when "remember me"
 is not checked), you can remove the `expires` and `maxAge` attributes from the cookie:
 
-````js
+```js
 // When logging in
 const cookie = await session.login(config, {
   id: sessionId,
