@@ -12,8 +12,11 @@
       pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
 
       treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs {
-        programs.mdformat.enable = true;
         programs.nixfmt.enable = true;
+        programs.mdformat.enable = true;
+        programs.mdformat.settings.end-of-line = "lf";
+        programs.mdformat.settings.number = true;
+        programs.mdformat.settings.wrap = 100;
         programs.biome.enable = true;
         programs.biome.formatUnsafe = true;
         programs.biome.settings.formatter.indentStyle = "space";
