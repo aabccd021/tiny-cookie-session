@@ -1,4 +1,4 @@
-import { consumeSession, login, logout, testConfig } from "./tiny-session.js";
+import { consumeSession, login, logout, testConfig } from ".";
 
 /**
  * @typedef {Object} DBSession

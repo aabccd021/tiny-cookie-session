@@ -12,7 +12,7 @@
       pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
 
       treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs {
-        projectRootFile = "flake.nix";
+        programs.mdformat.enable = true;
         programs.nixfmt.enable = true;
         programs.biome.enable = true;
         programs.biome.formatUnsafe = true;
@@ -20,25 +20,14 @@
         programs.biome.settings.formatter.lineWidth = 100;
       };
 
-      tsc = pkgs.runCommand "tsc" { } ''
-        cp -L ${./tiny-session.js} ./tiny-session.js
-        cp -L ${./tsconfig.json} ./tsconfig.json
-        mkdir --parents "$out"  
-        ${pkgs.typescript}/bin/tsc --outDir "$out"
-      '';
+      packages.format = treefmtEval.config.build.check self;
 
-      test = pkgs.runCommand "test" { } ''
-        cp -L ${./tiny-session.js} ./tiny-session.js
-        cp -L ${./tiny-session.test.js} ./tiny-session.test.js
-        ${pkgs.bun}/bin/bun ./tiny-session.test.js
+      packages.test = pkgs.runCommand "test" { } ''
+        cd ${./.}
+        ${pkgs.typescript}/bin/tsc
+        ${pkgs.bun}/bin/bun ./index.test.js
         touch "$out"
       '';
-
-      packages = {
-        formatting = treefmtEval.config.build.check self;
-        tsc = tsc;
-        test = test;
-      };
 
     in
     {

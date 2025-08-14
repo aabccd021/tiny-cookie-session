@@ -7,7 +7,8 @@ Cookie session management for javascript servers.
 - CSRF and cookie tampering is not included, and should be performed before using
 
 ## Garbage Collection
-not implemented in this library because not security relevant.     
+
+not implemented in this library because not security relevant.
 
 ## Comparison with Device Bound Session Credentials
 
@@ -20,7 +21,7 @@ not implemented in this library because not security relevant.
 
 ## What this library is not
 
-- Protecting from malware continuously stealing cookies 
+- Protecting from malware continuously stealing cookies
 
 ## Improving security with service workers
 

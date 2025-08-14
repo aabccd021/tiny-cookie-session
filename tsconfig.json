@@ -5,6 +5,7 @@
     "module": "preserve",
     "moduleDetection": "force",
     "checkJs": true,
+    "allowJs": true,
 
     // Outputs
     "noEmit": true,

@@ -1,100 +1,5 @@
 /**
- * @typedef {Object} CookieOptions
- * @property {number} [maxAge]
- * @property {Date} [expires]
- * @property {string} [domain]
- * @property {string} [path]
- * @property {boolean} [httpOnly]
- * @property {boolean} [secure]
- * @property {("strict"|"lax"|"none")} [sameSite]
- */
-
-/**
- * @typedef {Object} Cookie
- * @property {string} value
- * @property {CookieOptions} options
- */
-
-/**
- * @template S
- * @typedef {Object} SessionSelect
- * @property {string} id
- * @property {Date} exp
- * @property {Date} tokenExp
- * @property {S} data
- * @property {readonly [string, string | undefined]} latestTokenHash
- */
-
-/**
- * @template S
- * @typedef {Object} NotFoundSession
- * @property {"NotFound"} state
- * @property {Cookie} cookie
- */
-
-/**
- * @template S
- * @typedef {Object} TokenStolenSession
- * @property {"TokenStolen"} state
- * @property {Cookie} cookie
- * @property {string} id
- * @property {Date} exp
- * @property {Date} tokenExp
- * @property {S} data
- */
-
-/**
- * @template S
- * @typedef {Object} ExpiredSession
- * @property {"Expired"} state
- * @property {Cookie} cookie
- * @property {string} id
- * @property {Date} exp
- * @property {Date} tokenExp
- * @property {S} data
- */
-
-/**
- * @template S
- * @typedef {Object} TokenRefreshedSession
- * @property {"TokenRefreshed"} state
- * @property {Cookie} cookie
- * @property {string} id
- * @property {Date} exp
- * @property {Date} tokenExp
- * @property {S} data
- */
-
-/**
- * @template S
- * @typedef {Object} ActiveSession
- * @property {"Active"} state
- * @property {string} id
- * @property {Date} exp
- * @property {Date} tokenExp
- * @property {S} data
- */
-
-/**
- * @template S
- * @typedef {NotFoundSession<S>|TokenStolenSession<S>|ExpiredSession<S>|TokenRefreshedSession<S>|ActiveSession<S>} Session
- */
-
-/**
- * @template S
- * @template I
- * @typedef {Object} Config
- * @property {function(): Date} [ dateNow ]
- * @property {number} sessionExpiresIn
- * @property {number} tokenExpiresIn
- * @property {function({tokenHash: string}): Promise<SessionSelect<S>|undefined>} selectSession
- * @property {function({id: string, exp: Date, tokenHash: string, tokenExp: Date, data: I}): Promise<void>} insertSession
- * @property {function({id: string, exp: Date, tokenExp: Date, tokenHash: string}): Promise<void>} updateSession
- * @property {function({tokenHash: string}): Promise<void>} deleteSession
- */
-
-/**
- * @type {Cookie}
+ * @type {import("./index").Cookie}
  */
 const logoutCookie = {
   value: "",
@@ -107,32 +12,25 @@ const logoutCookie = {
   },
 };
 
-/**
- * @returns {string}
- */
 function generateToken() {
-  // TODO: Remove ts-ignore when https://tc39.es/proposal-arraybuffer-base64 added to typescript
   // @ts-ignore https://tc39.es/proposal-arraybuffer-base64
   return crypto.getRandomValues(new Uint8Array(32)).toHex();
 }
 
 /**
  * @param {string} token
- * @returns {Promise<string>}
  */
 async function hashToken(token) {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  // TODO: Remove ts-ignore when https://tc39.es/proposal-arraybuffer-base64 added to typescript
-  // @ts-ignore
+  // @ts-ignore https://tc39.es/proposal-arraybuffer-base64
   return new Uint8Array(hashBuffer).toHex();
 }
 
 /**
  * @template S
  * @template I
- * @param {Config<S, I>} config
- * @returns {Promise<{cookie: Cookie, tokenHash: string}>}
+ * @param {import("./index").Config<S, I>} config
  */
 async function createNewTokenCookie(config) {
   const token = generateToken();
@@ -141,7 +39,7 @@ async function createNewTokenCookie(config) {
 
   const expires = new Date(now.getTime() + config.sessionExpiresIn);
 
-  /** @type {Cookie} */
+  /** @type {import("./index").Cookie} */
   const cookie = {
     value: token,
     options: {
@@ -157,26 +55,18 @@ async function createNewTokenCookie(config) {
 }
 
 /**
- * @template S
- * @template I
- * @param {Config<S, I>} config
- * @param {{token: string}} arg
- * @returns {Promise<Cookie>}
+ * @type {import("./index").logout}
  */
-export async function logout(config, arg) {
+export const logout = async (config, arg) => {
   const tokenHash = await hashToken(arg.token);
   config.deleteSession({ tokenHash });
   return logoutCookie;
-}
+};
 
 /**
- * @template S
- * @template I
- * @param {Config<S, I>} config
- * @param {{data: I, id: string}} arg
- * @returns {Promise<Cookie>}
+ * @type {import("./index").login}
  */
-export async function login(config, arg) {
+export const login = async (config, arg) => {
   const { cookie, tokenHash } = await createNewTokenCookie(config);
   const now = config.dateNow?.() ?? new Date();
 
@@ -188,16 +78,12 @@ export async function login(config, arg) {
     data: arg.data,
   });
   return cookie;
-}
+};
 
 /**
- * @template S
- * @template I
- * @param {Config<S, I>} config
- * @param {{token: string}} arg
- * @returns {Promise<Session<S>>}
+ * @type {import("./index").consumeSession}
  */
-export async function consumeSession(config, arg) {
+export const consumeSession = async (config, arg) => {
   const requestTokenHash = await hashToken(arg.token);
   const session = await config.selectSession({ tokenHash: requestTokenHash });
   const now = config.dateNow?.() ?? new Date();
@@ -262,16 +148,12 @@ export async function consumeSession(config, arg) {
     ...returnData,
     state: "Active",
   };
-}
+};
 
 /**
- * @template S
- * @template I
- * @param {Config<S, I>} config
- * @param {{data: I, id: string}[]} argSessions
- * @returns {Promise<void>}
+ * @type {import("./index").testConfig}
  */
-export async function testConfig(config, argSessions) {
+export const testConfig = async (config, argSessions) => {
   if (config.tokenExpiresIn >= config.sessionExpiresIn) {
     throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
   }
@@ -356,4 +238,4 @@ export async function testConfig(config, argSessions) {
       }
     }
   }
-}
+};
