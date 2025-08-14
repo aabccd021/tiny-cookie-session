@@ -14,6 +14,54 @@ it falls short of DBSC in virtually every other aspect - including security, sto
 When Device Bound Session Credentials are available in your environment,
 they should always be your preferred choice.
 
+
+## Comparison of Cookie-Based Session Management Methods
+
+### Long-lived session id
+
+The server generates a long-lived session id and stores it in a cookie.
+
+After the cookie is stolen, the attacker can use it until the session expires or manually logged out.
+
+Both the attacker and the legitimate user can use the same session at the same time.
+
+The server can't even tell which request is made by the attacker and which is made by the legitimate user.
+
+### Simple token rotation
+
+A session is associated with a short-lived token that is rotated periodically.
+
+Only the latest token is stored in the database.
+
+After the token is stolen, the attacker can use it until at least the next rotation.
+
+If the attacker manages to do next rotation before the legitimate user,
+they took over the session and can continue using it indefinitely.
+leaving the legitimate user with an misterious logout.
+
+The user can use "log out other devices" feature to manually inspect the list of devices and log out 
+any suspicious ones.
+
+### tiny-cookie-session
+
+A session is associated with a short-lived token that is rotated periodically.
+
+All previous tokens are stored in the database.
+
+After the token is stolen, the attacker can use it until at least the next rotation.
+
+The moment the legitimate user accesses the system again,
+both the attacker and the legitimate user are logged out.
+
+### Device Bound Session Credentials (DBSC)
+
+A session is associated with a short-lived token that is rotated periodically,
+and can only be rotated by the legitimate user.
+
+After the token is stolen, the attacker can use it until the next rotation.
+
+The legitimate user notices nothing and can continue using the system as usual.
+
 ## Installation
 
 ```sh
@@ -591,34 +639,28 @@ function setupTokenGarbageCollection(db) {
 }
 ```
 
-## Managing Security for Inactive Users
+## "Log Out Other Devices" Feature
 
-You can limit number of stored tokens, and still detect cookie theft,
-by providing the user an option to "log out other devices".
+By implmenting a "log out other devices" feature, 
+you can enhance security by allowing users to manually invalidate unwanted sessions,
+especially if you limit the number of stored tokens.
 
-Consider this configuration:
+Consider following configurations:
 
 - `tokenExpiresIn` = 10 minutes
 - Token storage limit = 2016 tokens
 - `sessionExpiresIn` = 10 minutes × 2016 = 20,160 minutes (14 days)
 
-This also means:
+If the user is inactive for less than 14 days, 
+this library will detect cookie theft as usual then logs out both the user and the attacker.
 
-- User will be logged out after 14 days of inactivity, because the cookie is deleted from the browser
+If the user is inactive for more than 14 days and then logs back in,
+we can show a "log out other devices" option.
+Then the user can manually inspect the list of devices and log out any suspicious ones.
 
-Now we have two scenarios for cookie theft detection:
+Although obviously, this would be less automated and less secure than the first scenario.
 
-1. When the user is inactive for less than 14 days,
-   the token is still available on the database,
-   then the server will detect this as cookie theft and will invalidate the session.
-   Both the user and the attacker will be logged out.
-
-2. When the user is inactive for more than 14 days and then logs back in,
-   we will inform the user that they can "log out other devices".
-   Then the user will manually inspect the list of devices and log out any suspicious ones.
-   Although obviously, this would be less automatic and less secure than the first scenario.
-
-Also you would need to carefully consider when the "log out other devices" option should be available.
+Also you need to carefully design when the "log out other devices" option should be shown to the user.
 Otherwise, the attacker could use the "log out other devices" option to log out the legitimate user.
 
 Note that in both scenarios, the attacker was able to use the stolen token (valid session) while the user was inactive.
