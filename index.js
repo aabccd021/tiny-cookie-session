@@ -105,11 +105,6 @@ export const consumeSession = async (config, arg) => {
     };
   }
 
-  /*
-  No need to use `crypto.timingSafeEqual` here because we are comparing hashes of high entropy 
-  tokens.
-  https://security.stackexchange.com/questions/237116/using-timingsafeequal#comment521092_237133
-  */
   const isTokenLatest0 = requestTokenHash === session.latestTokenHash[0];
   const isTokenLatest1 = requestTokenHash === session.latestTokenHash[1];
 
