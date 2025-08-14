@@ -31,7 +31,8 @@ db.run(`
     second_token_hash TEXT,
     exp INTEGER NOT NULL,
     token_exp INTEGER NOT NULL,
-    user_id TEXT NOT NULL
+    user_id TEXT NOT NULL,
+    role TEXT NOT NULL
   )
 `);
 
@@ -46,7 +47,7 @@ const config = {
 
   selectSession: async ({ tokenHash }) => {
     const session = db.query(`
-      SELECT id, token_hash, second_token_hash, exp, token_exp, user_id
+      SELECT id, token_hash, second_token_hash, exp, token_exp, user_id, role
       FROM sessions
       WHERE token_hash = ? OR second_token_hash = ?
     `).get(tokenHash, tokenHash);
@@ -60,15 +61,16 @@ const config = {
       tokenExp: new Date(session.token_exp),
       data: {
         userId: session.user_id,
+        userRole: session.role
       },
     };
   },
 
   insertSession: async ({ id, tokenHash, exp, tokenExp, data }) => {
     db.run(`
-      INSERT INTO sessions (id, token_hash, exp, token_exp, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `, id, tokenHash, exp.getTime(), tokenExp.getTime(), data.userId);
+      INSERT INTO sessions (id, token_hash, exp, token_exp, user_id, role)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, id, tokenHash, exp.getTime(), tokenExp.getTime(), data.userId, data.role);
   },
 
   updateSession: async ({ id, tokenHash, exp, tokenExp }) => {
@@ -113,6 +115,7 @@ function createInMemoryConfig() {
             tokenExp: session.tokenExp,
             data: {
               userId: session.userId,
+              createdAt: session.createdAt
             },
           };
         }
@@ -126,6 +129,8 @@ function createInMemoryConfig() {
         tokenExp,
         tokenHashes: [tokenHash],
         userId: data.userId,
+        role: data.role,
+        createdAt: new Date().toISOString()
       };
     },
 
@@ -164,11 +169,11 @@ import { testConfig } from "tiny-cookie-session";
 await testConfig(config, [
   {
     id: crypto.randomUUID(),
-    data: { userId: "user-1" },
+    data: { userId: "user-1", role: "admin" },
   },
   {
     id: crypto.randomUUID(),
-    data: { userId: "user-2" },
+    data: { userId: "user-2", role: "user" },
   },
 ]);
 ```
@@ -206,23 +211,48 @@ For extreme cases where you set this to a very short value (e.g., 10 seconds), i
 import { login } from "tiny-cookie-session";
 import { config } from "./session-config.js";
 
-// Handle login request
-app.post("/login", async (req, res) => {
-  // Validate credentials (not shown)
-  const userId = "user-123";
-  
-  // Create a new session
-  const cookie = await login(config, {
-    id: crypto.randomUUID(), // Unique session ID
-    data: { userId }, // Custom data to store with the session
-  });
-  
-  // Set the cookie in the response
-  res.setHeader("Set-Cookie", 
-    `session=${cookie.value}; Path=${cookie.options.path}; HttpOnly; Secure; SameSite=Lax`);
-  
-  res.json({ success: true });
+// Create a Bun server
+const server = Bun.serve({
+  port: 3000,
+  async fetch(req) {
+    const url = new URL(req.url);
+    
+    if (url.pathname === "/login" && req.method === "POST") {
+      // Parse request body (assuming JSON)
+      const body = await req.json();
+      
+      // Validate credentials (not shown)
+      const userId = "user-123";
+      const role = "admin";
+      
+      // Create a new session
+      const cookie = await login(config, {
+        id: crypto.randomUUID(), // Unique session ID
+        data: { userId, role }, // Custom data to store with the session
+      });
+      
+      // Create response
+      const response = new Response(JSON.stringify({ success: true }), {
+        headers: { "Content-Type": "application/json" }
+      });
+      
+      // Set the cookie
+      const bunCookie = new Bun.Cookie("session", cookie.value);
+      bunCookie.httpOnly = cookie.options.httpOnly;
+      bunCookie.secure = cookie.options.secure;
+      bunCookie.sameSite = cookie.options.sameSite;
+      bunCookie.path = cookie.options.path;
+      bunCookie.expires = cookie.options.expires;
+      
+      response.headers.append("Set-Cookie", bunCookie.toString());
+      return response;
+    }
+    
+    return new Response("Not Found", { status: 404 });
+  }
 });
+
+console.log(`Server running at http://localhost:${server.port}`);
 ```
 
 ### Logout
@@ -231,20 +261,37 @@ app.post("/login", async (req, res) => {
 import { logout } from "tiny-cookie-session";
 import { config } from "./session-config.js";
 
-app.post("/logout", async (req, res) => {
-  const token = req.cookies.session;
+// In your Bun server handler
+if (url.pathname === "/logout" && req.method === "POST") {
+  // Get session token from cookie
+  const cookies = new Bun.CookieMap(req.headers.get("cookie") || "");
+  const token = cookies.get("session");
   
   if (token) {
     // Invalidate the session
     const cookie = await logout(config, { token });
     
-    // Clear the cookie
-    res.setHeader("Set-Cookie", 
-      `session=${cookie.value}; Path=${cookie.options.path}; HttpOnly; Secure; SameSite=Lax; Max-Age=${cookie.options.maxAge}`);
+    // Create response
+    const response = new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" }
+    });
+    
+    // Set the logout cookie (clearing the session)
+    const bunCookie = new Bun.Cookie("session", cookie.value);
+    bunCookie.httpOnly = cookie.options.httpOnly;
+    bunCookie.secure = cookie.options.secure;
+    bunCookie.sameSite = cookie.options.sameSite;
+    bunCookie.path = cookie.options.path;
+    bunCookie.maxAge = cookie.options.maxAge;
+    
+    response.headers.append("Set-Cookie", bunCookie.toString());
+    return response;
   }
   
-  res.json({ success: true });
-});
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { "Content-Type": "application/json" }
+  });
+}
 ```
 
 ### Consume Session
@@ -253,177 +300,222 @@ app.post("/logout", async (req, res) => {
 import { consumeSession } from "tiny-cookie-session";
 import { config } from "./session-config.js";
 
-app.get("/protected", async (req, res) => {
-  const token = req.cookies.session;
+// In your Bun server handler
+if (url.pathname === "/protected") {
+  // Get session token from cookie
+  const cookies = new Bun.CookieMap(req.headers.get("cookie") || "");
+  const token = cookies.get("session");
   
   if (!token) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" }
+    });
   }
   
   const session = await consumeSession(config, { token });
   
-  switch (session.state) {
-    case "Active":
-      // Session is valid
-      return res.json({ 
-        userId: session.data.userId, 
-        message: "You are logged in" 
-      });
-      
-    case "TokenRefreshed":
-      // Token was refreshed, set new cookie
-      res.setHeader("Set-Cookie", 
-        `session=${session.cookie.value}; Path=${session.cookie.options.path}; HttpOnly; Secure; SameSite=Lax; Expires=${session.cookie.options.expires?.toUTCString()}`);
-      
-      return res.json({ 
-        userId: session.data.userId, 
-        message: "You are logged in (token refreshed)" 
-      });
-      
-    case "TokenStolen":
-      // Token theft detected!
-      res.setHeader("Set-Cookie", 
-        `session=${session.cookie.value}; Path=${session.cookie.options.path}; HttpOnly; Secure; SameSite=Lax; Max-Age=${session.cookie.options.maxAge}`);
-      
-      return res.status(401).json({ 
-        error: "Session invalidated due to security concern" 
-      });
-      
-    case "Expired":
-      // Session expired
-      res.setHeader("Set-Cookie", 
-        `session=${session.cookie.value}; Path=${session.cookie.options.path}; HttpOnly; Secure; SameSite=Lax; Max-Age=${session.cookie.options.maxAge}`);
-      
-      return res.status(401).json({ 
-        error: "Session expired" 
-      });
-      
-    case "NotFound":
-      // Session not found
-      return res.status(401).json({ 
-        error: "Invalid session" 
-      });
+  if (session.state === "Active") {
+    // Session is valid
+    return new Response(JSON.stringify({
+      userId: session.data.userId,
+      role: session.data.userRole,
+      message: "You are logged in"
+    }), {
+      headers: { "Content-Type": "application/json" }
+    });
+  } else if (session.state === "TokenRefreshed") {
+    // Token was refreshed, set new cookie
+    const response = new Response(JSON.stringify({
+      userId: session.data.userId,
+      role: session.data.userRole,
+      message: "You are logged in (token refreshed)"
+    }), {
+      headers: { "Content-Type": "application/json" }
+    });
+    
+    const bunCookie = new Bun.Cookie("session", session.cookie.value);
+    bunCookie.httpOnly = session.cookie.options.httpOnly;
+    bunCookie.secure = session.cookie.options.secure;
+    bunCookie.sameSite = session.cookie.options.sameSite;
+    bunCookie.path = session.cookie.options.path;
+    bunCookie.expires = session.cookie.options.expires;
+    
+    response.headers.append("Set-Cookie", bunCookie.toString());
+    return response;
+  } else if (session.state === "TokenStolen") {
+    // Token theft detected!
+    const response = new Response(JSON.stringify({
+      error: "Session invalidated due to security concern"
+    }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" }
+    });
+    
+    const bunCookie = new Bun.Cookie("session", session.cookie.value);
+    bunCookie.httpOnly = session.cookie.options.httpOnly;
+    bunCookie.secure = session.cookie.options.secure;
+    bunCookie.sameSite = session.cookie.options.sameSite;
+    bunCookie.path = session.cookie.options.path;
+    bunCookie.maxAge = session.cookie.options.maxAge;
+    
+    response.headers.append("Set-Cookie", bunCookie.toString());
+    return response;
+  } else if (session.state === "Expired") {
+    // Session expired
+    const response = new Response(JSON.stringify({
+      error: "Session expired"
+    }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" }
+    });
+    
+    const bunCookie = new Bun.Cookie("session", session.cookie.value);
+    bunCookie.httpOnly = session.cookie.options.httpOnly;
+    bunCookie.secure = session.cookie.options.secure;
+    bunCookie.sameSite = session.cookie.options.sameSite;
+    bunCookie.path = session.cookie.options.path;
+    bunCookie.maxAge = session.cookie.options.maxAge;
+    
+    response.headers.append("Set-Cookie", bunCookie.toString());
+    return response;
+  } else {
+    // Session not found
+    return new Response(JSON.stringify({
+      error: "Invalid session"
+    }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" }
+    });
   }
-});
+}
 ```
 
 ## Cookie Parsing/Serializing
 
 This library doesn't parse or serialize cookies. You need to use your own cookie parsing/serializing library.
 
-### Using the `cookie` library
-
-```js
-import { parse, serialize } from "cookie";
-import { consumeSession } from "tiny-cookie-session";
-
-// Parsing cookies from request
-const cookies = parse(request.headers.get("cookie") || "");
-const token = cookies.session;
-
-// Consuming the session
-const session = await consumeSession(config, { token });
-
-// Serializing cookie for response
-if (session.state === "TokenRefreshed") {
-  const serialized = serialize("session", session.cookie.value, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    expires: session.cookie.options.expires,
-  });
-  
-  response.headers.set("Set-Cookie", serialized);
-}
-```
-
 ### Using Bun.CookieMap and Bun.Cookie
 
+Here's an example of using Bun's cookie utilities with tiny-cookie-session:
+
 ```js
 import { consumeSession } from "tiny-cookie-session";
 
-// In a Bun server request handler
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-    
-    if (url.pathname === "/api/protected") {
-      // Get the session token from cookies
-      const token = request.cookies.get("session");
-      
-      if (!token) {
-        return new Response("Unauthorized", { status: 401 });
-      }
-      
-      const session = await consumeSession(config, { token });
-      
-      if (session.state === "Active" || session.state === "TokenRefreshed") {
-        const response = new Response(JSON.stringify({
-          userId: session.data.userId,
-          message: "Protected data"
-        }), {
-          headers: { "Content-Type": "application/json" }
-        });
-        
-        // Set the refreshed token if needed
-        if (session.state === "TokenRefreshed") {
-          response.headers.append("Set-Cookie", 
-            new Bun.Cookie({
-              name: "session",
-              value: session.cookie.value,
-              httpOnly: true,
-              secure: true,
-              sameSite: "Lax",
-              path: "/",
-              expires: session.cookie.options.expires,
-            }).toString()
-          );
-        }
-        
-        return response;
-      } else {
-        return new Response("Unauthorized", { status: 401 });
-      }
-    }
-    
-    return new Response("Not Found", { status: 404 });
+export async function withSession(
+  req,
+  handler
+) {
+  // Get the session token from cookies
+  const cookieHeader = req.headers.get("Cookie");
+  if (cookieHeader === null) {
+    return handler(undefined);
   }
+
+  const token = new Bun.CookieMap(cookieHeader).get("session");
+  if (token === null) {
+    return handler(undefined);
+  }
+
+  // Consume the session
+  const session = await consumeSession(config, { token });
+  
+  // Handle different session states
+  if (session.state === "TokenStolen" || session.state === "Expired") {
+    const response = new Response(null, {
+      status: 302,
+      headers: { "Location": "/login" }
+    });
+    
+    const bunCookie = new Bun.Cookie("session", session.cookie.value);
+    bunCookie.httpOnly = session.cookie.options.httpOnly;
+    bunCookie.secure = session.cookie.options.secure;
+    bunCookie.sameSite = session.cookie.options.sameSite;
+    bunCookie.path = session.cookie.options.path;
+    bunCookie.maxAge = session.cookie.options.maxAge;
+    
+    response.headers.append("Set-Cookie", bunCookie.toString());
+    return response;
+  }
+  
+  // Pass the session to the handler
+  const response = await handler(session);
+  
+  // If token was refreshed, set the new cookie
+  if (session.state === "TokenRefreshed") {
+    const bunCookie = new Bun.Cookie("session", session.cookie.value);
+    bunCookie.httpOnly = session.cookie.options.httpOnly;
+    bunCookie.secure = session.cookie.options.secure;
+    bunCookie.sameSite = session.cookie.options.sameSite;
+    bunCookie.path = session.cookie.options.path;
+    bunCookie.expires = session.cookie.options.expires;
+    
+    response.headers.append("Set-Cookie", bunCookie.toString());
+  }
+  
+  return response;
 }
 ```
 
 ## Passing Custom Data
 
-You can pass custom data when using `login` and `consumeSession` functions.
-
-This is useful if you have a SQL table for session with non-nullable columns for custom data.
-
-### Login with Custom Data
+You can pass custom data when using `login` and `consumeSession` functions. The data structure can be different between insertion and selection.
 
 ```js
-// Login with userId as custom data
+// Define your configuration with different data structures for insert and select
+const config = {
+  // Other config properties...
+  
+  // When selecting sessions, we return userId, createdAt, and lastLogin
+  selectSession: async ({ tokenHash }) => {
+    const session = db.query(`
+      SELECT id, token_hash, second_token_hash, exp, token_exp, user_id, created_at, last_login
+      FROM sessions
+      WHERE token_hash = ? OR second_token_hash = ?
+    `).get(tokenHash, tokenHash);
+
+    if (!session) return undefined;
+
+    return {
+      id: session.id,
+      latestTokenHash: [session.token_hash, session.second_token_hash],
+      exp: new Date(session.exp),
+      tokenExp: new Date(session.token_exp),
+      data: {
+        userId: session.user_id,
+        createdAt: session.created_at,
+        lastLogin: session.last_login
+      },
+    };
+  },
+  
+  // When inserting sessions, we only require userId and role
+  insertSession: async ({ id, tokenHash, exp, tokenExp, data }) => {
+    const now = new Date().toISOString();
+    
+    db.run(`
+      INSERT INTO sessions (id, token_hash, exp, token_exp, user_id, role, created_at, last_login)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, id, tokenHash, exp.getTime(), tokenExp.getTime(), data.userId, data.role, now, now);
+  },
+  
+  // Other methods...
+};
+
+// Login with the required data for insertSession
 const cookie = await login(config, {
   id: crypto.randomUUID(),
   data: { 
     userId: "user-123",
-    role: "admin",
-    lastLoginTime: new Date().toISOString(),
+    role: "admin"
   }
 });
-```
 
-### Consuming Session with Custom Data
-
-```js
-const token = request.cookies.get("session");
+// Consume session will return data in the format defined by selectSession
 const session = await consumeSession(config, { token });
-
 if (session.state === "Active" || session.state === "TokenRefreshed") {
-  // Access the custom data
-  const { userId, role, lastLoginTime } = session.data;
-  
-  // Use the data
-  console.log(`User ${userId} with role ${role} logged in at ${lastLoginTime}`);
+  console.log(`User ${session.data.userId} created at ${session.data.createdAt}`);
+  console.log(`Last login: ${session.data.lastLogin}`);
 }
 ```
 
@@ -463,23 +555,19 @@ You can force logout a user by deleting their session from the storage backend. 
 async function forceLogoutUser(userId) {
   // For SQLite
   db.run("DELETE FROM sessions WHERE user_id = ?", userId);
-  
-  // Or for in-memory store
-  for (const [id, session] of Object.entries(sessions)) {
-    if (session.userId === userId) {
-      delete sessions[id];
-    }
-  }
 }
 
-// Usage
-app.post("/admin/force-logout/:userId", async (req, res) => {
-  const { userId } = req.params;
+// Usage in a Bun server
+if (url.pathname === "/admin/force-logout" && req.method === "POST") {
+  const body = await req.json();
+  const { userId } = body;
   
   await forceLogoutUser(userId);
   
-  res.json({ success: true });
-});
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { "Content-Type": "application/json" }
+  });
+}
 ```
 
 ## Cookie Theft Mitigation
@@ -509,67 +597,41 @@ Without tracking two tokens, request B would be falsely identified as a cookie t
 
 ## Device Bound Session Credentials
 
-Device Bound Session Credentials (DBSC) is a more sophisticated approach to session security that binds the session to a specific device using cryptographic keys, often stored in secure hardware (like TPM).
+Device Bound Session Credentials (DBSC) is an advanced security approach that cryptographically binds session credentials to specific devices. DBSC creates a strong link between the user's device and their session, making it much harder for attackers to use stolen cookies.
+
+For more information about DBSC, see:
+
+- [W3C Draft Community Group Report](https://wicg.github.io/dbsc/)
+- [Fastly's article on DBSC](https://www.fastly.com/blog/device-bound-session-credentials)
+- [Google's Web Platform Incubator Community Group discussion](https://github.com/WICG/dbsc)
 
 ### tiny-cookie-session vs DBSC
 
 **tiny-cookie-session:**
 
-- Invalidates both attacker and user on cookie theft detection (can't determine which is legitimate)
-- Requires storing multiple tokens per active session
-- Doesn't rely on client secure storage (TPM)
-- Doesn't require additional endpoints for token management
+- **Session theft detection:** Can detect cookie theft but only after it occurs
+- **Response to theft:** Must invalidate both attacker's and user's sessions since it can't distinguish between them
+- **Storage requirements:** Needs to store multiple tokens per active session to detect theft
+- **Client requirements:** Works with any client; no special hardware or APIs needed
+- **Implementation complexity:** Simpler to implement; requires no client-side cryptographic operations
+- **User experience:** Logout affects both legitimate user and attacker when theft is detected
 
 **DBSC:**
 
-- Only invalidates the attacker, as legitimate users can complete cryptographic challenges
-- Only needs to store a single token per session
-- Relies on client secure storage for private keys
-- Requires additional endpoints for token creation/updating
+- **Session theft prevention:** Proactively prevents cookie theft by binding sessions to devices
+- **Response to theft:** Can specifically reject only the attacker, as they can't complete cryptographic challenges
+- **Storage requirements:** Only needs to store one token per session
+- **Client requirements:** Requires secure hardware (like TPM) or secure enclaves on client devices
+- **Implementation complexity:** More complex; requires client-side crypto APIs and key management
+- **User experience:** Legitimate users remain logged in even after theft attempts
 
 ### Using tiny-cookie-session with DBSC
 
-If your client devices support DBSC, you can enhance security by combining approaches:
+You can enhance tiny-cookie-session's security by integrating it with DBSC principles. When a client supports DBSC, the session can be bound to the device's cryptographic identity, adding an additional layer of security.
 
-```js
-// When refreshing a token, include a device-bound challenge
-async function refreshTokenWithDBSC(session, devicePublicKey) {
-  // Create new token with tiny-cookie-session
-  const { cookie, tokenHash } = await createNewTokenCookie(config);
-  
-  // Create a challenge using the device's public key
-  const challenge = createChallengeForDevice(devicePublicKey);
-  
-  // Update session with new token and challenge
-  await config.updateSession({
-    id: session.id,
-    tokenHash,
-    exp: session.exp,
-    tokenExp: session.tokenExp,
-    challenge,
-  });
-  
-  return { cookie, challenge };
-}
+The integration would require modifying your authentication flow to verify the device's identity with each token refresh. The server would generate challenges that only the legitimate device could solve using its private key stored in secure hardware. By combining both approaches, you get the simplicity of tiny-cookie-session with the enhanced security of DBSC.
 
-// When consuming a session, verify the device signature
-async function verifyDeviceSignature(session, signature) {
-  // Verify that the signature matches the challenge
-  const isValid = verifySignatureForChallenge(
-    session.challenge,
-    signature,
-    session.devicePublicKey
-  );
-  
-  if (!isValid) {
-    // This is likely not the original device
-    await config.deleteSession({ tokenHash: session.tokenHash });
-    return false;
-  }
-  
-  return true;
-}
-```
+This provides defense in depth: tiny-cookie-session's token rotation detects theft attempts, while DBSC prevents unauthorized devices from using stolen credentials in the first place. This approach is especially valuable for high-security applications like financial services or healthcare.
 
 ## Session Token
 
@@ -594,51 +656,7 @@ This library doesn't provide CSRF protection. You need to implement CSRF protect
 
 This library doesn't sign cookies by default. While signed cookies can prevent tampering without accessing the storage backend, they aren't strictly necessary for the core functionality.
 
-You can easily implement signed cookies on top of this library:
-
-```js
-import { createHmac } from "crypto";
-
-const SECRET_KEY = process.env.COOKIE_SECRET;
-
-function signCookie(value) {
-  const signature = createHmac("sha256", SECRET_KEY)
-    .update(value)
-    .digest("hex");
-    
-  return `${value}.${signature}`;
-}
-
-function verifyCookie(signedValue) {
-  const [value, signature] = signedValue.split(".");
-  
-  const expectedSignature = createHmac("sha256", SECRET_KEY)
-    .update(value)
-    .digest("hex");
-    
-  if (signature === expectedSignature) {
-    return value;
-  }
-  
-  return null;
-}
-
-// Usage with tiny-cookie-session
-const cookie = await login(config, {
-  id: "session-id",
-  data: { userId: "user-123" },
-});
-
-// Sign the cookie before sending
-const signedCookie = signCookie(cookie.value);
-
-// When receiving a cookie, verify before using
-const token = verifyCookie(signedCookieValue);
-if (token) {
-  const session = await consumeSession(config, { token });
-  // Handle session
-}
-```
+You can implement signed cookies on top of this library if desired.
 
 ## Your Cookie is still not 100% safe
 
@@ -652,81 +670,61 @@ Limitations to be aware of:
 
 No purely software-based solution, including DBSC, can fully prevent these issues.
 
-## Improving security with service workers
-
-You can enhance security by periodically refreshing the session using service workers:
-
-```js
-// In your service worker (service-worker.js)
-const SESSION_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-
-// Periodically refresh the session cookie
-setInterval(async () => {
-  try {
-    const response = await fetch('/api/refresh-session', {
-      credentials: 'same-origin',
-    });
-    
-    if (response.ok) {
-      console.log('Session refreshed by service worker');
-    }
-  } catch (error) {
-    console.error('Error refreshing session:', error);
-  }
-}, SESSION_REFRESH_INTERVAL);
-
-// On your server
-app.get('/api/refresh-session', async (req, res) => {
-  const token = req.cookies.session;
-  
-  if (!token) {
-    return res.status(401).json({ error: 'No session' });
-  }
-  
-  const session = await consumeSession(config, { token });
-  
-  if (session.state === 'TokenRefreshed') {
-    res.setHeader('Set-Cookie', 
-      `session=${session.cookie.value}; Path=${session.cookie.options.path}; HttpOnly; Secure; SameSite=Lax; Expires=${session.cookie.options.expires?.toUTCString()}`);
-  }
-  
-  res.json({ success: true });
-});
-```
-
 ## Delete cookie after browser close
 
 To create a session that expires when the browser is closed (equivalent to when "remember me" is not checked), simply remove the `expires` and `maxAge` attributes from the cookie:
 
 ```js
-// Login without "remember me" option
-app.post("/login", async (req, res) => {
-  const rememberMe = req.body.rememberMe === true;
+// Login with "remember me" option
+if (url.pathname === "/login" && req.method === "POST") {
+  const body = await req.json();
+  const rememberMe = body.rememberMe === true;
   
-  // Create session
+  // Create a new session
   const cookie = await login(config, {
     id: crypto.randomUUID(),
-    data: { userId: req.body.userId },
+    data: { userId: body.userId, role: body.role },
   });
   
-  // Prepare cookie options
-  const cookieOptions = {
-    path: cookie.options.path,
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-  };
+  // Create response
+  const response = new Response(JSON.stringify({ success: true }), {
+    headers: { "Content-Type": "application/json" }
+  });
+  
+  const options = { ...cookie.options }
+  delete options.expires;
+  const bunCookie = new Bun.Cookie("session", cookie.value, options);
+
+  bunCookie.httpOnly = true;
+  bunCookie.secure = true;
+  bunCookie.sameSite = "lax";
+  bunCookie.path = "/";
   
   // Only set expiration if "remember me" is checked
   if (rememberMe) {
-    cookieOptions.expires = cookie.options.expires;
+    bunCookie.expires = cookie.options.expires;
   }
   
-  // Set the cookie with or without expiration
-  res.setHeader("Set-Cookie", serialize("session", cookie.value, cookieOptions));
+  response.headers.append("Set-Cookie", bunCookie.toString());
+  return response;
+}
+
+// Similarly for consumeSession when token is refreshed
+if (session.state === "TokenRefreshed") {
+  const bunCookie = new Bun.Cookie("session", session.cookie.value);
+  bunCookie.httpOnly = true;
+  bunCookie.secure = true;
+  bunCookie.sameSite = "lax";
+  bunCookie.path = "/";
   
-  res.json({ success: true });
-});
+  // Only set expiration if the original cookie had it (preserving remember me setting)
+  const originalCookie = new Bun.CookieMap(req.headers.get("cookie") || "").get("session", { decode: false });
+  if (originalCookie && originalCookie.expires) {
+    bunCookie.expires = session.cookie.options.expires;
+  }
+  
+  response.headers.append("Set-Cookie", bunCookie.toString());
+}
 ```
 
 ## Development
