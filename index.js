@@ -38,14 +38,9 @@ async function createNewTokenCookie(config) {
   const now = config.dateNow?.() ?? new Date();
 
   /*
-  We use `sessionExpiresIn` instead of `tokenExpiresIn` here, because we want
-  the cookie to expire when the session expires, not when the token expires.
-
-  This allows the user to stay logged in as long as the session is valid, even
-  if the token is rotated frequently.
-
-  We primarily use short-lived tokens to detect cookie theft, and not to limit
-  the session duration.
+  We use `sessionExpiresIn` instead of `tokenExpiresIn` here, because we want the cookie to expire 
+  when the session expires, not when the token expires. This allows the user to stay logged in as 
+  long as the session is valid, even if the token is rotated frequently.
   */
   const expires = new Date(now.getTime() + config.sessionExpiresIn);
 

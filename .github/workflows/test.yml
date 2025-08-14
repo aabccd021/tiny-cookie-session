@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bunx prettier --check README.md
+      - run: bunx prettier --print-width 100 --check README.md
       - run: bunx biome check --indent-style=space --line-width=100
       - run: bunx tsc **.js --allowJs --checkJs --module preserve --lib esnext,webworker --target esnext --noEmit
 
