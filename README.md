@@ -1,6 +1,18 @@
 # tiny-cookie-session
 
-**tiny-cookie-session** is a tiny cookie-based session management library with cookie theft mitigation.
+**tiny-cookie-session** is a tiny cookie-based session management library with cookie theft detection.
+
+This library offers security features similar to 
+[Device Bound Session Credentials](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials), 
+but it's designed to be more widely accessible. 
+
+Unlike DBSC, it doesn't require specialized secure hardware (like TPM chips) or specific browser support to function.
+
+However, it's important to note that while this library is more accessible, 
+it falls short of DBSC in virtually every other aspect - including security, storage efficiency, and overall functionality.
+
+When Device Bound Session Credentials are available in your environment, 
+they should always be your preferred choice.
 
 ## Installation
 
@@ -258,26 +270,32 @@ await testConfig(config, [
 This function tests your implementation by simulating session operations like insertion, token rotation, and deletion.
 Note that failed tests may leave data in your storage, so avoid running this in production.
 
-## How to decide `sessionExpiresIn`
+## How to decide `sessionExpiresIn` and `tokenExpiresIn`
+
+### Session Expiration Time
 
 The session expires after a period of inactivity equal to `sessionExpiresIn`.
 This is similar to "log out after X minutes of inactivity."
 For example, with `sessionExpiresIn: 30 * 60 * 1000` (30 minutes), a user can remain logged in indefinitely by making requests at least every 29 minutes.
 
-## How to decide `tokenExpiresIn`
+Expiration time will be extended both in the database `exp` and in the cookie `Expires`.
+
+Your choice for session expiration time should balance security and user experience:
+
+- Shorter session durations increase security but force users to log in more frequently
+- Longer session durations improve user experience but increase the risk if credentials are stolen
+
+### Token Expiration Time
 
 The `tokenExpiresIn` value controls how frequently tokens rotate when sessions are active.
 When a token expires but the session is still valid, the system generates a new token.
 
-Shorter token expiration times:
+Your choice for token expiration time affects:
 
-- Detect cookie theft faster
-- Increase storage requirements for token history
-- May cause unexpected logouts if requests take longer than the expiration time
+- **Security vs. Storage Trade-off**: Shorter token expiration times help detect cookie theft faster but increase storage requirements
+- **User Experience**: Excessively short token lifetimes may cause unexpected logouts if requests take longer than the token expiration time
 
 For example, if `tokenExpiresIn` is set to 15 minutes, and a user is continuously active for 3 hours, the system will store 12 tokens for that session.
-If the user remains active for days or weeks without logging out, the number of stored tokens will continue to grow.
-Consider implementing token garbage collection (see below) if you use short token expiration times with long-lived sessions.
 
 ## Basic Usage
 
@@ -436,7 +454,9 @@ const userSession = await consumeSession(config, { token });
 
 ## Passing Custom Data
 
-You can use different data structures for session insertion and selection, which is useful if your session table has non-nullable columns that must be provided when creating a session:
+You can insert/select extra data associated with your session,
+which is useful if your session table has non-nullable columns that must be provided when creating a session,
+or you want to fetch a lot of data at once because you are using latency sensitive database:
 
 ```js
 // Configuration with different data types for insert and select
@@ -539,14 +559,9 @@ function setupSessionGarbageCollection(db) {
 }
 ```
 
-Consider the following when implementing session garbage collection:
+Garbage collecting expired sessions is always safe and has no security implications since those sessions would be rejected as "Expired" anyway if a user tried to use them.
 
-- Run it during off-peak hours to minimize database load
-- Consider using a separate worker process for large applications
-- Monitor the number of deleted sessions to detect anomalies
-- Add a date index on the expiration_time column for better performance
-
-## Garbage Collecting Old Tokens
+## Limiting Stored Tokens
 
 For long-lived sessions with frequent token rotation, you may want to limit the number of tokens stored per session:
 
@@ -576,11 +591,34 @@ function setupTokenGarbageCollection(db) {
 }
 ```
 
-Note that limiting stored tokens creates a security trade-off:
+## Managing Security for Inactive Users
 
-- If an attacker steals a very old token that has been garbage collected, the theft won't be detected
-- However, since the token is old, it would be rejected anyway as "not found"
-- The main risk is if the attacker steals a token just before it's garbage collected
+You can limit number of stored tokens, and still being secure against cookie theft, 
+by providing the user an option to "log out other devices".
+
+Consider this configuration:
+- `tokenExpiresIn` = 10 minutes
+- Token storage limit = 2016 tokens
+- `sessionExpiresIn` = 10 minutes × 2016 = 20,160 minutes (14 days)
+
+This also means:
+- User will be logged out after 14 days of inactivity, because the cookie is deleted from the browser
+
+When the user is inactive for less than 14 days, 
+the token is still available on the database,
+then the server will detect this as cookie theft,
+and will invalidate the session.
+Both the user and the attacker will be logged out.
+
+When the user is inactive for more than 14 days and then logs back in,
+we will inform th user that they can "log out other devices".
+Then the attacker will be logged out.
+Although obviously, this would be less automatic and less secure than the previous case.
+
+Also you would need to carefully consider when the "log out other devices" option should be available.
+Otherwise, the attacker could use the "log out other devices" option to log out the legitimate user.
+
+Note that in both case, the attacker was able to use the stolen token (valid session) while the user was inactive.
 
 ## Force Logout Sessions
 
@@ -603,40 +641,60 @@ async function forceLogoutAll() {
 }
 ```
 
-## Cookie Theft Mitigation
+## Enhanced Security with Service Workers
 
-This library implements a cookie theft detection mechanism based on token rotation and history tracking.
+You can further improve security by implementing a service worker that continuously refreshes the session token in the background. 
+This reduces the window of opportunity for an attacker using a stolen token, 
+as the legitimate user's browser will constantly rotate tokens even when the page is closed.
+Although, of course you need to consider the cost of constantly refreshing tokens.
+
+## Cookie Theft Detection
+
+This library implements a cookie theft detection mechanism based on token rotation.
 
 ### How the Detection Works
 
 We detect cookie theft when there's a request with a token that is associated with a valid session but is not one of the two most recently issued tokens for that session.
 
-The library stores all tokens that have ever been issued for a session (unless you implement token garbage collection), and it knows which ones are the most recent.
+The system stores all tokens that have ever been issued for a session (unless you implement token garbage collection). 
+When a token is used, the system checks if it's one of the two most recent tokens:
+
+- If it is, the request is considered legitimate (either the current or immediately previous token)
+- If not, the system concludes the token was stolen and invalidates the entire session
+
+Only either the legitimate user or the attacker can have the latest token at any given time. 
+If a non-latest token is used, it means someone is using an old token - either the legitimate user or an attacker.
 
 See [index.test.js](./index.test.js) for detailed tests of the cookie theft detection mechanism.
 
-When cookie theft is detected, the entire session is invalidated, forcing both the legitimate user and the attacker to re-authenticate. This library doesn't prevent cookie theft itself but can detect it after it has occurred and limit the attacker's window of opportunity.
+When cookie theft is detected, the entire session is invalidated, 
+forcing both the legitimate user and the attacker to re-authenticate. 
+
+This library can detect cookie theft after it has occurred and limit the attacker's window of opportunity.
 
 ### Handling Race Conditions
 
-To prevent legitimate users from being accidentally logged out during concurrent requests, we consider both the current and previous token to be valid. This handles cases like:
+To prevent legitimate users from being accidentally logged out during concurrent requests, 
+we consider both the current and previous token to be valid. 
 
-```
+This handles cases like:
+
 User loads a page (using token A)
-First API request from that page causes token rotation (token A → token B)
-Second API request still uses token A (concurrent with the first request)
-```
+First request from that page causes token rotation (token A → token B)
+Second request still uses token A (concurrent with the first request)
 
 Without keeping the previous token valid, the second request would be incorrectly flagged as theft.
 
 ## Device Bound Session Credentials
 
-Device Bound Session Credentials (DBSC) is an emerging standard that cryptographically binds cookies to specific devices using secure hardware.
+Device Bound Session Credentials (DBSC) is a standard that cryptographically binds cookies to specific devices using secure hardware.
 
 For more information about DBSC, see:
 
 - [Fighting Cookie Theft using Device-Bound Session Credentials](https://blog.chromium.org/2024/04/fighting-cookie-theft-using-device.html)
 - [Device-Bound Session Credentials Documentation](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials)
+- [DBSC Standard Specification](https://w3c.github.io/webappsec-device-bound-session-credentials/)
+- [W3C Web Application Security Working Group](https://www.w3.org/groups/wg/webappsec)
 
 ### tiny-cookie-session vs DBSC
 
@@ -656,7 +714,11 @@ Key differences in security model:
 - tiny-cookie-session requires both the user and the attacker to consume the token first to detect and invalidate the session.
 - DBSC will invalidate the session as soon as the stolen token is expired, even if it was just stolen.
 
-Neither tiny-cookie-session nor DBSC can prevent constant theft by persistent background malware.
+While DBSC provides superior security when available, 
+tiny-cookie-session provides cookie theft detection across all platforms and browsers. 
+
+For applications requiring maximum security across diverse client environments, 
+using tiny-cookie-session as a fallback when DBSC isn't available offers the best of both approaches.
 
 ## Session Token Security
 
@@ -674,20 +736,13 @@ Doing SHA-256 for every request might seem like a lot, but it's not any more tax
 ## CSRF Protection
 
 This library focuses solely on session management and does not implement CSRF protection.
-You should implement CSRF protection at the application level before processing session data.
-
-Common CSRF protection mechanisms include:
-
-1. **CSRF tokens**: Include a token in forms and validate it on submission
-2. **SameSite cookies**: Set cookies with SameSite=Lax or Strict (default with this library)
-3. **Origin/Referer checking**: Verify that requests come from your domain
-4. **Double Submit Cookie**: Send a token in both cookie and request body/header
-
-Without CSRF protection, authenticated users could be tricked into performing actions they didn't intend.
+You should implement CSRF protection for the whole application and before using any functions from this library.
 
 ## Signed Cookies
 
-This library doesn't sign cookies directly. The main benefit of signed cookies is preventing cookie tampering without reaching the storage backend, but this isn't essentially required for this library to work.
+This library doesn't sign cookies directly. 
+The main benefit of signed cookies is preventing cookie tampering without reaching the storage backend, 
+but this isn't essentially required for this library to work or to provide security.
 
 You can implement cookie signing as an additional layer in your application if desired:
 
