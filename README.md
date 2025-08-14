@@ -593,7 +593,7 @@ function setupTokenGarbageCollection(db) {
 
 ## Managing Security for Inactive Users
 
-You can limit number of stored tokens, and still being secure against cookie theft, 
+You can limit number of stored tokens, and still detect cookie theft,
 by providing the user an option to "log out other devices".
 
 Consider this configuration:
@@ -604,21 +604,22 @@ Consider this configuration:
 This also means:
 - User will be logged out after 14 days of inactivity, because the cookie is deleted from the browser
 
-When the user is inactive for less than 14 days, 
+Now we have two scenarios for cookie theft detection:
+
+1. When the user is inactive for less than 14 days, 
 the token is still available on the database,
-then the server will detect this as cookie theft,
-and will invalidate the session.
+then the server will detect this as cookie theft and will invalidate the session.
 Both the user and the attacker will be logged out.
 
-When the user is inactive for more than 14 days and then logs back in,
+2. When the user is inactive for more than 14 days and then logs back in,
 we will inform th user that they can "log out other devices".
-Then the attacker will be logged out.
-Although obviously, this would be less automatic and less secure than the previous case.
+Then the user will manually inspect the list of devices and log out any suspicious ones.
+Although obviously, this would be less automatic and less secure than the first scenario.
 
 Also you would need to carefully consider when the "log out other devices" option should be available.
 Otherwise, the attacker could use the "log out other devices" option to log out the legitimate user.
 
-Note that in both case, the attacker was able to use the stolen token (valid session) while the user was inactive.
+Note that in both scenario, the attacker was able to use the stolen token (valid session) while the user was inactive.
 
 ## Force Logout Sessions
 
