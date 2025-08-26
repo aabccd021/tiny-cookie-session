@@ -48,8 +48,6 @@ export type Action =
       readonly idHash: string;
     };
 
-type hash = (token: string) => Promise<string>;
-
 type logout = (arg: { readonly credentials: Credentials }) => Promise<{
   readonly cookie: Cookie;
   readonly action: Action;

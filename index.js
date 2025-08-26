@@ -21,7 +21,8 @@ function generateRandomHex() {
 }
 
 /**
- * @type {import("./index").hash}
+ * @param {string} token
+ * @returns {Promise<string>}
  */
 const hash = async (token) => {
   const data = new TextEncoder().encode(token);
