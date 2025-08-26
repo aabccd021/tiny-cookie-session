@@ -74,7 +74,7 @@ export const logout = async (arg) => {
     cookie: logoutCookie,
     action: {
       type: "delete",
-      idHash: arg.idHash,
+      idHash: arg.credentials.idHash,
     },
   };
 };
@@ -83,13 +83,13 @@ export const logout = async (arg) => {
  * @type {import("./index").credentialsFromCookie}
  */
 export const credentialsFromCookie = async (arg) => {
-  const [sessionId, token] = arg.cookie.split(":");
-  if (sessionId === undefined || token === undefined) {
+  const [id, token] = arg.cookie.split(":");
+  if (id === undefined || token === undefined) {
     return undefined;
   }
 
-  const sessionIdHash = await hash(sessionId);
-  return { sessionId, token, sessionIdHash };
+  const idHash = await hash(id);
+  return { id, token, idHash };
 };
 
 /**
@@ -97,8 +97,8 @@ export const credentialsFromCookie = async (arg) => {
  */
 export const consume = async (arg) => {
   const requestTokenHash = await hash(arg.credentials.token);
-  const isOddToken = requestTokenHash === arg.dbSession.oddTokenHash;
-  const isEvenToken = requestTokenHash === arg.dbSession.evenTokenHash;
+  const isOddToken = requestTokenHash === arg.session.oddTokenHash;
+  const isEvenToken = requestTokenHash === arg.session.evenTokenHash;
 
   if (!isOddToken && !isEvenToken) {
     return {
@@ -106,25 +106,25 @@ export const consume = async (arg) => {
       cookie: logoutCookie,
       action: {
         type: "delete",
-        idHash: arg.dbSession.idHash,
+        idHash: arg.session.idHash,
       },
     };
   }
 
   const now = arg.config?.dateNow?.() ?? new Date();
-  if (arg.dbSession.exp.getTime() <= now.getTime()) {
+  if (arg.session.exp.getTime() <= now.getTime()) {
     return {
       state: "SessionExpired",
       cookie: logoutCookie,
       action: {
         type: "delete",
-        idHash: arg.dbSession.idHash,
+        idHash: arg.session.idHash,
       },
     };
   }
 
-  const isLatestToken = arg.dbSession.isLatestTokenOdd ? isOddToken : isEvenToken;
-  const shouldRotate = arg.dbSession.tokenExp.getTime() <= now.getTime() && isLatestToken;
+  const isLatestToken = arg.session.isLatestTokenOdd ? isOddToken : isEvenToken;
+  const shouldRotate = arg.session.tokenExp.getTime() <= now.getTime() && isLatestToken;
   if (!shouldRotate) {
     return { state: "SessionActive" };
   }
@@ -135,7 +135,7 @@ export const consume = async (arg) => {
 
   /** @type {import("./index").Cookie} */
   const cookie = {
-    value: `${arg.credentials.sessionId}:${token}`,
+    value: `${arg.credentials.id}:${token}`,
     options: {
       httpOnly: true,
       sameSite: "lax",
@@ -146,7 +146,7 @@ export const consume = async (arg) => {
   };
 
   const tokenHashStr = await hash(token);
-  const isNextOddToken = !arg.dbSession.isLatestTokenOdd;
+  const isNextOddToken = !arg.session.isLatestTokenOdd;
   const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
   const tokenExp = new Date(now.getTime() + tokenExpiresIn);
 
@@ -155,7 +155,7 @@ export const consume = async (arg) => {
     cookie,
     action: {
       type: "update",
-      idHash: arg.dbSession.idHash,
+      idHash: arg.session.idHash,
       isLatestTokenOdd: isNextOddToken,
       oddTokenHash: isNextOddToken ? tokenHashStr : undefined,
       evenTokenHash: isNextOddToken ? undefined : tokenHashStr,

@@ -15,17 +15,17 @@ export type Cookie = {
 
 export type Config = {
   readonly dateNow?: () => Date;
-  readonly sessionExpiresIn: number;
-  readonly tokenExpiresIn: number;
+  readonly sessionExpiresIn?: number;
+  readonly tokenExpiresIn?: number;
 };
 
 type Credentials = {
-  readonly sessionId: string;
-  readonly sessionIdHash: string;
+  readonly id: string;
+  readonly idHash: string;
   readonly token: string;
 };
 
-export type SessionAction =
+export type Action =
   | {
       readonly type: "insert";
       readonly idHash: string;
@@ -50,21 +50,21 @@ export type SessionAction =
 
 type hash = (token: string) => Promise<string>;
 
-type logout = (arg: { readonly idHash: string }) => Promise<{
+type logout = (arg: { readonly credentials: Credentials }) => Promise<{
   readonly cookie: Cookie;
-  readonly action: SessionAction;
+  readonly action: Action;
 }>;
 export const logout: logout;
 
 type login = (arg: { config?: Config }) => Promise<{
   readonly cookie: Cookie;
-  readonly action: SessionAction;
+  readonly action: Action;
 }>;
 export const login: login;
 
 type consume = (arg: {
   readonly credentials: Credentials;
-  readonly dbSession: {
+  readonly session: {
     readonly idHash: string;
     readonly oddTokenHash: string;
     readonly evenTokenHash?: string;
@@ -74,15 +74,15 @@ type consume = (arg: {
   };
   readonly config?: Config;
 }) => Promise<{
-  readonly state: 
-  | "SessionForked"
-  | "SessionExpired"
-  | "TokenRotated"
-  | "SessionActive"
-  | "CookieMalformed";
+  readonly state:
+    | "SessionForked"
+    | "SessionExpired"
+    | "TokenRotated"
+    | "SessionActive"
+    | "CookieMalformed";
 
   readonly cookie?: Cookie;
-  readonly action?: SessionAction;
+  readonly action?: Action;
 }>;
 export const consume: consume;
 
