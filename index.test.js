@@ -142,7 +142,7 @@ function runAction(sessions, action) {
   const credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
   if (credentials === undefined) throw new Error();
 
-  let session = sessions.get(credentials.idHash);
+  const session = sessions.get(credentials.idHash);
   if (session === undefined) throw new Error();
 
   date = new Date("2023-10-01T00:11:00Z");
@@ -152,7 +152,6 @@ function runAction(sessions, action) {
     throw new Error();
 
   runAction(sessions, consumeResult.action);
-  session = sessions.get(credentials.idHash);
   if (session === undefined) throw new Error();
   if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
   if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
@@ -183,9 +182,9 @@ function runAction(sessions, action) {
   if (credentials === undefined) throw new Error();
 
   consumeResult = await consume({ credentials, config, session });
-  runAction(sessions, consumeResult.action);
   if (consumeResult.state !== "SessionActive") throw new Error();
 
+  runAction(sessions, consumeResult.action);
   if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
   if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
 }
