@@ -64,6 +64,24 @@ function runAction(sessions, action) {
 }
 
 {
+  console.info("# login");
+  const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+  const sessions = createDb();
+
+  const loginResult = await login({ config });
+  if (loginResult.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
+    throw new Error();
+  runAction(sessions, loginResult.action);
+
+  const credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
+  if (credentials === undefined) throw new Error();
+
+  const session = sessions.get(credentials.idHash);
+  if (session?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+  if (session?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+}
+
+{
   console.info("# logout");
   let date = new Date("2023-10-01T00:00:00Z");
   const config = { ...testConfig, dateNow: () => date };
