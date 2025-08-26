@@ -1,4 +1,4 @@
-import { credentialsFromCookie, login, logout } from ".";
+import { consume, credentialsFromCookie, login, logout } from ".";
 
 /**
  * @typedef {Object} Session
@@ -9,8 +9,12 @@ import { credentialsFromCookie, login, logout } from ".";
  * @property {boolean} isLatestTokenOdd
  */
 
-/** @type {Map<string, Session>} */
-const sessionMap = new Map();
+/**
+ * @returns {Map<string, Session>}
+ */
+function createDb() {
+  return new Map();
+}
 
 const testConfig = {
   tokenExpiresIn: 10 * 60 * 1000,
@@ -58,9 +62,10 @@ function handleAction(action, sessions) {
 {
   console.info("# login");
   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+  const sessions = createDb();
 
   const loginResult = await login({ config });
-  handleAction(loginResult.action, sessionMap);
+  handleAction(loginResult.action, sessions);
 
   if (loginResult.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
     throw new Error();
@@ -73,61 +78,49 @@ function handleAction(action, sessions) {
   console.info("# logout");
   let date = new Date("2023-10-01T00:00:00Z");
   const config = { ...testConfig, dateNow: () => date };
+  const sessions = createDb();
 
   const loginResult = await login({ config });
-  handleAction(loginResult.action, sessionMap);
+  handleAction(loginResult.action, sessions);
 
   const credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
   if (credentials === undefined) throw new Error();
 
   date = new Date("2023-10-01T00:01:00Z");
   const logoutResult = await logout({ credentials });
-  handleAction(logoutResult.action, sessionMap);
+  handleAction(logoutResult.action, sessions);
 
   if (logoutResult.cookie.value !== "") throw new Error();
   if (logoutResult.cookie.options.maxAge !== 0) throw new Error();
 }
 
-//
-// {
-//   console.info("# consume: state NotFound for unknown credentials");
-//   const config = createConfig();
-//
-//   const session = await consume(config, { credentials: "unknown-credentials" });
-//   if (session.state !== "NotFound") throw new Error();
-//
-//   if (session.cookie.value !== "") throw new Error();
-//   if (session.cookie.options.maxAge !== 0) throw new Error();
-// }
-//
-// {
-//   console.info("# consume: state Active after login");
-//   const state = { date: new Date("2023-10-01T00:00:00Z") };
-//   const config = createConfig(state);
-//
-//   const cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
-//   });
-//   const credentials = cookie.value;
-//
-//   const session = await consume(config, { credentials });
-//   if (session.state !== "Active") throw new Error();
-//
-//   if (session.id !== "test-session-id") throw new Error();
-//   if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
-//   if (session.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
-//   if (session.data.userId !== "test-user-id") throw new Error();
-// }
+{
+  console.info("# consume: state Active after login");
+  const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+  const sessions = createDb();
+
+  const loginResult = await login({ config });
+  handleAction(loginResult.action, sessions);
+
+  const credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
+  if (credentials === undefined) throw new Error();
+
+  const session = sessions.get(credentials.idHash);
+  if (session === undefined) throw new Error();
+
+  const consumeResult = await consume({ credentials, config, session });
+  if (consumeResult.state !== "SessionActive") throw new Error();
+
+  if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+  if (session.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+}
 //
 // {
 //   console.info("# consume: state Active after 9 minutes");
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   const cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   const loginResult = await login(config, {
 //   });
 //   const credentials = cookie.value;
 //
@@ -135,10 +128,8 @@ function handleAction(action, sessions) {
 //   const session = await consume(config, { credentials });
 //   if (session.state !== "Active") throw new Error();
 //
-//   if (session.id !== "test-session-id") throw new Error();
 //   if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
 //   if (session.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
-//   if (session.data.userId !== "test-user-id") throw new Error();
 // }
 //
 // {
@@ -146,9 +137,7 @@ function handleAction(action, sessions) {
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   const cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   const loginResult = await login(config, {
 //   });
 //   let credentials = cookie.value;
 //
@@ -159,10 +148,8 @@ function handleAction(action, sessions) {
 //
 //   credentials = session.cookie.value;
 //
-//   if (session.id !== "test-session-id") throw new Error();
 //   if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
 //   if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
-//   if (session.data.userId !== "test-user-id") throw new Error();
 //   if (credentials.length !== 64) throw new Error();
 //   if (/^[a-zA-Z0-9]*$/.test(credentials) !== true) throw new Error();
 //   if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
@@ -174,9 +161,7 @@ function handleAction(action, sessions) {
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   const cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   const loginResult = await login(config, {
 //   });
 //   let credentials = cookie.value;
 //
@@ -189,8 +174,6 @@ function handleAction(action, sessions) {
 //   session = await consume(config, { credentials });
 //   if (session.state !== "Active") throw new Error();
 //
-//   if (session.id !== "test-session-id") throw new Error();
-//   if (session.data.userId !== "test-user-id") throw new Error();
 //   if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
 //   if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
 // }
@@ -200,9 +183,7 @@ function handleAction(action, sessions) {
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   const cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   const loginResult = await login(config, {
 //   });
 //   const credentials = cookie.value;
 //
@@ -210,8 +191,6 @@ function handleAction(action, sessions) {
 //   const session = await consume(config, { credentials });
 //   if (session.state !== "Expired") throw new Error();
 //
-//   if (session.id !== "test-session-id") throw new Error();
-//   if (session.data.userId !== "test-user-id") throw new Error();
 //   if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
 //   if (session.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
 //   if (session.cookie.value !== "") throw new Error();
@@ -223,9 +202,7 @@ function handleAction(action, sessions) {
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   const cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   const loginResult = await login(config, {
 //   });
 //   const credentials = cookie.value;
 //
@@ -245,9 +222,7 @@ function handleAction(action, sessions) {
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   const cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   const loginResult = await login(config, {
 //   });
 //   let credentials = cookie.value;
 //
@@ -270,9 +245,7 @@ function handleAction(action, sessions) {
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   let cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   let loginResult = await login(config, {
 //   });
 //   let credentials = cookie.value;
 //
@@ -292,9 +265,7 @@ function handleAction(action, sessions) {
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   let cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   let loginResult = await login(config, {
 //   });
 //   let credentials = cookie.value;
 //
@@ -303,9 +274,7 @@ function handleAction(action, sessions) {
 //   credentials = cookie.value;
 //
 //   state.date = new Date("2023-10-01T00:14:00Z");
-//   cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   loginResult = await login(config, {
 //   });
 //
 //   const session = await consume(config, { credentials: cookie.value });
@@ -318,8 +287,6 @@ function handleAction(action, sessions) {
 //   const config = createConfig(state);
 //
 //   const userCookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
 //   });
 //   let userToken = userCookie.value;
 //
@@ -337,8 +304,6 @@ function handleAction(action, sessions) {
 //
 //   const attackerSession = await consume(config, { credentials: attackerToken });
 //   if (attackerSession.state !== "TokenStolen") throw new Error();
-//   if (attackerSession.id !== "test-session-id") throw new Error();
-//   if (attackerSession.data.userId !== "test-user-id") throw new Error();
 //   if (attackerSession.exp.toISOString() !== "2023-10-01T05:22:00.000Z") throw new Error();
 //   if (attackerSession.tokenExp.toISOString() !== "2023-10-01T00:32:00.000Z") throw new Error();
 //   if (attackerSession.cookie.value !== "") throw new Error();
@@ -356,8 +321,6 @@ function handleAction(action, sessions) {
 //   const config = createConfig(state);
 //
 //   const userCookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
 //   });
 //   const userToken = userCookie.value;
 //
@@ -375,8 +338,6 @@ function handleAction(action, sessions) {
 //
 //   const userSession = await consume(config, { credentials: userToken });
 //   if (userSession.state !== "TokenStolen") throw new Error();
-//   if (userSession.id !== "test-session-id") throw new Error();
-//   if (userSession.data.userId !== "test-user-id") throw new Error();
 //   if (userSession.exp.toISOString() !== "2023-10-01T05:22:00.000Z") throw new Error();
 //   if (userSession.tokenExp.toISOString() !== "2023-10-01T00:32:00.000Z") throw new Error();
 //   if (userSession.cookie.value !== "") throw new Error();
@@ -394,8 +355,6 @@ function handleAction(action, sessions) {
 //   const config = createConfig(state);
 //
 //   const userCookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
 //   });
 //   const userToken = userCookie.value;
 //   let attackerToken = userToken;
@@ -423,8 +382,6 @@ function handleAction(action, sessions) {
 //   const config = createConfig(state);
 //
 //   const userCookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
 //   });
 //   let userToken = userCookie.value;
 //   const attackerToken = userToken;
@@ -452,9 +409,7 @@ function handleAction(action, sessions) {
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   const cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   const loginResult = await login(config, {
 //   });
 //   let credentials = cookie.value;
 //   const prevToken = credentials;
@@ -475,9 +430,7 @@ function handleAction(action, sessions) {
 //   const state = { date: new Date("2023-10-01T00:00:00Z") };
 //   const config = createConfig(state);
 //
-//   const cookie = await login(config, {
-//     id: "test-session-id",
-//     data: { userId: "test-user-id" },
+//   const loginResult = await login(config, {
 //   });
 //   let credentials = cookie.value;
 //   const prevToken = credentials;

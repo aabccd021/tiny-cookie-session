@@ -63,7 +63,6 @@ export const login: login;
 type consume = (arg: {
   readonly credentials: Credentials;
   readonly session: {
-    readonly idHash: string;
     readonly oddTokenHash: string;
     readonly evenTokenHash?: string;
     readonly exp: Date;

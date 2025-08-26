@@ -6,7 +6,6 @@ const logoutCookie = {
   options: {
     httpOnly: true,
     sameSite: "lax",
-    path: "/",
     secure: true,
     maxAge: 0,
   },
@@ -47,7 +46,6 @@ export const login = async (arg) => {
     options: {
       httpOnly: true,
       sameSite: "lax",
-      path: "/",
       secure: true,
       expires,
     },
@@ -107,7 +105,7 @@ export const consume = async (arg) => {
       cookie: logoutCookie,
       action: {
         type: "delete",
-        idHash: arg.session.idHash,
+        idHash: arg.credentials.idHash,
       },
     };
   }
@@ -119,7 +117,7 @@ export const consume = async (arg) => {
       cookie: logoutCookie,
       action: {
         type: "delete",
-        idHash: arg.session.idHash,
+        idHash: arg.credentials.idHash,
       },
     };
   }
@@ -156,7 +154,7 @@ export const consume = async (arg) => {
     cookie,
     action: {
       type: "update",
-      idHash: arg.session.idHash,
+      idHash: arg.credentials.idHash,
       isLatestTokenOdd: isNextOddToken,
       oddTokenHash: isNextOddToken ? tokenHashStr : undefined,
       evenTokenHash: isNextOddToken ? undefined : tokenHashStr,
