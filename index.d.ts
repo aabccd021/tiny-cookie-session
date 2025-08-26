@@ -25,40 +25,90 @@ type Credentials = {
   readonly token: string;
 };
 
-export type Action =
-  | {
-      readonly type: "insert";
-      readonly idHash: string;
-      readonly exp: Date;
-      readonly oddTokenHash: string;
-      readonly tokenExp: Date;
-      readonly isLatestTokenOdd: boolean;
-    }
-  | {
-      readonly type: "update";
-      readonly idHash: string;
-      readonly exp: Date;
-      readonly oddTokenHash?: string;
-      readonly evenTokenHash?: string;
-      readonly tokenExp: Date;
-      readonly isLatestTokenOdd: boolean;
-    }
-  | {
-      readonly type: "delete";
-      readonly idHash: string;
-    };
+export type InsertAction = {
+  readonly type: "insert";
+  readonly idHash: string;
+  readonly exp: Date;
+  readonly oddTokenHash: string;
+  readonly tokenExp: Date;
+  readonly isLatestTokenOdd: boolean;
+};
+export type UpdateAction = {
+  readonly type: "update";
+  readonly idHash: string;
+  readonly exp: Date;
+  readonly oddTokenHash?: string;
+  readonly evenTokenHash?: string;
+  readonly tokenExp: Date;
+  readonly isLatestTokenOdd: boolean;
+};
+export type DeleteAction = {
+  readonly type: "delete";
+  readonly idHash: string;
+};
+
+export type Action = InsertAction | DeleteAction | UpdateAction;
 
 type logout = (arg: { readonly credentials: Credentials }) => Promise<{
   readonly cookie: Cookie;
-  readonly action: Action;
+  readonly action: DeleteAction;
 }>;
 export const logout: logout;
 
 type login = (arg: { config?: Config }) => Promise<{
   readonly cookie: Cookie;
-  readonly action: Action;
+  readonly action: InsertAction;
 }>;
 export const login: login;
+
+// type consume = (arg: {
+//   readonly credentials: Credentials;
+//   readonly session: {
+//     readonly oddTokenHash: string;
+//     readonly evenTokenHash?: string;
+//     readonly exp: Date;
+//     readonly tokenExp: Date;
+//     readonly isLatestTokenOdd: boolean;
+//   };
+//   readonly config?: Config;
+// }) => Promise<{
+//   readonly state:
+//     | "SessionForked"
+//     | "SessionExpired"
+//     | "TokenRotated"
+//     | "SessionActive"
+//     | "CookieMalformed";
+//
+//   readonly cookie?: Cookie;
+//   readonly action?: Action;
+// }>;
+
+export type ConsumeResult =
+  | {
+      readonly state: "SessionForked";
+      readonly cookie: Cookie;
+      readonly action: DeleteAction;
+    }
+  | {
+      readonly state: "SessionExpired";
+      readonly cookie: Cookie;
+      readonly action: DeleteAction;
+    }
+  | {
+      readonly state: "TokenRotated";
+      readonly cookie: Cookie;
+      readonly action: UpdateAction;
+    }
+  | {
+      readonly state: "SessionActive";
+      readonly cookie: undefined;
+      readonly action: undefined;
+    }
+  | {
+      readonly state: "CookieMalformed";
+      readonly cookie: Cookie;
+      readonly action: DeleteAction;
+    };
 
 type consume = (arg: {
   readonly credentials: Credentials;
@@ -70,17 +120,7 @@ type consume = (arg: {
     readonly isLatestTokenOdd: boolean;
   };
   readonly config?: Config;
-}) => Promise<{
-  readonly state:
-    | "SessionForked"
-    | "SessionExpired"
-    | "TokenRotated"
-    | "SessionActive"
-    | "CookieMalformed";
-
-  readonly cookie?: Cookie;
-  readonly action?: Action;
-}>;
+}) => Promise<ConsumeResult>;
 export const consume: consume;
 
 type credentialsFromCookie = (arg: { readonly cookie: string }) => Promise<Credentials | undefined>;

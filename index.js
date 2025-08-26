@@ -125,7 +125,11 @@ export const consume = async (arg) => {
   const isLatestToken = arg.session.isLatestTokenOdd ? isOddToken : isEvenToken;
   const shouldRotate = arg.session.tokenExp.getTime() <= now.getTime() && isLatestToken;
   if (!shouldRotate) {
-    return { state: "SessionActive" };
+    return {
+      state: "SessionActive",
+      cookie: undefined,
+      action: undefined,
+    };
   }
 
   const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;

@@ -160,36 +160,45 @@ function runAction(sessions, action) {
   if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
   if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
 }
-//
-// {
-//   console.info("# consume: state SessionActive after TokenRotated");
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
-//   const sessions = createDb();
-//
-//   const loginResult = await login(config, {
-//   });
-//   let credentials = cookie.value;
-//
-//   date = new Date("2023-10-01T00:11:00Z");
-//   let session = await consume({ credentials, config, session });
-//   if (consumeResult.state !== "TokenRotated") throw new Error();
-//
-//   credentials = session.cookie.value;
-//
-//   session = await consume({ credentials, config, session });
-//   if (consumeResult.state !== "SessionActive") throw new Error();
-//
-//   if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
-//   if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
-// }
+
+{
+  console.info("# consume: state SessionActive after TokenRotated");
+  let date = new Date("2023-10-01T00:00:00Z");
+  const config = { ...testConfig, dateNow: () => date };
+  const sessions = createDb();
+
+  const loginResult = await login({ config });
+  runAction(sessions, loginResult.action);
+
+  let credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
+  if (credentials === undefined) throw new Error();
+
+  const session = sessions.get(credentials.idHash);
+  if (session === undefined) throw new Error();
+
+  date = new Date("2023-10-01T00:11:00Z");
+  let consumeResult = await consume({ credentials, config, session });
+  runAction(sessions, consumeResult.action);
+
+  if (consumeResult.state !== "TokenRotated") throw new Error();
+
+  credentials = await credentialsFromCookie({ cookie: consumeResult.cookie.value });
+  if (credentials === undefined) throw new Error();
+
+  consumeResult = await consume({ credentials, config, session });
+  runAction(sessions, consumeResult.action);
+  if (consumeResult.state !== "SessionActive") throw new Error();
+
+  if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
+  if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
+}
 //
 // {
 //   console.info("# consume: state Expired after 6 hours");
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   const loginResult = await login(config, {
-//   });
+//   const loginResult = login({ config   });
 //   const credentials = cookie.value;
 //
 //   date = new Date("2023-10-01T06:00:00Z");
@@ -207,12 +216,11 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   const loginResult = await login(config, {
-//   });
+//   const loginResult = login({ config   });
 //   const credentials = cookie.value;
 //
 //   date = new Date("2023-10-01T06:00:00Z");
-//   let session = await consume({ credentials, config, session });
+//   let consumeResult = await consume({ credentials, config, session });
 //   if (consumeResult.state !== "Expired") throw new Error();
 //
 //   session = await consume({ credentials, config, session });
@@ -227,12 +235,11 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   const loginResult = await login(config, {
-//   });
+//   const loginResult = login({ config   });
 //   let credentials = cookie.value;
 //
 //   date = new Date("2023-10-01T00:11:00Z");
-//   let session = await consume({ credentials, config, session });
+//   let consumeResult = await consume({ credentials, config, session });
 //   if (consumeResult.state !== "TokenRotated") throw new Error();
 //   credentials = session.cookie.value;
 //
@@ -250,8 +257,7 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   let loginResult = await login(config, {
-//   });
+//   let loginResult = login({ config   });
 //   let credentials = cookie.value;
 //
 //   date = new Date("2023-10-01T00:11:00Z");
@@ -270,8 +276,7 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   let loginResult = await login(config, {
-//   });
+//   let loginResult = login({ config   });
 //   let credentials = cookie.value;
 //
 //   date = new Date("2023-10-01T00:11:00Z");
@@ -279,8 +284,7 @@ function runAction(sessions, action) {
 //   credentials = cookie.value;
 //
 //   date = new Date("2023-10-01T00:14:00Z");
-//   loginResult = await login(config, {
-//   });
+//   loginResult = login({ config   });
 //
 //   const consumeResult = await consume(config, { credentials: cookie.value });
 //   if (consumeResult.state !== "SessionActive") throw new Error();
@@ -291,8 +295,7 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   const userCookie = await login(config, {
-//   });
+//   const userCookie = login({ config   });
 //   let userToken = userCookie.value;
 //
 //   const attackerToken = userToken;
@@ -325,8 +328,7 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   const userCookie = await login(config, {
-//   });
+//   const userCookie = login({ config   });
 //   const userToken = userCookie.value;
 //
 //   let attackerToken = userToken;
@@ -359,8 +361,7 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   const userCookie = await login(config, {
-//   });
+//   const userCookie = login({ config   });
 //   const userToken = userCookie.value;
 //   let attackerToken = userToken;
 //
@@ -386,8 +387,7 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   const userCookie = await login(config, {
-//   });
+//   const userCookie = login({ config   });
 //   let userToken = userCookie.value;
 //   const attackerToken = userToken;
 //
@@ -414,14 +414,13 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   const loginResult = await login(config, {
-//   });
+//   const loginResult = login({ config   });
 //   let credentials = cookie.value;
 //   const prevToken = credentials;
 //
 //   date = new Date("2023-10-01T00:11:00Z");
 //
-//   let session = await consume(config, { credentials: prevToken });
+//   let consumeResult = await consume(config, { credentials: prevToken });
 //   if (consumeResult.state !== "TokenRotated") throw new Error();
 //   credentials = session.cookie.value;
 //
@@ -435,8 +434,7 @@ function runAction(sessions, action) {
 //   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
 //   const sessions = createDb();
 //
-//   const loginResult = await login(config, {
-//   });
+//   const loginResult = login({ config   });
 //   let credentials = cookie.value;
 //   const prevToken = credentials;
 //   const credentialsRotated = Promise.withResolvers();
