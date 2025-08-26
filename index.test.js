@@ -147,16 +147,13 @@ function runAction(sessions, action) {
 
   date = new Date("2023-10-01T00:11:00Z");
   const consumeResult = await consume({ credentials, config, session });
-  runAction(sessions, consumeResult.action);
-
   if (consumeResult.state !== "TokenRotated") throw new Error();
-  if (consumeResult.cookie === undefined) throw new Error();
   if (consumeResult.cookie.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
     throw new Error();
 
+  runAction(sessions, consumeResult.action);
   session = sessions.get(credentials.idHash);
   if (session === undefined) throw new Error();
-
   if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
   if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
 }
