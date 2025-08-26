@@ -61,28 +61,6 @@ type login = (arg: { config?: Config }) => Promise<{
 }>;
 export const login: login;
 
-// type consume = (arg: {
-//   readonly credentials: Credentials;
-//   readonly session: {
-//     readonly oddTokenHash: string;
-//     readonly evenTokenHash?: string;
-//     readonly exp: Date;
-//     readonly tokenExp: Date;
-//     readonly isLatestTokenOdd: boolean;
-//   };
-//   readonly config?: Config;
-// }) => Promise<{
-//   readonly state:
-//     | "SessionForked"
-//     | "SessionExpired"
-//     | "TokenRotated"
-//     | "SessionActive"
-//     | "CookieMalformed";
-//
-//   readonly cookie?: Cookie;
-//   readonly action?: Action;
-// }>;
-
 export type ConsumeResult =
   | {
       readonly state: "SessionForked";
