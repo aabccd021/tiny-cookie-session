@@ -22,10 +22,14 @@ const testConfig = {
 };
 
 /**
- * @param {import("./index").Action} action
  * @param {Map<string, Session>} sessions
+ * @param {import("./index").Action} [action]
  */
-function handleAction(action, sessions) {
+function handleAction(sessions, action) {
+  if (action === undefined) {
+    return;
+  }
+
   if (action.type === "insert") {
     sessions.set(action.idHash, {
       oddTokenHash: action.oddTokenHash,
@@ -65,7 +69,7 @@ function handleAction(action, sessions) {
   const sessions = createDb();
 
   const loginResult = await login({ config });
-  handleAction(loginResult.action, sessions);
+  handleAction(sessions, loginResult.action);
 
   if (loginResult.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
     throw new Error();
@@ -81,14 +85,14 @@ function handleAction(action, sessions) {
   const sessions = createDb();
 
   const loginResult = await login({ config });
-  handleAction(loginResult.action, sessions);
+  handleAction(sessions, loginResult.action);
 
   const credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
   if (credentials === undefined) throw new Error();
 
   date = new Date("2023-10-01T00:01:00Z");
   const logoutResult = await logout({ credentials });
-  handleAction(logoutResult.action, sessions);
+  handleAction(sessions, logoutResult.action);
 
   if (logoutResult.cookie.value !== "") throw new Error();
   if (logoutResult.cookie.options.maxAge !== 0) throw new Error();
@@ -100,7 +104,7 @@ function handleAction(action, sessions) {
   const sessions = createDb();
 
   const loginResult = await login({ config });
-  handleAction(loginResult.action, sessions);
+  handleAction(sessions, loginResult.action);
 
   const credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
   if (credentials === undefined) throw new Error();
@@ -109,6 +113,7 @@ function handleAction(action, sessions) {
   if (session === undefined) throw new Error();
 
   const consumeResult = await consume({ credentials, config, session });
+  handleAction(sessions, consumeResult.action);
   if (consumeResult.state !== "SessionActive") throw new Error();
 
   if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
