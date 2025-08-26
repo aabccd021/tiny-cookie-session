@@ -12,41 +12,37 @@ const logoutCookie = {
   },
 };
 
-function generateToken() {
+const defaultSessionExpiresIn = 1000 * 60 * 60 * 24 * 7;
+const defaultTokenExpiresIn = 1000 * 60 * 2;
+
+function generateRandomHex() {
   // @ts-ignore https://tc39.es/proposal-arraybuffer-base64
   return crypto.getRandomValues(new Uint8Array(32)).toHex();
 }
 
 /**
- * @param {string} token
+ * @type {import("./index").hash}
  */
-async function hashToken(token) {
+const hash = async (token) => {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   // @ts-ignore https://tc39.es/proposal-arraybuffer-base64
   return new Uint8Array(hashBuffer).toHex();
-}
+};
 
 /**
- * @template S
- * @template I
- * @param {import("./index").Config<S, I>} config
+ * @type {import("./index").login}
  */
-async function createNewTokenCookie(config) {
-  const token = generateToken();
-  const tokenHash = await hashToken(token);
-  const now = config.dateNow?.() ?? new Date();
-
-  /*
-  We use `sessionExpiresIn` instead of `tokenExpiresIn` here, because we want the cookie to expire 
-  when the session expires, not when the token expires. This allows the user to stay logged in as 
-  long as the session is valid, even if the token is rotated frequently.
-  */
-  const expires = new Date(now.getTime() + config.sessionExpiresIn);
+export const login = async (arg) => {
+  const id = generateRandomHex();
+  const token = generateRandomHex();
+  const now = arg.config?.dateNow?.() ?? new Date();
+  const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
+  const expires = new Date(now.getTime() + sessionExpiresIn);
 
   /** @type {import("./index").Cookie} */
   const cookie = {
-    value: token,
+    value: `${id}:${token}`,
     options: {
       httpOnly: true,
       sameSite: "lax",
@@ -56,191 +52,115 @@ async function createNewTokenCookie(config) {
     },
   };
 
-  return { cookie, tokenHash };
-}
+  const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
+  return {
+    cookie,
+    action: {
+      type: "insert",
+      idHash: await hash(id),
+      exp: expires,
+      isLatestTokenOdd: true,
+      tokenExp: new Date(now.getTime() + tokenExpiresIn),
+      oddTokenHash: await hash(token),
+    },
+  };
+};
 
 /**
  * @type {import("./index").logout}
  */
-export const logout = async (config, arg) => {
-  const tokenHash = await hashToken(arg.token);
-  config.deleteSession({ tokenHash });
-  return logoutCookie;
+export const logout = async (arg) => {
+  return {
+    cookie: logoutCookie,
+    action: {
+      type: "delete",
+      idHash: arg.idHash,
+    },
+  };
 };
 
 /**
- * @type {import("./index").login}
+ * @type {import("./index").credentialsFromCookie}
  */
-export const login = async (config, arg) => {
-  const { cookie, tokenHash } = await createNewTokenCookie(config);
-  const now = config.dateNow?.() ?? new Date();
+export const credentialsFromCookie = async (arg) => {
+  const [sessionId, token] = arg.cookie.split(":");
+  if (sessionId === undefined || token === undefined) {
+    return undefined;
+  }
 
-  config.insertSession({
-    tokenHash,
-    id: arg.id,
-    exp: new Date(now.getTime() + config.sessionExpiresIn),
-    tokenExp: new Date(now.getTime() + config.tokenExpiresIn),
-    data: arg.data,
-  });
-  return cookie;
+  const sessionIdHash = await hash(sessionId);
+  return { sessionId, token, sessionIdHash };
 };
 
 /**
- * @type {import("./index").consumeSession}
+ * @type {import("./index").consume}
  */
-export const consumeSession = async (config, arg) => {
-  const requestTokenHash = await hashToken(arg.token);
-  const session = await config.selectSession({ tokenHash: requestTokenHash });
-  const now = config.dateNow?.() ?? new Date();
+export const consume = async (arg) => {
+  const requestTokenHash = await hash(arg.credentials.token);
+  const isOddToken = requestTokenHash === arg.dbSession.oddTokenHash;
+  const isEvenToken = requestTokenHash === arg.dbSession.evenTokenHash;
 
-  if (session === undefined) {
+  if (!isOddToken && !isEvenToken) {
     return {
-      state: "NotFound",
+      state: "SessionForked",
       cookie: logoutCookie,
+      action: {
+        type: "delete",
+        idHash: arg.dbSession.idHash,
+      },
     };
   }
 
-  const isTokenLatest0 = requestTokenHash === session.latestTokenHash[0];
-  const isTokenLatest1 = requestTokenHash === session.latestTokenHash[1];
+  const now = arg.config?.dateNow?.() ?? new Date();
+  if (arg.dbSession.exp.getTime() <= now.getTime()) {
+    return {
+      state: "SessionExpired",
+      cookie: logoutCookie,
+      action: {
+        type: "delete",
+        idHash: arg.dbSession.idHash,
+      },
+    };
+  }
 
-  // Exclude hashes to avoid accidentally logging them,
-  // also explicitly specify the properties to return to avoid returning unnecessary values
-  const returnData = {
-    id: session.id,
-    data: session.data,
-    exp: session.exp,
-    tokenExp: session.tokenExp,
+  const isLatestToken = arg.dbSession.isLatestTokenOdd ? isOddToken : isEvenToken;
+  const shouldRotate = arg.dbSession.tokenExp.getTime() <= now.getTime() && isLatestToken;
+  if (!shouldRotate) {
+    return { state: "SessionActive" };
+  }
+
+  const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
+  const exp = new Date(now.getTime() + sessionExpiresIn);
+  const token = generateRandomHex();
+
+  /** @type {import("./index").Cookie} */
+  const cookie = {
+    value: `${arg.credentials.sessionId}:${token}`,
+    options: {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: true,
+      expires: exp,
+    },
   };
 
-  if (!isTokenLatest0 && !isTokenLatest1) {
-    config.deleteSession({ tokenHash: requestTokenHash });
-    return {
-      ...returnData,
-      state: "TokenStolen",
-      cookie: logoutCookie,
-    };
-  }
-
-  if (session.exp < now) {
-    config.deleteSession({ tokenHash: requestTokenHash });
-    return {
-      ...returnData,
-      state: "Expired",
-      cookie: logoutCookie,
-    };
-  }
-
-  if (session.tokenExp <= now && isTokenLatest0) {
-    const { cookie, tokenHash } = await createNewTokenCookie(config);
-    const exp = new Date(now.getTime() + config.sessionExpiresIn);
-    const tokenExp = new Date(now.getTime() + config.tokenExpiresIn);
-    config.updateSession({
-      id: session.id,
-      tokenHash,
-      exp,
-      tokenExp,
-    });
-    return {
-      ...returnData,
-      state: "TokenRotated",
-      cookie,
-      exp,
-      tokenExp,
-    };
-  }
+  const tokenHashStr = await hash(token);
+  const isNextOddToken = !arg.dbSession.isLatestTokenOdd;
+  const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
+  const tokenExp = new Date(now.getTime() + tokenExpiresIn);
 
   return {
-    ...returnData,
-    state: "Active",
+    state: "TokenRotated",
+    cookie,
+    action: {
+      type: "update",
+      idHash: arg.dbSession.idHash,
+      isLatestTokenOdd: isNextOddToken,
+      oddTokenHash: isNextOddToken ? tokenHashStr : undefined,
+      evenTokenHash: isNextOddToken ? undefined : tokenHashStr,
+      exp,
+      tokenExp,
+    },
   };
-};
-
-/**
- * @type {import("./index").testConfig}
- */
-export const testConfig = async (config, argSessions) => {
-  if (config.tokenExpiresIn >= config.sessionExpiresIn) {
-    throw new Error("tokenExpiresIn must be less than sessionExpiresIn");
-  }
-
-  const states = [];
-
-  // Simulate innserting multiple sessions
-  for (const argSession of argSessions) {
-    const latestTokenHash2 = await hashToken(generateToken());
-    const latestTokenHash1 = await hashToken(generateToken());
-    const latestTokenHash0 = await hashToken(generateToken());
-
-    const start = new Date();
-    await config.insertSession({
-      id: argSession.id,
-      tokenHash: latestTokenHash2,
-      exp: new Date(start.getTime() + config.sessionExpiresIn),
-      tokenExp: new Date(start.getTime() + config.tokenExpiresIn),
-      data: argSession.data,
-    });
-
-    await config.updateSession({
-      id: argSession.id,
-      tokenHash: latestTokenHash1,
-      exp: new Date(start.getTime() + 10000 + config.sessionExpiresIn),
-      tokenExp: new Date(start.getTime() + 1000 + config.tokenExpiresIn),
-    });
-
-    await config.updateSession({
-      id: argSession.id,
-      tokenHash: latestTokenHash0,
-      exp: new Date(start.getTime() + 20000 + config.sessionExpiresIn),
-      tokenExp: new Date(start.getTime() + 2000 + config.tokenExpiresIn),
-    });
-
-    states.push({ start, latestTokenHash0, latestTokenHash1, latestTokenHash2 });
-  }
-
-  // Simulate session selection and deletion
-  for (const argSession of argSessions) {
-    const sessionHashes = states.shift();
-    if (sessionHashes === undefined) {
-      throw new Error("Absurd");
-    }
-
-    const { start, latestTokenHash0, latestTokenHash1, latestTokenHash2 } = sessionHashes;
-
-    for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
-      const session = await config.selectSession({ tokenHash });
-      if (session === undefined) {
-        throw new Error("Session not found");
-      }
-
-      if (session.id !== argSession.id) {
-        throw new Error("Session id does not match");
-      }
-
-      if (session.latestTokenHash[0] !== latestTokenHash0) {
-        throw new Error("Session latestTokenHash0 does not match");
-      }
-
-      if (session.latestTokenHash[1] !== latestTokenHash1) {
-        throw new Error("Session latestTokenHash1 does not match");
-      }
-
-      const expectedSessionExp = new Date(start.getTime() + 20000 + config.sessionExpiresIn);
-      if (session.exp.getTime() !== expectedSessionExp.getTime()) {
-        throw new Error("Session expired");
-      }
-
-      const expectedTokenExp = new Date(start.getTime() + 2000 + config.tokenExpiresIn);
-      if (session.tokenExp.getTime() !== expectedTokenExp.getTime()) {
-        throw new Error("Token expired");
-      }
-    }
-
-    await config.deleteSession({ tokenHash: latestTokenHash0 });
-    for (const tokenHash of [latestTokenHash0, latestTokenHash1, latestTokenHash2]) {
-      const session = await config.selectSession({ tokenHash });
-      if (session !== undefined) {
-        throw new Error("Session should not be found after deletion");
-      }
-    }
-  }
 };

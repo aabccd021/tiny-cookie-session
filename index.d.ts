@@ -13,112 +13,78 @@ export type Cookie = {
   options: CookieOptions;
 };
 
-export type SessionSelect<S> = {
-  id: string;
-  exp: Date;
-  tokenExp: Date;
-  data: S;
-  latestTokenHash: readonly [string, string | undefined];
+export type Config = {
+  readonly dateNow?: () => Date;
+  readonly sessionExpiresIn: number;
+  readonly tokenExpiresIn: number;
 };
 
-export type NotFoundSession<_S> = {
-  state: "NotFound";
-  cookie: Cookie;
+type Credentials = {
+  readonly sessionId: string;
+  readonly sessionIdHash: string;
+  readonly token: string;
 };
 
-export type TokenStolenSession<S> = {
-  state: "TokenStolen";
-  cookie: Cookie;
-  id: string;
-  exp: Date;
-  tokenExp: Date;
-  data: S;
-};
+export type SessionAction =
+  | {
+      readonly type: "insert";
+      readonly idHash: string;
+      readonly exp: Date;
+      readonly oddTokenHash: string;
+      readonly tokenExp: Date;
+      readonly isLatestTokenOdd: boolean;
+    }
+  | {
+      readonly type: "update";
+      readonly idHash: string;
+      readonly exp: Date;
+      readonly oddTokenHash?: string;
+      readonly evenTokenHash?: string;
+      readonly tokenExp: Date;
+      readonly isLatestTokenOdd: boolean;
+    }
+  | {
+      readonly type: "delete";
+      readonly idHash: string;
+    };
 
-export type ExpiredSession<S> = {
-  state: "Expired";
-  cookie: Cookie;
-  id: string;
-  exp: Date;
-  tokenExp: Date;
-  data: S;
-};
+type hash = (token: string) => Promise<string>;
 
-export type TokenRotatedSession<S> = {
-  state: "TokenRotated";
-  cookie: Cookie;
-  id: string;
-  exp: Date;
-  tokenExp: Date;
-  data: S;
-};
-
-export type ActiveSession<S> = {
-  state: "Active";
-  id: string;
-  exp: Date;
-  tokenExp: Date;
-  data: S;
-};
-
-export type Session<S> =
-  | NotFoundSession<S>
-  | TokenStolenSession<S>
-  | ExpiredSession<S>
-  | TokenRotatedSession<S>
-  | ActiveSession<S>;
-
-export type Config<S, I> = {
-  dateNow?: () => Date;
-  sessionExpiresIn: number;
-  tokenExpiresIn: number;
-  selectSession: (arg: { tokenHash: string }) => Promise<SessionSelect<S> | undefined>;
-  insertSession: (arg: {
-    id: string;
-    exp: Date;
-    tokenHash: string;
-    tokenExp: Date;
-    data: I;
-  }) => Promise<void>;
-  updateSession: (arg: {
-    id: string;
-    exp: Date;
-    tokenExp: Date;
-    tokenHash: string;
-  }) => Promise<void>;
-  deleteSession: (arg: { tokenHash: string }) => Promise<void>;
-};
-type logout = <S, I>(
-  config: Config<S, I>,
-  arg: {
-    token: string;
-  },
-) => Promise<Cookie>;
+type logout = (arg: { readonly idHash: string }) => Promise<{
+  readonly cookie: Cookie;
+  readonly action: SessionAction;
+}>;
 export const logout: logout;
 
-type login = <S, I>(
-  config: Config<S, I>,
-  arg: {
-    data: I;
-    id: string;
-  },
-) => Promise<Cookie>;
+type login = (arg: { config?: Config }) => Promise<{
+  readonly cookie: Cookie;
+  readonly action: SessionAction;
+}>;
 export const login: login;
 
-type consumeSession = <S, I>(
-  config: Config<S, I>,
-  arg: {
-    token: string;
-  },
-) => Promise<Session<S>>;
+type consume = (arg: {
+  readonly credentials: Credentials;
+  readonly dbSession: {
+    readonly idHash: string;
+    readonly oddTokenHash: string;
+    readonly evenTokenHash?: string;
+    readonly exp: Date;
+    readonly tokenExp: Date;
+    readonly isLatestTokenOdd: boolean;
+  };
+  readonly config?: Config;
+}) => Promise<{
+  readonly state: 
+  | "SessionForked"
+  | "SessionExpired"
+  | "TokenRotated"
+  | "SessionActive"
+  | "CookieMalformed";
 
-export const consumeSession: consumeSession;
+  readonly cookie?: Cookie;
+  readonly action?: SessionAction;
+}>;
+export const consume: consume;
 
-type testConfig = <S, I>(
-  config: Config<S, I>,
-  argSessions: {
-    data: I;
-    id: string;
-  }[],
-) => Promise<void>;
-export const testConfig: testConfig;
+type credentialsFromCookie = (arg: { readonly cookie: string }) => Promise<Credentials | undefined>;
+export const credentialsFromCookie: credentialsFromCookie;
