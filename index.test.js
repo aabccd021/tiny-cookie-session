@@ -455,32 +455,42 @@ async function consume(db, config, arg) {
     if (userSession?.state !== "SessionForked") throw new Error();
   }
 }
-//
-// {
-//   console.info("# consume: state SessionForked, user, attacker, user, attacker");
-//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//
-//
-//   const userSession = await login(db, {config   });
-//   userCookie = userSession.cookie.value;
-//   attackerCookie = userCookie;
-//
-//   date = ("2023-10-01T00:11:00Z");
-//   const userSession = await consume(db, config, { cookie: userCookie });
-//   if (userSession?.state !== "TokenRotated") throw new Error();
-//   userCookie = userSession.cookie.value;
-//
-//   date = ("2023-10-01T00:22:00Z");
-//   const attackerSession = await consume(db, config, { cookie: attackerCookie });
-//   if (attackerSession?.state !== "SessionActive") throw new Error();
-//
-//   const userSession = await consume(db, config, { cookie: userCookie });
-//   if (userSession?.state !== "TokenRotated") throw new Error();
-//   userCookie = userSession.cookie.value;
-//
-//  const attackerSession = await consume(db, config, { cookie: attackerCookie });
-//   if (attackerSession?.state !== "SessionForked") throw new Error();
-// }
+
+{
+  console.info("# consume: state SessionForked, user, attacker, user, attacker");
+  /** @type {string} */ let userCookie;
+  /** @type {string} */ let attackerCookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
+  const config = { ...testConfig, dateNow: () => new Date(date) };
+
+  {
+    date = "2023-10-01T00:00:00Z";
+    const userSession = await login(db, { config });
+    userCookie = userSession.cookie.value;
+  }
+  attackerCookie = userCookie;
+  {
+    date = "2023-10-01T00:11:00Z";
+    const userSession = await consume(db, config, { cookie: userCookie });
+    if (userSession?.state !== "TokenRotated") throw new Error();
+    userCookie = userSession.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:22:00Z";
+    const attackerSession = await consume(db, config, { cookie: attackerCookie });
+    if (attackerSession?.state !== "SessionActive") throw new Error();
+  }
+  {
+    const userSession = await consume(db, config, { cookie: userCookie });
+    if (userSession?.state !== "TokenRotated") throw new Error();
+    userCookie = userSession.cookie.value;
+  }
+  {
+    const attackerSession = await consume(db, config, { cookie: attackerCookie });
+    if (attackerSession?.state !== "SessionForked") throw new Error();
+  }
+}
 //
 // {
 //   console.info("# consume: state SessionActive with second last credentials");
