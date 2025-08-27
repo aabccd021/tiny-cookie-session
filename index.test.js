@@ -493,7 +493,7 @@ async function consume(db, config, arg) {
 }
 
 {
-  console.info("# consume: state SessionActive with previous cookie");
+  console.info("# consume: state SessionActive with previous cookie (race condition)");
 
   /** @type {string} */ let cookie;
   /** @type {string} */ let prevCookie;
@@ -506,21 +506,25 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
-  prevCookie = cookie;
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
     cookie = session.cookie.value;
   }
   {
     const session = await consume(db, config, { cookie: prevCookie });
     if (session?.state !== "SessionActive") throw new Error();
   }
+  {
+    const session = await consume(db, config, { cookie: cookie });
+    if (session?.state !== "SessionActive") throw new Error();
+  }
 }
 
 {
-  console.info("# consume: state SessionActive on race condition");
+  console.info("# consume: state SessionActive with previous cookie after two rotations");
 
   /** @type {string} */ let cookie;
   /** @type {string} */ let prevCookie;
@@ -533,44 +537,26 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
-  prevCookie = cookie;
   {
-    const credentialsRotated = Promise.withResolvers();
-    const secondRequestFinished = Promise.withResolvers();
-
     date = "2023-10-01T00:11:00Z";
-
-    await Promise.all([
-      (async () => {
-        const session = await consume(db, config, { cookie });
-
-        credentialsRotated.resolve(undefined);
-        await secondRequestFinished.promise;
-
-        // emulate set-credentials
-        if (session?.state === "TokenRotated") {
-          cookie = session.cookie.value;
-        } else if (session?.state !== "SessionActive") {
-          throw new Error();
-        }
-      })(),
-
-      (async () => {
-        await credentialsRotated.promise;
-
-        const session = await consume(db, config, { cookie });
-
-        // emulate set-credentials
-        if (session?.state === "TokenRotated") {
-          cookie = session.cookie.value;
-        } else if (session?.state !== "SessionActive") {
-          throw new Error();
-        }
-
-        secondRequestFinished.resolve(undefined);
-      })(),
-    ]);
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
+    cookie = session.cookie.value;
   }
-
-  if (prevCookie === cookie) throw new Error();
+  {
+    date = "2023-10-01T00:22:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
+    cookie = session.cookie.value;
+  }
+  {
+    const session = await consume(db, config, { cookie: prevCookie });
+    if (session?.state !== "SessionActive") throw new Error();
+  }
+  {
+    const session = await consume(db, config, { cookie: cookie });
+    if (session?.state !== "SessionActive") throw new Error();
+  }
 }
