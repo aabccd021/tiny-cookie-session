@@ -138,7 +138,6 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
       throw new Error();
-
     cookie = session.cookie.value;
   }
 
@@ -162,7 +161,6 @@ async function consume(db, config, arg) {
   {
     date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
-
     cookie = session.cookie.value;
   }
 
@@ -191,7 +189,6 @@ async function consume(db, config, arg) {
   {
     date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
-
     cookie = session.cookie.value;
   }
 
@@ -215,7 +212,6 @@ async function consume(db, config, arg) {
   {
     date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
-
     cookie = session.cookie.value;
   }
 
@@ -240,7 +236,6 @@ async function consume(db, config, arg) {
   {
     date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
-
     cookie = session.cookie.value;
   }
 
@@ -267,7 +262,6 @@ async function consume(db, config, arg) {
   {
     date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
-
     cookie = session.cookie.value;
   }
 
@@ -275,7 +269,6 @@ async function consume(db, config, arg) {
     date = new Date("2023-10-01T00:11:00Z");
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
-
     cookie = session.cookie.value;
   }
 
@@ -299,7 +292,6 @@ async function consume(db, config, arg) {
   {
     date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
-
     cookie = session.cookie.value;
   }
 
@@ -329,7 +321,6 @@ async function consume(db, config, arg) {
   {
     date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
-
     cookie = session.cookie.value;
   }
 
@@ -337,7 +328,6 @@ async function consume(db, config, arg) {
     date = new Date("2023-10-01T00:11:00Z");
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
-
     cookie = session.cookie.value;
   }
 
@@ -345,7 +335,6 @@ async function consume(db, config, arg) {
     date = new Date("2023-10-01T00:22:00Z");
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
-
     cookie = session.cookie.value;
   }
 
