@@ -91,7 +91,7 @@ async function consume(db, config, arg) {
 
   const data = db.get(credentials.idHash);
   if (data === undefined) {
-    return { state: "SessionExpired", data: undefined, cookie: lib.logoutCookie };
+    return { state: "SessionNotFound", data: undefined, cookie: lib.logoutCookie };
   }
 
   const result = await lib.consume({ credentials, config, session: data });
@@ -160,7 +160,7 @@ async function consume(db, config, arg) {
   }
   {
     const session = await consume(db, config, { cookie });
-    if (session?.state !== "SessionExpired") throw new Error();
+    if (session?.state !== "SessionNotFound") throw new Error();
   }
 }
 
@@ -281,7 +281,7 @@ async function consume(db, config, arg) {
   }
   {
     const session = await consume(db, config, { cookie });
-    if (session?.state !== "SessionExpired") throw new Error();
+    if (session?.state !== "SessionNotFound") throw new Error();
   }
 }
 
@@ -377,7 +377,7 @@ async function consume(db, config, arg) {
   }
   {
     const userSession = await consume(db, config, { cookie: userCookie });
-    if (userSession?.state !== "SessionExpired") throw new Error();
+    if (userSession?.state !== "SessionNotFound") throw new Error();
   }
 }
 
@@ -415,7 +415,7 @@ async function consume(db, config, arg) {
   }
   {
     const attackerSession = await consume(db, config, { cookie: userCookie });
-    if (attackerSession?.state !== "SessionExpired") throw new Error();
+    if (attackerSession?.state !== "SessionNotFound") throw new Error();
   }
 }
 
