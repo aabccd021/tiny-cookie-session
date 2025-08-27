@@ -31,12 +31,10 @@ function runAction(db, action) {
       tokenExp: action.tokenExp,
       isLatestTokenOdd: true,
     });
-    return;
   }
 
   if (action.type === "delete") {
     db.delete(action.idHash);
-    return;
   }
 
   if (action.type === "update") {
@@ -52,7 +50,6 @@ function runAction(db, action) {
     session.isLatestTokenOdd = action.isLatestTokenOdd;
     session.tokenExp = action.tokenExp;
     session.exp = action.exp;
-    return;
   }
 }
 
