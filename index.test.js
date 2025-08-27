@@ -119,6 +119,7 @@ async function consume(db, config, arg) {
 
 {
   console.info("# login");
+
   /** @type {string} */ let cookie;
   /** @type {string} */ let date;
   /** @type {Map<string, Session>} */ const db = new Map();
@@ -142,6 +143,7 @@ async function consume(db, config, arg) {
 
 {
   console.info("# logout");
+
   /** @type {string} */ let cookie;
   /** @type {string} */ let date;
   /** @type {Map<string, Session>} */ const db = new Map();
@@ -190,6 +192,7 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state SessionActive after 9 minutes");
+
   /** @type {string} */ let cookie;
   /** @type {string} */ let date;
   /** @type {Map<string, Session>} */ const db = new Map();
@@ -213,6 +216,7 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state TokenRotated after 11 minutes");
+
   /** @type {string} */ let cookie;
   /** @type {string} */ let date;
   /** @type {Map<string, Session>} */ const db = new Map();
