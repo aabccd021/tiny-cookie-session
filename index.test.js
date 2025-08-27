@@ -2,10 +2,10 @@ import * as lib from ".";
 
 /**
  * @typedef {Object} Session
- * @property {string} oddTokenHash
- * @property {string} [evenTokenHash]
  * @property {Date} exp
  * @property {Date} tokenExp
+ * @property {string} oddTokenHash
+ * @property {string} [evenTokenHash]
  * @property {boolean} isLatestTokenOdd
  */
 

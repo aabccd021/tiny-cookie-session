@@ -12,119 +12,124 @@ bun install github:aabccd021/tiny-cookie-session
 
 ## Configuration
 
-This library requires a storage adapter configuration that implements four core functions: `selectSession`, `insertSession`, `updateSession`, and `deleteSession`.
+This library returns action objects that you need to execute against your database. You'll need to implement a way to handle these actions in your database of choice.
 
 ### Bun SQLite Configuration Example
 
 ```js
-// TODO library updated and no more methods like `selectSession`, instead the user need to implement `runAction`
 import { Database } from "bun:sqlite";
-import { login, logout, consumeSession, testConfig } from "tiny-cookie-session";
+import { login, logout, credentialsFromCookie, consume } from "tiny-cookie-session";
 
-// Create and initialize your database
 const db = new Database("sessions.db");
-db.exec("PRAGMA foreign_keys = ON;");
 db.run(`
   CREATE TABLE IF NOT EXISTS session (
-    id TEXT PRIMARY KEY,
-    expiration_time INTEGER NOT NULL,
-    user_id TEXT NOT NULL,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    id_hash TEXT PRIMARY KEY,
+    odd_token_hash TEXT,
+    even_token_hash TEXT,
+    exp INTEGER NOT NULL,
+    token_exp INTEGER NOT NULL,
+    is_latest_token_odd BOOLEAN NOT NULL,
+    user_id TEXT NOT NULL
   );
 `);
 
 // Create session configuration
-const sessionConfig = {
+const config = {
   sessionExpiresIn: 5 * 60 * 60 * 1000, // 5 hours
   tokenExpiresIn: 10 * 60 * 1000, // 10 minutes
-
-  selectSession: async ({ tokenHash }) => {
-    const session = db
-      .query(
-        `
-          SELECT 
-            s.id, 
-            s.expiration_time as expirationTime, 
-            s.user_id as userId,
-            s.created_at as createdAt
-          FROM session s
-          WHERE t.hash = $tokenHash
-        `,
-      )
-      .get({ tokenHash });
-
-    if (!session) return undefined;
-
-    // Get the two most recent tokens for this session
-    const tokenHashes = db
-      .query(
-        `
-          SELECT hash
-          WHERE session_id = $sessionId
-          ORDER BY expiration_time DESC
-          LIMIT 2
-        `,
-      )
-      .all({ sessionId: session.id });
-
-    const [tokenHash0, tokenHash1] = tokenHashes;
-
-    if (tokenHash0 === undefined) throw new Error("Expected at least one token");
-
-    return {
-      id: session.id,
-      exp: new Date(session.expirationTime),
-      tokenExp: new Date(session.expirationTime),
-      latestTokenHashes: [tokenHash0, tokenHash1],
-      data: {
-        userId: session.userId,
-        createdAt: new Date(session.createdAt),
-      },
-    };
-  },
-
-  insertSession: async ({ id, exp, tokenHash, tokenExp, data }) => {
-      db.query(
-        `
-          INSERT INTO session (id, expiration_time, user_id)
-          VALUES ($id, $exp, $userId)
-        `,
-      ).run({
-        id,
-        exp: exp.getTime(),
-        userId: data.userId,
-      });
-
-  },
-
-  updateSession: async ({ id, exp, tokenExp, tokenHash }) => {
-      db.query(
-        `
-          UPDATE session
-          SET expiration_time = $exp
-          WHERE id = $id
-        `,
-      ).run({
-        id,
-        exp: exp.getTime(),
-      });
-  },
-
-  deleteSession: async ({ tokenHash }) => {
-    db.query(
-      `
-        DELETE FROM session
-        WHERE id IN ()
-      `,
-    ).run({ tokenHash });
-  },
 };
+
+// Function to run actions returned by library functions
+async function runAction(action) {
+  if (!action) return;
+
+  if (action.type === "insert") {
+    db.query(`
+      INSERT INTO session (
+        id_hash, 
+        odd_token_hash, 
+        exp, 
+        token_exp, 
+        is_latest_token_odd,
+        user_id
+      )
+      VALUES (
+        :idHash, 
+        :oddTokenHash, 
+        :exp, 
+        :tokenExp, 
+        :isLatestTokenOdd,
+        :userId
+      )
+    `).run({
+      idHash: action.idHash,
+      oddTokenHash: action.oddTokenHash,
+      exp: action.exp.getTime(),
+      tokenExp: action.tokenExp.getTime(),
+      isLatestTokenOdd: action.isLatestTokenOdd ? 1 : 0,
+      userId: action.data.userId
+    });
+  }
+
+  if (action.type === "update") {
+    db.query(`
+      UPDATE session
+      SET 
+        odd_token_hash = COALESCE(:oddTokenHash, odd_token_hash),
+        even_token_hash = COALESCE(:evenTokenHash, even_token_hash),
+        exp = :exp,
+        token_exp = :tokenExp,
+        is_latest_token_odd = :isLatestTokenOdd
+      WHERE id_hash = :idHash
+    `).run({
+      idHash: action.idHash,
+      oddTokenHash: action.oddTokenHash,
+      evenTokenHash: action.evenTokenHash,
+      exp: action.exp.getTime(),
+      tokenExp: action.tokenExp.getTime(),
+      isLatestTokenOdd: action.isLatestTokenOdd ? 1 : 0
+    });
+  }
+
+  if (action.type === "delete") {
+    db.query(`
+      DELETE FROM session
+      WHERE id_hash = :idHash
+    `).run({ idHash: action.idHash });
+  }
+}
+
+// Function to get session from database
+async function getSession(idHash) {
+  const row = db.query(`
+    SELECT 
+      odd_token_hash as oddTokenHash, 
+      even_token_hash as evenTokenHash, 
+      exp, 
+      token_exp as tokenExp, 
+      is_latest_token_odd as isLatestTokenOdd,
+      user_id as userId
+    FROM session
+    WHERE id_hash = :idHash
+  `).get({ idHash });
+  
+  if (!row) return undefined;
+  
+  return {
+    oddTokenHash: row.oddTokenHash,
+    evenTokenHash: row.evenTokenHash,
+    exp: new Date(row.exp),
+    tokenExp: new Date(row.tokenExp),
+    isLatestTokenOdd: Boolean(row.isLatestTokenOdd),
+    data: { userId: row.userId }
+  };
+}
 ```
 
 ### In-Memory Store Configuration Example
 
 ```js
-// TODO
+// See test file for implementation details
 ```
 
 See [test](./index.test.js) for actual implementation and testing of the in-memory store.
@@ -132,12 +137,13 @@ See [test](./index.test.js) for actual implementation and testing of the in-memo
 ## Basic Usage
 
 ```js
-import { login, logout, consumeSession } from "tiny-cookie-session";
+import { login, logout, credentialsFromCookie, consume } from "tiny-cookie-session";
 import { serve } from "bun";
 
-// Initialize your session config (see previous examples)
-const sessionConfig = {
-  /* your session config */
+// Initialize your session config
+const config = {
+  sessionExpiresIn: 5 * 60 * 60 * 1000, // 5 hours
+  tokenExpiresIn: 10 * 60 * 1000, // 10 minutes
 };
 
 serve({
@@ -147,17 +153,19 @@ serve({
 
     // Login endpoint
     if (url.pathname === "/login") {
-      // Create a new session
+      // Authenticate user (not shown)
       const userId = "user-123"; // From your authentication system
-      const sessionId = crypto.randomUUID();
-
-      const cookie = await login(sessionConfig, {
-        id: sessionId,
-        data: { userId },
+      
+      const result = await login({ 
+        config,
+        data: { userId }
       });
-
+      
+      // Run action to save session to database
+      await runAction(result.action);
+      
       // Create a cookie using Bun's built-in Cookie API
-      const bunCookie = new Bun.Cookie("session", cookie.value, cookie.options);
+      const bunCookie = new Bun.Cookie("session", result.cookie.value, result.cookie.options);
 
       return new Response("Logged in successfully", {
         headers: { "Set-Cookie": bunCookie.serialize() },
@@ -169,11 +177,16 @@ serve({
       const cookieHeader = request.headers.get("Cookie");
       if (!cookieHeader) return new Response("Not logged in", { status: 401 });
 
-      const token = new Bun.CookieMap(cookieHeader).get("session");
-      if (!token) return new Response("Not logged in", { status: 401 });
+      const cookieValue = new Bun.CookieMap(cookieHeader).get("session");
+      if (!cookieValue) return new Response("Not logged in", { status: 401 });
 
-      const cookie = await logout(sessionConfig, { token });
-      const bunCookie = new Bun.Cookie("session", cookie.value, cookie.options);
+      const credentials = await credentialsFromCookie({ cookie: cookieValue });
+      if (!credentials) return new Response("Invalid session", { status: 401 });
+      
+      const result = await logout({ credentials });
+      await runAction(result.action);
+      
+      const bunCookie = new Bun.Cookie("session", result.cookie.value, result.cookie.options);
 
       return new Response("Logged out successfully", {
         headers: { "Set-Cookie": bunCookie.serialize() },
@@ -185,46 +198,41 @@ serve({
       const cookieHeader = request.headers.get("Cookie");
       if (!cookieHeader) return new Response("Not logged in", { status: 401 });
 
-      const token = new Bun.CookieMap(cookieHeader).get("session");
-      if (!token) return new Response("Not logged in", { status: 401 });
+      const cookieValue = new Bun.CookieMap(cookieHeader).get("session");
+      if (!cookieValue) return new Response("Not logged in", { status: 401 });
 
-      // Use the session
-      const session = await consumeSession(sessionConfig, { token });
-
+      const credentials = await credentialsFromCookie({ cookie: cookieValue });
+      if (!credentials) return new Response("Invalid session", { status: 401 });
+      
+      const session = await getSession(credentials.idHash);
+      if (!session) return new Response("Session not found", { status: 401 });
+      
+      const result = await consume({ 
+        credentials,
+        config,
+        session
+      });
+      
       // Handle different session states
-      if (session.state === "NotFound") {
-        const bunCookie = new Bun.Cookie("session", session.cookie.value, session.cookie.options);
-        return new Response("Not logged in", {
+      if (result.state === "SessionExpired" || result.state === "SessionForked") {
+        await runAction(result.action);
+        const bunCookie = new Bun.Cookie("session", result.cookie.value, result.cookie.options);
+        return new Response("Session invalid", {
           status: 401,
           headers: { "Set-Cookie": bunCookie.serialize() },
         });
       }
 
-      if (session.state === "TokenStolen") {
-        const bunCookie = new Bun.Cookie("session", session.cookie.value, session.cookie.options);
-        return new Response("Session invalidated due to potential theft", {
-          status: 401,
-          headers: { "Set-Cookie": bunCookie.serialize() },
-        });
-      }
-
-      if (session.state === "Expired") {
-        const bunCookie = new Bun.Cookie("session", session.cookie.value, session.cookie.options);
-        return new Response("Session expired", {
-          status: 401,
-          headers: { "Set-Cookie": bunCookie.serialize() },
-        });
-      }
-
-      if (session.state === "TokenRotated") {
+      if (result.state === "TokenRotated") {
+        await runAction(result.action);
         // Set the new token in the response
-        const bunCookie = new Bun.Cookie("session", session.cookie.value, session.cookie.options);
+        const bunCookie = new Bun.Cookie("session", result.cookie.value, result.cookie.options);
         return new Response(`Hello ${session.data.userId}`, {
           headers: { "Set-Cookie": bunCookie.serialize() },
         });
       }
 
-      if (session.state === "Active") {
+      if (result.state === "SessionActive") {
         return new Response(`Hello ${session.data.userId}`);
       }
     }
@@ -245,14 +253,14 @@ You'll need to use your platform's cookie handling capabilities or a dedicated c
 import cookie from "cookie";
 
 // When logging in
-const sessionCookie = await login(config, { id: sessionId, data: { userId } });
-const cookieStr = cookie.serialize("session", sessionCookie.value, sessionCookie.options);
+const result = await login({ config });
+const cookieStr = cookie.serialize("session", result.cookie.value, result.cookie.options);
 response.setHeader("Set-Cookie", cookieStr);
 
 // When using a session
 const cookies = cookie.parse(request.headers.cookie || "");
-const token = cookies.session;
-const session = await consumeSession(config, { token });
+const cookieValue = cookies.session;
+const credentials = await credentialsFromCookie({ cookie: cookieValue });
 ```
 
 ## Garbage Collecting Expired Sessions
@@ -261,7 +269,7 @@ As sessions expire, they should be removed from your database to prevent it from
 Since this library doesn't automatically delete expired sessions for inactive users, you'll need to implement your own garbage collection mechanism:
 
 ```js
-db.query("DELETE FROM session WHERE expiration_time < $now").run({ now });
+db.query("DELETE FROM session WHERE exp < :now").run({ now: Date.now() });
 ```
 
 Garbage collecting expired sessions is always safe and has no security implications, since those sessions would be rejected as "Expired" anyway if a user tried to use them.
@@ -272,10 +280,10 @@ This library allows you to immediately invalidate sessions by deleting them from
 
 ```js
 // Force logout a specific session
-db.query("DELETE FROM session WHERE id = $sessionId").run({ sessionId });
+db.query("DELETE FROM session WHERE id_hash = :idHash").run({ idHash });
 
 // Force logout all sessions for a specific user
-db.query("DELETE FROM session WHERE user_id = $userId").run({ userId });
+db.query("DELETE FROM session WHERE user_id = :userId").run({ userId });
 
 // Force logout all users
 db.query(`DELETE FROM session`).run();
@@ -287,16 +295,17 @@ To create session cookies that are removed when the browser closes (equivalent t
 
 ```js
 // When logging in
-const cookie = await login(config, { id: sessionId });
-delete cookie.options.expires;
-delete cookie.options.maxAge;
-const bunCookie = new Bun.Cookie("session", cookie.value, cookie.options);
+const result = await login({ config });
+await runAction(result.action);
+delete result.cookie.options.expires;
+delete result.cookie.options.maxAge;
+const bunCookie = new Bun.Cookie("session", result.cookie.value, result.cookie.options);
 
 // When rotating token
-if (session.state === "TokenRotated") {
-  delete session.cookie.options.expires;
-  delete session.cookie.options.maxAge;
-  const bunCookie = new Bun.Cookie("session", session.cookie.value, session.cookie.options);
+if (consumeResult.state === "TokenRotated") {
+  delete consumeResult.cookie.options.expires;
+  delete consumeResult.cookie.options.maxAge;
+  const bunCookie = new Bun.Cookie("session", consumeResult.cookie.value, consumeResult.cookie.options);
 }
 ```
 

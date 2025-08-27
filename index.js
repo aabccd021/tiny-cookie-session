@@ -1,7 +1,7 @@
 /**
  * @type {import("./index").Cookie}
  */
-const logoutCookie = {
+export const logoutCookie = {
   value: "",
   options: {
     httpOnly: true,

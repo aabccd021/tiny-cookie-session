@@ -49,6 +49,8 @@ export type DeleteAction = {
 
 export type Action = InsertAction | DeleteAction | UpdateAction;
 
+export const logoutCookie: Cookie;
+
 type LogoutArg = {
   readonly credentials: Credentials;
 };
