@@ -146,8 +146,8 @@ async function consume(db, arg) {
   if (credentials === undefined) throw new Error();
   const session = db.get(credentials.idHash);
   if (session === undefined) throw new Error();
-  const consumeResult = await consume(db, { credentials, config, session });
-  if (consumeResult.state !== "SessionActive") throw new Error();
+  const result = await consume(db, { credentials, config, session });
+  if (result.state !== "SessionActive") throw new Error();
   if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
   if (session.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
 }
@@ -167,8 +167,8 @@ async function consume(db, arg) {
   if (credentials === undefined) throw new Error();
   const session = db.get(credentials.idHash);
   if (session === undefined) throw new Error();
-  const consumeResult = await consume(db, { credentials, config, session });
-  if (consumeResult.state !== "SessionActive") throw new Error();
+  const result = await consume(db, { credentials, config, session });
+  if (result.state !== "SessionActive") throw new Error();
   if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
   if (session.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
 }
@@ -188,9 +188,9 @@ async function consume(db, arg) {
   if (credentials === undefined) throw new Error();
   const session = db.get(credentials.idHash);
   if (session === undefined) throw new Error();
-  const consumeResult = await consume(db, { credentials, config, session });
-  if (consumeResult.state !== "TokenRotated") throw new Error();
-  if (consumeResult.cookie.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
+  const result = await consume(db, { credentials, config, session });
+  if (result.state !== "TokenRotated") throw new Error();
+  if (result.cookie.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
     throw new Error();
   if (session === undefined) throw new Error();
   if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
@@ -212,15 +212,15 @@ async function consume(db, arg) {
   if (credentials === undefined) throw new Error();
   const session = db.get(credentials.idHash);
   if (session === undefined) throw new Error();
-  let consumeResult = await consume(db, { credentials, config, session });
-  if (consumeResult.state !== "TokenRotated") throw new Error();
-  cookie = consumeResult.cookie;
+  let result = await consume(db, { credentials, config, session });
+  if (result.state !== "TokenRotated") throw new Error();
+  cookie = result.cookie;
 
   // request 3
   credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
   if (credentials === undefined) throw new Error();
-  consumeResult = await consume(db, { credentials, config, session });
-  if (consumeResult.state !== "SessionActive") throw new Error();
+  result = await consume(db, { credentials, config, session });
+  if (result.state !== "SessionActive") throw new Error();
   if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
   if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
 }
@@ -230,24 +230,34 @@ async function consume(db, arg) {
   let date = new Date("2023-10-01T00:00:00Z");
   const config = { ...testConfig, dateNow: () => date };
   const db = createDb();
+  let cookie;
 
-  // request 1
-  const { cookie } = await login(db, { config });
+  {
+    const result = await login(db, { config });
+    cookie = result.cookie;
+  }
 
-  // request 2
-  date = new Date("2023-10-01T06:00:00Z");
-  const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
-  if (credentials === undefined) throw new Error();
-  let session = db.get(credentials.idHash);
-  if (session === undefined) throw new Error();
-  const consumeResult = await consume(db, { credentials, config, session });
-  if (consumeResult.state !== "SessionExpired") throw new Error();
-  if (consumeResult.cookie.value !== "") throw new Error();
-  if (consumeResult.cookie.options.maxAge !== 0) throw new Error();
+  {
+    date = new Date("2023-10-01T06:00:00Z");
 
-  // assert session is deleted
-  session = db.get(credentials.idHash);
-  if (session !== undefined) throw new Error();
+    const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
+    if (credentials === undefined) throw new Error();
+    const session = db.get(credentials.idHash);
+
+    if (session === undefined) throw new Error();
+    const result = await consume(db, { credentials, config, session });
+
+    if (result.state !== "SessionExpired") throw new Error();
+    if (result.cookie.value !== "") throw new Error();
+    if (result.cookie.options.maxAge !== 0) throw new Error();
+  }
+
+  {
+    const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
+    if (credentials === undefined) throw new Error();
+    const session = db.get(credentials.idHash);
+    if (session !== undefined) throw new Error();
+  }
 }
 
 {
@@ -255,33 +265,52 @@ async function consume(db, arg) {
   let date = new Date("2023-10-01T00:00:00Z");
   const config = { ...testConfig, dateNow: () => date };
   const db = createDb();
+  let cookie;
 
-  // request 1
-  let { cookie } = await login(db, { config });
+  {
+    const result = await login(db, { config });
+    cookie = result.cookie;
+  }
 
-  // request 2
-  date = new Date("2023-10-01T00:11:00Z");
-  let credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
-  if (credentials === undefined) throw new Error();
-  const session = db.get(credentials.idHash);
-  if (session === undefined) throw new Error();
-  let consumeResult = await consume(db, { credentials, config, session });
-  if (consumeResult.state !== "TokenRotated") throw new Error();
-  cookie = consumeResult.cookie;
+  {
+    date = new Date("2023-10-01T00:11:00Z");
 
-  // request 3
-  date = new Date("2023-10-01T00:22:00Z");
-  credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
-  if (credentials === undefined) throw new Error();
-  consumeResult = await consume(db, { credentials, config, session });
-  if (consumeResult.state !== "TokenRotated") throw new Error();
-  cookie = consumeResult.cookie;
-  credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
-  if (credentials === undefined) throw new Error();
+    const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
+    if (credentials === undefined) throw new Error();
 
-  // request 4
-  consumeResult = await consume(db, { credentials, config, session });
-  if (consumeResult.state !== "SessionActive") throw new Error();
+    const session = db.get(credentials.idHash);
+    if (session === undefined) throw new Error();
+
+    const result = await consume(db, { credentials, config, session });
+    if (result.state !== "TokenRotated") throw new Error();
+
+    cookie = result.cookie;
+  }
+
+  {
+    date = new Date("2023-10-01T00:22:00Z");
+    const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
+    if (credentials === undefined) throw new Error();
+
+    const session = db.get(credentials.idHash);
+    if (session === undefined) throw new Error();
+
+    const result = await consume(db, { credentials, config, session });
+    if (result.state !== "TokenRotated") throw new Error();
+
+    cookie = result.cookie;
+  }
+
+  {
+    const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
+    if (credentials === undefined) throw new Error();
+
+    const session = db.get(credentials.idHash);
+    if (session === undefined) throw new Error();
+
+    const result = await consume(db, { credentials, config, session });
+    if (result.state !== "SessionActive") throw new Error();
+  }
 }
 
 //
@@ -303,8 +332,8 @@ async function consume(db, arg) {
 //   date = new Date("2023-10-01T00:14:00Z");
 //   loginResult = await login(db, {config   });
 //
-//   const consumeResult = await consume(db, config, { credentials: cookie.value });
-//   if (consumeResult.state !== "SessionActive") throw new Error();
+//   const result = await consume(db, config, { credentials: cookie.value });
+//   if (result.state !== "SessionActive") throw new Error();
 // }
 //
 // {
@@ -440,12 +469,12 @@ async function consume(db, arg) {
 //
 //   date = new Date("2023-10-01T00:11:00Z");
 //
-//   let consumeResult = await consume(db, config, { credentials: prevToken });
-//   if (consumeResult.state !== "TokenRotated") throw new Error();
+//   let result = await consume(db, config, { credentials: prevToken });
+//   if (result.state !== "TokenRotated") throw new Error();
 //   credentials = session.cookie.value;
 //
-//   consumeResult = await consume(db, config, { credentials: prevToken });
-//   if (consumeResult.state !== "SessionActive") throw new Error();
+//   result = await consume(db, config, { credentials: prevToken });
+//   if (result.state !== "SessionActive") throw new Error();
 // }
 //
 // {
@@ -469,15 +498,15 @@ async function consume(db, arg) {
 //
 //   await Promise.all([
 //     (async () => {
-//       const consumeResult = await consume(db, { credentials, config, session });
+//       const result = await consume(db, { credentials, config, session });
 //
 //       credentialsRotated.resolve(undefined);
 //       await secondRequestFinished.promise;
 //
 //       // emulate set-credentials
-//       if (consumeResult.state === "TokenRotated") {
+//       if (result.state === "TokenRotated") {
 //         credentials = session.cookie.value;
-//       } else if (consumeResult.state !== "SessionActive") {
+//       } else if (result.state !== "SessionActive") {
 //         throw new Error();
 //       }
 //     })(),
@@ -485,12 +514,12 @@ async function consume(db, arg) {
 //     (async () => {
 //       await lib.credentialsRotated.promise;
 //
-//       const consumeResult = await consume(db, { credentials, config, session });
+//       const result = await consume(db, { credentials, config, session });
 //
 //       // emulate set-credentials
-//       if (consumeResult.state === "TokenRotated") {
+//       if (result.state === "TokenRotated") {
 //         credentials = session.cookie.value;
-//       } else if (consumeResult.state !== "SessionActive") {
+//       } else if (result.state !== "SessionActive") {
 //         throw new Error();
 //       }
 //
