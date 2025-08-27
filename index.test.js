@@ -242,11 +242,11 @@ async function consume(db, arg) {
 
     const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
     if (credentials === undefined) throw new Error();
+
     const session = db.get(credentials.idHash);
-
     if (session === undefined) throw new Error();
-    const result = await consume(db, { credentials, config, session });
 
+    const result = await consume(db, { credentials, config, session });
     if (result.state !== "SessionExpired") throw new Error();
     if (result.cookie.value !== "") throw new Error();
     if (result.cookie.options.maxAge !== 0) throw new Error();
@@ -255,6 +255,7 @@ async function consume(db, arg) {
   {
     const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
     if (credentials === undefined) throw new Error();
+
     const session = db.get(credentials.idHash);
     if (session !== undefined) throw new Error();
   }
