@@ -211,12 +211,16 @@ async function consume(db, arg) {
 
   {
     date = new Date("2023-10-01T00:11:00Z");
+
     const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
     if (credentials === undefined) throw new Error();
+
     const session = db.get(credentials.idHash);
     if (session === undefined) throw new Error();
+
     const result = await consume(db, { credentials, config, session });
     if (result.state !== "TokenRotated") throw new Error();
+
     cookie = result.cookie;
   }
 
