@@ -317,26 +317,36 @@ async function consume(db, config, arg) {
   }
 }
 
-//
-// {
-//   console.info("# consume: state SessionActive after re-login");
-//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//
-//
-//   let loginResult = await login(db, {config   });
-//
-// let session = db.get(credentials.idHash);
-//
-//   date = ("2023-10-01T00:11:00Z");
-//   cookie = await logout(db, config, { credentials });
-//   credentials = cookie.value;
-//
-//   date = ("2023-10-01T00:14:00Z");
-//   loginResult = await login(db, {config   });
-//
-//   const session = await consume(db, config, { credentials: cookie.value });
-//   if (session?.state !== "SessionActive") throw new Error();
-// }
+{
+  console.info("# consume: state SessionActive after re-login");
+
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
+  const config = { ...testConfig, dateNow: () => new Date(date) };
+
+  {
+    date = "2023-10-01T00:00:00Z";
+    const session = await login(db, { config });
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:01:00Z";
+    const session = await logout(db, { cookie });
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:02:00Z";
+    const session = await login(db, { config });
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:03:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "SessionActive") throw new Error();
+  }
+}
+
 //
 // {
 //   console.info("# consume: state TokenStolen, user, user, attacker");
