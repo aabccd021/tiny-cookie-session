@@ -1,48 +1,13 @@
 # tiny-cookie-session
 
-**tiny-cookie-session** is a cookie-based session management library that detects cookie theft.
-
-This library aims to mitigate cookie theft in a manner similar to [Device Bound Session Credentials (DBSC)](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials), while being more accessible by not requiring specialized secure hardware (e.g., TPM).
-
-However, this library falls short of DBSC in every other aspect, so DBSC should always be preferred when available.
-
-## Comparison of Cookie-Based Session Management Approaches
-
-### Long-lived session ID
-
-- The server generates a long-lived session ID and stores it in a cookie.
-- If the cookie is stolen, an attacker can use it until the session expires or the user logs out manually.
-- Both the attacker and the user can use the same session simultaneously.
-- The server cannot distinguish between requests made by the attacker and those made by the user.
-
-### Simple token rotation
-
-- Each session is associated with a short-lived token that is rotated periodically.
-- Only the latest token is stored in the database.
-- If the token is stolen and the attacker manages to rotate the token before the user does, they take over the session and can continue using it indefinitely.
-- The user may experience a mysterious logout.
-- The user can use a "log out other devices" feature to manually inspect the list of devices and log out any suspicious ones.
-
-### tiny-cookie-session
-
-- Each session is associated with a short-lived token that is rotated periodically.
-- All previous tokens (belonging to active sessions) are stored in the database.
-- If the token is stolen, the attacker can use the session until the next time the user uses the session.
-- When the user uses the session, both the attacker and the user will be logged out.
-
-### Device Bound Session Credentials (DBSC)
-
-- Each session is associated with a short-lived token that can only be rotated by the user.
-- Only the latest token is stored in the database.
-- If the token is stolen, the attacker can use it until the next rotation.
-- The user notices nothing and can continue using the system as usual.
+**tiny-cookie-session** is a cookie-based session management library that detects session forking.
 
 ## Installation
 
 ```sh
-pnpm install tiny-cookie-session@github:aabccd021/tiny-cookie-session
-yarn add tiny-cookie-session@github:aabccd021/tiny-cookie-session
-bun install tiny-cookie-session@github:aabccd021/tiny-cookie-session
+pnpm install github:aabccd021/tiny-cookie-session
+yarn add github:aabccd021/tiny-cookie-session
+bun install github:aabccd021/tiny-cookie-session
 ```
 
 ## Configuration
@@ -52,6 +17,7 @@ This library requires a storage adapter configuration that implements four core 
 ### Bun SQLite Configuration Example
 
 ```js
+// TODO library updated and no more methods like `selectSession`, instead the user need to implement `runAction`
 import { Database } from "bun:sqlite";
 import { login, logout, consumeSession, testConfig } from "tiny-cookie-session";
 
@@ -64,12 +30,6 @@ db.run(`
     expiration_time INTEGER NOT NULL,
     user_id TEXT NOT NULL,
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-  );
-  CREATE TABLE IF NOT EXISTS session_token (
-    session_id TEXT NOT NULL,
-    hash TEXT PRIMARY KEY,
-    expiration_time INTEGER NOT NULL,
-    FOREIGN KEY (session_id) REFERENCES session(id) ON DELETE CASCADE
   );
 `);
 
@@ -88,7 +48,6 @@ const sessionConfig = {
             s.user_id as userId,
             s.created_at as createdAt
           FROM session s
-          JOIN session_token t ON s.id = t.session_id
           WHERE t.hash = $tokenHash
         `,
       )
@@ -101,7 +60,6 @@ const sessionConfig = {
       .query(
         `
           SELECT hash
-          FROM session_token
           WHERE session_id = $sessionId
           ORDER BY expiration_time DESC
           LIMIT 2
@@ -126,7 +84,6 @@ const sessionConfig = {
   },
 
   insertSession: async ({ id, exp, tokenHash, tokenExp, data }) => {
-    db.transaction(() => {
       db.query(
         `
           INSERT INTO session (id, expiration_time, user_id)
@@ -138,32 +95,9 @@ const sessionConfig = {
         userId: data.userId,
       });
 
-      db.query(
-        `
-          INSERT INTO session_token (session_id, hash, expiration_time)
-          VALUES ($sessionId, $tokenHash, $tokenExp)
-        `,
-      ).run({
-        sessionId: id,
-        tokenHash,
-        tokenExp: tokenExp.getTime(),
-      });
-    })();
   },
 
   updateSession: async ({ id, exp, tokenExp, tokenHash }) => {
-    db.transaction(() => {
-      db.query(
-        `
-          INSERT INTO session_token (session_id, hash, expiration_time)
-          VALUES ($sessionId, $tokenHash, $tokenExp)
-        `,
-      ).run({
-        sessionId: id,
-        tokenHash,
-        tokenExp: tokenExp.getTime(),
-      });
-
       db.query(
         `
           UPDATE session
@@ -174,18 +108,13 @@ const sessionConfig = {
         id,
         exp: exp.getTime(),
       });
-    })();
   },
 
   deleteSession: async ({ tokenHash }) => {
     db.query(
       `
         DELETE FROM session
-        WHERE id IN (
-          SELECT session_id
-          FROM session_token
-          WHERE hash = $tokenHash
-        )
+        WHERE id IN ()
       `,
     ).run({ tokenHash });
   },
@@ -195,85 +124,10 @@ const sessionConfig = {
 ### In-Memory Store Configuration Example
 
 ```js
-import { login, logout, consumeSession, testConfig } from "tiny-cookie-session";
-
-// Create a simple in-memory store
-const sessions = {};
-
-const config = {
-  sessionExpiresIn: 5 * 60 * 60 * 1000, // 5 hours
-  tokenExpiresIn: 10 * 60 * 1000, // 10 minutes
-
-  selectSession: async ({ tokenHash }) => {
-    for (const [id, session] of Object.entries(sessions)) {
-      const [tokenHash1, tokenHash2] = session.tokenHashes.toReversed();
-      if (tokenHash0 !== undefined && session.tokenHashes.includes(tokenHash)) {
-        return {
-          id,
-          latestTokenHashes: [tokenHash0, tokenHash1],
-          exp: session.exp,
-          tokenExp: session.tokenExp,
-          data: {
-            userId: session.userId,
-            createdAt: session.createdAt,
-          },
-        };
-      }
-    }
-    return undefined;
-  },
-
-  insertSession: async ({ id, exp, tokenHash, tokenExp, data }) => {
-    sessions[id] = {
-      exp,
-      tokenExp,
-      tokenHashes: [tokenHash],
-      userId: data.userId,
-      createdAt: new Date(),
-    };
-  },
-
-  updateSession: async ({ id, exp, tokenHash, tokenExp }) => {
-    const session = sessions[id];
-    if (!session) throw new Error("Session not found");
-
-    session.tokenHashes.push(tokenHash);
-    session.tokenExp = tokenExp;
-    session.exp = exp;
-  },
-
-  deleteSession: async ({ tokenHash }) => {
-    const sessionEntry = Object.entries(sessions).find(([_, session]) =>
-      session.tokenHashes.includes(tokenHash),
-    );
-    if (!sessionEntry) throw new Error("Session not found");
-
-    const [id] = sessionEntry;
-    delete sessions[id];
-  },
-};
+// TODO
 ```
 
 See [test](./index.test.js) for actual implementation and testing of the in-memory store.
-
-## Testing Configuration
-
-The `testConfig` function helps verify that your storage implementation works correctly with this library.
-You can also test a single user with multiple sessions to thoroughly test your implementation.
-
-```js
-import { testConfig } from "tiny-cookie-session";
-
-await testConfig(config, [
-  { id: crypto.randomUUID(), data: { userId: "user-1" } },
-  { id: crypto.randomUUID(), data: { userId: "user-1" } },
-  { id: crypto.randomUUID(), data: { userId: "user-2" } },
-  { id: crypto.randomUUID(), data: { userId: "user-3" } },
-]);
-```
-
-This function tests your implementation by simulating session operations like insertion, token rotation, and deletion.
-Note that failed tests may leave data in your storage, so avoid running this in production.
 
 ## Basic Usage
 
@@ -401,72 +255,6 @@ const token = cookies.session;
 const session = await consumeSession(config, { token });
 ```
 
-## Passing Custom Data
-
-You can insert or select extra data associated with your session, which is useful if your session table has non-nullable columns that must be provided when creating a session, or if you want to fetch additional data at once (for example, when using a latency-sensitive database):
-
-```js
-// Configuration with different data types for insert and select
-const sessionConfig = {
-  // ... other config
-
-  // Select includes user ID and auto-generated createdAt timestamp
-  selectSession: async ({ tokenHash }) => {
-    const session = db
-      .query(
-        `
-          SELECT 
-            s.id, 
-            s.expiration_time as expirationTime, 
-            s.user_id as userId,
-            s.created_at as createdAt
-          FROM session s
-          JOIN session_token t ON s.id = t.session_id
-          WHERE t.hash = $tokenHash
-        `,
-      )
-      .get({ tokenHash });
-
-    // ... other logic
-
-    return {
-      // ... other session data
-      data: {
-        userId: session.userId,
-        createdAt: new Date(session.createdAt),
-      },
-    };
-  },
-
-  // userId must be inserted with the session since it's non-nullable
-  insertSession: async ({ id, exp, tokenHash, tokenExp, data }) => {
-    db.transaction(() => {
-      db.query(
-        `
-          INSERT INTO session (id, expiration_time, user_id)
-          VALUES ($id, $exp, $userId)
-        `,
-      ).run({ id, exp: exp.getTime(), userId: data.userId });
-
-      // ... token insertion
-    })();
-  },
-};
-
-// When logging in, you can pass custom data you used on `insertSession`
-const cookie = await login(sessionConfig, {
-  id: crypto.randomUUID(),
-  data: { userId: "user-123" },
-});
-
-// When using a session, you can access the custom data you used on `selectSession`
-const session = await consumeSession(sessionConfig, { token });
-if (session.state === "Active" || session.state === "TokenRotated") {
-  console.log(`User ID: ${session.data.userId}`);
-  console.log(`Session created at: ${session.data.createdAt}`); // Auto-generated by SQLite
-}
-```
-
 ## Garbage Collecting Expired Sessions
 
 As sessions expire, they should be removed from your database to prevent it from growing indefinitely.
@@ -477,28 +265,6 @@ db.query("DELETE FROM session WHERE expiration_time < $now").run({ now });
 ```
 
 Garbage collecting expired sessions is always safe and has no security implications, since those sessions would be rejected as "Expired" anyway if a user tried to use them.
-
-## Limiting Stored Tokens
-
-For long-lived sessions with frequent token rotation, you may want to limit the number of tokens stored per session:
-
-```js
-// Keep only the 100 most recent tokens for each session
-db.query(
-  `
-  DELETE FROM session_token
-  WHERE rowid NOT IN (
-    SELECT rowid FROM (
-      SELECT rowid, session_id
-      FROM session_token
-      ORDER BY expiration_time DESC
-    ) GROUP BY session_id HAVING COUNT(*) <= 100
-  )
-`,
-).run();
-```
-
-Note that limiting stored tokens might lead to undetected cookie theft if an attacker steals a very old token that has been garbage collected.
 
 ## Force Logout Sessions
 
@@ -534,11 +300,11 @@ if (session.state === "TokenRotated") {
 }
 ```
 
-## Cookie Theft Detection
+## Session Forking Detection
 
 ### How the Detection Works
 
-Cookie theft is detected when a request contains a token that is associated with a valid session, but is not one of the two most recently issued tokens for that session.
+Session forking is detected when a request contains a token that is associated with a valid session, but is not one of the two most recently issued tokens for that session.
 
 The system stores all tokens that have ever been issued for a session (unless you implement token garbage collection).
 When a token is used, the system checks if it's one of the two most recent tokens:
@@ -549,11 +315,11 @@ When a token is used, the system checks if it's one of the two most recent token
 Only the user or the attacker can have the latest token at any given time.
 If a non-latest token is used, it means someone is using an old token, either the user or an attacker.
 
-See [test](./index.test.js) for detailed tests of the cookie theft detection mechanism.
+See [test](./index.test.js) for detailed tests of the session forking detection mechanism.
 
-When cookie theft is detected, the entire session is invalidated, forcing both the user and the attacker to re-authenticate.
+When session forking is detected, the entire session is invalidated, forcing both the user and the attacker to re-authenticate.
 
-This library can detect cookie theft after it has occurred and limit the attacker's window of opportunity.
+This library can detect session forking after it has occurred and limit the attacker's window of opportunity.
 
 ### Handling Race Conditions
 
@@ -590,10 +356,7 @@ When a token expires but the session is still valid, the system generates a new 
 
 Your choice for token expiration time affects:
 
-- **Security vs. Storage Trade-off**: Shorter token expiration times help detect cookie theft faster but increase storage requirements.
 - **User Experience**: Excessively short token lifetimes may cause unexpected logouts if requests take longer than the token expiration time.
-
-For example, if `tokenExpiresIn` is set to 15 minutes, and a user is continuously active for 3 hours, the system will store 12 tokens for that session.
 
 ## Session Token Security
 
@@ -612,28 +375,11 @@ Hashing the token on every request might seem expensive, but it's no more demand
 
 Also, [we don't have to use `crypto.timingSafeEqual` when comparing tokens because we are comparing hashes of high entropy tokens](https://security.stackexchange.com/questions/237116/using-timingsafeequal#comment521092_237133).
 
-## "Log Out Other Devices" Feature
+## Session Forking vs Total Hijack
 
-By implementing a "log out other devices" feature, you can enhance security by allowing users to manually invalidate unwanted sessions, especially if you limit the number of stored tokens.
+Total hijack is when an attacker completely takes over a session, and logs out the legitimate user.
 
-Consider the following configuration:
-
-- `tokenExpiresIn` = 10 minutes
-- Token storage limit = 2016 tokens
-- `sessionExpiresIn` = 10 minutes × 2016 = 20,160 minutes (14 days)
-
-Note that since the cookie's `Expires` attribute has the same value as `exp` stored in the database, it will be deleted from the browser after 14 days of inactivity.
-
-If the user is inactive for less than 14 days, this library will detect cookie theft as usual and log out both the user and the attacker.
-
-If the user is inactive for more than 14 days, the cookie will be deleted from the browser.
-When they log back in, you can show a "log out other devices" option, allowing the user to manually inspect the list of devices and log out any suspicious ones.
-
-Of course, this is less automated and less secure than the first scenario.
-
-You should also carefully design when the "log out other devices" option should be shown to the user. Otherwise, an attacker could use this option to log out the user.
-
-Note that in both scenarios, the attacker was able to use the stolen token (valid session) while the user was inactive.
+This is not session forking so this library does not detect or prevent it.
 
 ## CSRF
 
@@ -649,11 +395,42 @@ You can implement cookie signing as an additional layer in your application if d
 
 ## Security Limitations
 
-While this library provides cookie theft detection, be aware of these limitations:
+While this library provides session forking detection, be aware of these limitations:
 
 1. An attacker can use a stolen cookie until the user accesses the system again.
 2. If the user never logs back in, the attacker's session may remain active.
-3. Constant cookie theft (e.g., via persistent background malware) can't be prevented by any cookie-based mechanism, including this library and DBSC.
+3. Constant session forking (e.g., via persistent background malware) can't be prevented by any cookie-based mechanism, including this library and DBSC.
+
+## Comparison of Cookie-Based Session Management Approaches
+
+### Long-lived session ID
+
+- The server generates a long-lived session ID and stores it in a cookie.
+- If the cookie is stolen, an attacker can use it until the session expires or the user logs out manually.
+- Both the attacker and the user can use the same session simultaneously.
+- The server cannot distinguish between requests made by the attacker and those made by the user.
+
+### Simple token rotation
+
+- Each session is associated with a short-lived token that is rotated periodically.
+- Only the latest token is stored in the database.
+- If the token is stolen and the attacker manages to rotate the token before the user does, they take over the session and can continue using it indefinitely.
+- The user may experience a mysterious logout.
+- The user can use a "log out other devices" feature to manually inspect the list of devices and log out any suspicious ones.
+
+### tiny-cookie-session
+
+- Each session is associated with a short-lived token that is rotated periodically.
+- All previous tokens (belonging to active sessions) are stored in the database.
+- If the token is stolen, the attacker can use the session until the next time the user uses the session.
+- When the user uses the session, both the attacker and the user will be logged out.
+
+### Device Bound Session Credentials (DBSC)
+
+- Each session is associated with a short-lived token that can only be rotated by the user.
+- Only the latest token is stored in the database.
+- If the token is stolen, the attacker can use it until the next rotation.
+- The user notices nothing and can continue using the system as usual.
 
 ## LICENCE
 
