@@ -342,7 +342,7 @@ async function consume(db, config, arg) {
 }
 
 {
-  console.info("# consume: state SessionForked, user, user, attacker");
+  console.info("# consume: state SessionForked after used by user, user, attacker");
   /** @type {string} */ let userCookie;
   /** @type {string} */ let attackerCookie;
   /** @type {string} */ let date;
@@ -380,7 +380,7 @@ async function consume(db, config, arg) {
 }
 
 {
-  console.info("# consume: state SessionForked, attacker, attacker, user");
+  console.info("# consume: state SessionForked after used by attacker, attacker, user");
   /** @type {string} */ let userCookie;
   /** @type {string} */ let attackerCookie;
   /** @type {string} */ let date;
@@ -418,7 +418,7 @@ async function consume(db, config, arg) {
 }
 
 {
-  console.info("# consume: state SessionForked, attacker, user, attacker, user");
+  console.info("# consume: state SessionForked after used by attacker, user, attacker, user");
   /** @type {string} */ let userCookie;
   /** @type {string} */ let attackerCookie;
   /** @type {string} */ let date;
@@ -454,7 +454,7 @@ async function consume(db, config, arg) {
 }
 
 {
-  console.info("# consume: state SessionForked, user, attacker, user, attacker");
+  console.info("# consume: state SessionForked after used by user, attacker, user, attacker");
   /** @type {string} */ let userCookie;
   /** @type {string} */ let attackerCookie;
   /** @type {string} */ let date;
