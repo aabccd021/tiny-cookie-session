@@ -331,17 +331,14 @@ async function consume(db, config, arg) {
     cookie = session.cookie.value;
   }
   {
-    date = "2023-10-01T00:01:00Z";
     const session = await logout(db, { cookie });
     cookie = session.cookie.value;
   }
   {
-    date = "2023-10-01T00:02:00Z";
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
   {
-    date = "2023-10-01T00:03:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
   }
