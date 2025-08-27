@@ -16,41 +16,51 @@ const testConfig = {
 
 /**
  * @param {Map<string, Session>} db
- * @param {import("./index").Action} [action]
+ * @param {string} sessionIdHash
  */
-function runAction(db, action) {
-  if (action === undefined) {
-    return;
-  }
+function dbSelect(db, sessionIdHash) {
+  return db.get(sessionIdHash);
+}
 
-  if (action.type === "insert") {
-    db.set(action.idHash, {
-      oddTokenHash: action.oddTokenHash,
-      evenTokenHash: undefined,
-      exp: action.exp,
-      tokenExp: action.tokenExp,
-      isLatestTokenOdd: true,
-    });
-  }
+/**
+ * @param {Map<string, Session>} db
+ * @param {import("./index").InsertAction} arg
+ */
+function dbInsert(db, arg) {
+  db.set(arg.idHash, {
+    oddTokenHash: arg.oddTokenHash,
+    evenTokenHash: undefined,
+    exp: arg.exp,
+    tokenExp: arg.tokenExp,
+    isLatestTokenOdd: true,
+  });
+}
 
-  if (action.type === "delete") {
-    db.delete(action.idHash);
-  }
+/**
+ * @param {Map<string, Session>} db
+ * @param {import("./index").DeleteAction} arg
+ */
+function dbDelete(db, arg) {
+  db.delete(arg.idHash);
+}
 
-  if (action.type === "update") {
-    const session = db.get(action.idHash);
-    if (!session) throw new Error("Session not found for update");
+/**
+ * @param {Map<string, Session>} db
+ * @param {import("./index").UpdateAction} arg
+ */
+function dbUpdate(db, arg) {
+  const session = db.get(arg.idHash);
+  if (!session) throw new Error("Session not found for update");
 
-    if (action.evenTokenHash !== undefined) {
-      session.evenTokenHash = action.evenTokenHash;
-    }
-    if (action.oddTokenHash !== undefined) {
-      session.oddTokenHash = action.oddTokenHash;
-    }
-    session.isLatestTokenOdd = action.isLatestTokenOdd;
-    session.tokenExp = action.tokenExp;
-    session.exp = action.exp;
+  if (arg.evenTokenHash !== undefined) {
+    session.evenTokenHash = arg.evenTokenHash;
   }
+  if (arg.oddTokenHash !== undefined) {
+    session.oddTokenHash = arg.oddTokenHash;
+  }
+  session.isLatestTokenOdd = arg.isLatestTokenOdd;
+  session.tokenExp = arg.tokenExp;
+  session.exp = arg.exp;
 }
 
 /**
@@ -59,7 +69,12 @@ function runAction(db, action) {
  */
 async function login(db, arg) {
   const result = await lib.login(arg);
-  runAction(db, result.action);
+
+  if (result.action.type === "insert") {
+    dbInsert(db, result.action);
+  } else {
+    throw new Error("Unexpected action type");
+  }
 
   return result;
 }
@@ -79,7 +94,12 @@ async function logout(db, cookie) {
   }
 
   const result = await lib.logout({ credentialData: credential.data });
-  runAction(db, result.action);
+
+  if (result.action.type === "delete") {
+    dbDelete(db, result.action);
+  } else {
+    throw new Error("Unexpected action type");
+  }
 
   return result;
 }
@@ -91,40 +111,47 @@ async function logout(db, cookie) {
  */
 async function consume(db, cookie, config) {
   if (cookie === undefined) {
-    return { state: "CookieMissing", data: undefined, cookie: undefined };
+    return { state: "CookieMissing", cookie: undefined, data: undefined };
   }
 
   const credential = await lib.credentialFromCookie({ cookie });
   if (credential.data === undefined) {
-    return { state: "CookieMalformed", data: undefined, cookie: credential.cookie };
+    return { state: "CookieMalformed", cookie: credential.cookie, data: undefined };
   }
 
-  const data = db.get(credential.data.idHash);
+  const data = dbSelect(db, credential.data.idHash);
 
   /** @type {import("./index").Session} */
   const session = data !== undefined ? { found: true, data } : { found: false };
 
   const result = await lib.consume({ credentialData: credential.data, config, session });
-  runAction(db, result.action);
+
+  if (result.action?.type === "delete") {
+    dbDelete(db, result.action);
+  } else if (result.action?.type === "update") {
+    dbUpdate(db, result.action);
+  } else if (result.action !== undefined) {
+    throw new Error("Unexpected action type");
+  }
 
   if (result.state === "SessionActive") {
-    return { state: result.state, data, cookie: result.cookie };
+    return { state: "SessionActive", cookie: result.cookie, data };
   }
 
   if (result.state === "TokenRotated") {
-    return { state: result.state, data, cookie: result.cookie };
+    return { state: "TokenRotated", cookie: result.cookie, data };
   }
 
   if (result.state === "SessionNotFound") {
-    return { state: result.state, data: undefined, cookie: result.cookie };
+    return { state: "SessionNotFound", cookie: result.cookie, data: undefined };
   }
 
   if (result.state === "SessionExpired") {
-    return { state: result.state, data: undefined, cookie: result.cookie };
+    return { state: "SessionExpired", cookie: result.cookie, data: undefined };
   }
 
   if (result.state === "SessionForked") {
-    return { state: result.state, data: undefined, cookie: result.cookie };
+    return { state: "SessionForked", cookie: result.cookie, data: undefined };
   }
 
   throw new Error("Unexpected state");
