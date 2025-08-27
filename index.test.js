@@ -381,39 +381,44 @@ async function consume(db, config, arg) {
     if (userSession !== undefined) throw new Error();
   }
 }
-//
-// {
-//   console.info("# consume: state SessionForked, attacker, attacker, user");
-//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//
-//
-//   const userSession = await login(db, {config   });
-//   const userToken = userCookie.value;
-//
-//   let attackerToken = userToken;
-//
-//   date = ("2023-10-01T00:11:00Z");
-//   let attackerSession = await consume(db, config, { cookie: attackerCookie });
-//   if (attackerSession?.state !== "TokenRotated") throw new Error();
-//   attackerToken = attackerSession.cookie.value;
-//
-//   date = ("2023-10-01T00:22:00Z");
-//   attackerSession = await consume(db, config, { cookie: attackerCookie });
-//   if (attackerSession?.state !== "TokenRotated") throw new Error();
-//   attackerToken = attackerSession.cookie.value;
-//
-//   const userSession = await consume(db, config, { cookie: userCookie });
-//   if (userSession?.state !== "SessionForked") throw new Error();
-//   if (userSession.data.exp.toISOString() !== "2023-10-01T05:22:00.000Z") throw new Error();
-//   if (userSession.tokenExp.toISOString() !== "2023-10-01T00:32:00.000Z") throw new Error();
-//   if (userSession.cookie.value !== "") throw new Error();
-//   if (userSession.cookie.options.maxAge !== 0) throw new Error();
-//
-//   attackerSession = await consume(db, config, { cookie: userCookie });
-//   if (attackerSession !== undefined) throw new Error();
-//   if (attackerSession.cookie.value !== "") throw new Error();
-//   if (attackerSession.cookie.options.maxAge !== 0) throw new Error();
-// }
+
+{
+  console.info("# consume: state SessionForked, attacker, attacker, user");
+  /** @type {string} */ let userCookie;
+  /** @type {string} */ let attackerCookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
+  const config = { ...testConfig, dateNow: () => new Date(date) };
+
+  {
+    date = "2023-10-01T00:00:00Z";
+    const userSession = await login(db, { config });
+    userCookie = userSession.cookie.value;
+  }
+  attackerCookie = userCookie;
+  {
+    date = "2023-10-01T00:11:00Z";
+    const attackerSession = await consume(db, config, { cookie: attackerCookie });
+    if (attackerSession?.state !== "TokenRotated") throw new Error();
+    attackerCookie = attackerSession.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:22:00Z";
+    const attackerSession = await consume(db, config, { cookie: attackerCookie });
+    if (attackerSession?.state !== "TokenRotated") throw new Error();
+    attackerCookie = attackerSession.cookie.value;
+  }
+  {
+    const userSession = await consume(db, config, { cookie: userCookie });
+    if (userSession?.state !== "SessionForked") throw new Error();
+    if (userSession.cookie.value !== "") throw new Error();
+    if (userSession.cookie.options.maxAge !== 0) throw new Error();
+  }
+  {
+    const attackerSession = await consume(db, config, { cookie: userCookie });
+    if (attackerSession !== undefined) throw new Error();
+  }
+}
 //
 // {
 //   console.info("# consume: state SessionForked, attacker, user, attacker, user");
@@ -421,13 +426,13 @@ async function consume(db, config, arg) {
 //
 //
 //   const userSession = await login(db, {config   });
-//   const userToken = userCookie.value;
-//   let attackerToken = userToken;
+//   userCookie = userSession.cookie.value;
+//   attackerCookie = userCookie;
 //
 //   date = ("2023-10-01T00:11:00Z");
-//   let attackerSession = await consume(db, config, { cookie: attackerCookie });
+//   const attackerSession = await consume(db, config, { cookie: attackerCookie });
 //   if (attackerSession?.state !== "TokenRotated") throw new Error();
-//   attackerToken = attackerSession.cookie.value;
+//   attackerCookie = attackerSession.cookie.value;
 //
 //   date = ("2023-10-01T00:22:00Z");
 //   const userSession = await consume(db, config, { cookie: userCookie });
@@ -435,7 +440,7 @@ async function consume(db, config, arg) {
 //
 //   attackerSession = await consume(db, config, { cookie: attackerCookie });
 //   if (attackerSession?.state !== "TokenRotated") throw new Error();
-//   attackerToken = attackerSession.cookie.value;
+//   attackerCookie = attackerSession.cookie.value;
 //
 //   const userSession = await consume(db, config, { cookie: userCookie });
 //   if (userSession?.state !== "SessionForked") throw new Error();
@@ -456,7 +461,7 @@ async function consume(db, config, arg) {
 //   userCookie = userSession.cookie.value;
 //
 //   date = ("2023-10-01T00:22:00Z");
-//   let attackerSession = await consume(db, config, { cookie: attackerCookie });
+//   const attackerSession = await consume(db, config, { cookie: attackerCookie });
 //   if (attackerSession?.state !== "SessionActive") throw new Error();
 //
 //   const userSession = await consume(db, config, { cookie: userCookie });
