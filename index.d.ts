@@ -19,7 +19,7 @@ export type Config = {
   readonly tokenExpiresIn?: number;
 };
 
-type Credentials = {
+type CredentialData = {
   readonly id: string;
   readonly idHash: string;
   readonly token: string;
@@ -49,10 +49,8 @@ export type DeleteAction = {
 
 export type Action = InsertAction | DeleteAction | UpdateAction;
 
-export const logoutCookie: Cookie;
-
 type LogoutArg = {
-  readonly credentials: Credentials;
+  readonly credentialData: CredentialData;
 };
 
 type LogoutResult = {
@@ -89,7 +87,7 @@ export type Session =
     };
 
 export type ConsumeArg = {
-  readonly credentials: Credentials;
+  readonly credentialData: CredentialData;
   readonly session: Session;
   readonly config?: Config;
 };
@@ -123,11 +121,20 @@ export type ConsumeResult =
 
 export const consume: (arg: ConsumeArg) => Promise<ConsumeResult>;
 
-export type CredentialsFromCookieArg = {
+export type CredentialFromCookieArg = {
   readonly cookie: string;
 };
 
-export type CredentialsFromCookieResult = Credentials | undefined;
+export type CredentialFromCookieResult =
+  | {
+      readonly data: CredentialData;
+    }
+  | {
+      readonly cookie: Cookie;
+      readonly data: undefined;
+    };
 
-type credentialsFromCookie = (arg: { readonly cookie: string }) => Promise<Credentials | undefined>;
-export const credentialsFromCookie: credentialsFromCookie;
+type credentialFromCookie = (arg: {
+  readonly cookie: string;
+}) => Promise<CredentialFromCookieResult>;
+export const credentialFromCookie: credentialFromCookie;

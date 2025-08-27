@@ -1,7 +1,7 @@
 /**
  * @type {import("./index").Cookie}
  */
-export const logoutCookie = {
+const logoutCookie = {
   value: "",
   options: {
     httpOnly: true,
@@ -67,6 +67,20 @@ export async function login(arg) {
 }
 
 /**
+ * @param {import("./index").CredentialFromCookieArg} arg
+ * @returns {Promise<import("./index").CredentialFromCookieResult>}
+ */
+export async function credentialFromCookie(arg) {
+  const [id, token] = arg.cookie.split(":");
+  if (id === undefined || token === undefined) {
+    return { data: undefined, cookie: logoutCookie };
+  }
+
+  const idHash = await hash(id);
+  return { data: { id, token, idHash } };
+}
+
+/**
  * @param {import("./index").LogoutArg} arg
  * @returns {Promise<import("./index").LogoutResult>}
  */
@@ -75,23 +89,9 @@ export async function logout(arg) {
     cookie: logoutCookie,
     action: {
       type: "delete",
-      idHash: arg.credentials.idHash,
+      idHash: arg.credentialData.idHash,
     },
   };
-}
-
-/**
- * @param {import("./index").CredentialsFromCookieArg} arg
- * @returns {Promise<import("./index").CredentialsFromCookieResult>}
- */
-export async function credentialsFromCookie(arg) {
-  const [id, token] = arg.cookie.split(":");
-  if (id === undefined || token === undefined) {
-    return undefined;
-  }
-
-  const idHash = await hash(id);
-  return { id, token, idHash };
 }
 
 /**
@@ -107,7 +107,7 @@ export async function consume(arg) {
     };
   }
 
-  const requestTokenHash = await hash(arg.credentials.token);
+  const requestTokenHash = await hash(arg.credentialData.token);
   const isOddToken = requestTokenHash === arg.session.data.oddTokenHash;
   const isEvenToken = requestTokenHash === arg.session.data.evenTokenHash;
 
@@ -117,7 +117,7 @@ export async function consume(arg) {
       cookie: logoutCookie,
       action: {
         type: "delete",
-        idHash: arg.credentials.idHash,
+        idHash: arg.credentialData.idHash,
       },
     };
   }
@@ -129,7 +129,7 @@ export async function consume(arg) {
       cookie: logoutCookie,
       action: {
         type: "delete",
-        idHash: arg.credentials.idHash,
+        idHash: arg.credentialData.idHash,
       },
     };
   }
@@ -150,7 +150,7 @@ export async function consume(arg) {
 
   /** @type {import("./index").Cookie} */
   const cookie = {
-    value: `${arg.credentials.id}:${token}`,
+    value: `${arg.credentialData.id}:${token}`,
     options: {
       httpOnly: true,
       sameSite: "lax",
@@ -170,7 +170,7 @@ export async function consume(arg) {
     cookie,
     action: {
       type: "update",
-      idHash: arg.credentials.idHash,
+      idHash: arg.credentialData.idHash,
       isLatestTokenOdd: isNextOddToken,
       oddTokenHash: isNextOddToken ? tokenHashStr : undefined,
       evenTokenHash: isNextOddToken ? undefined : tokenHashStr,

@@ -56,7 +56,6 @@ function runAction(db, action) {
 /**
  * @param {Map<string, Session>} db
  * @param {import("./index").LoginArg} arg
- * @returns {Promise<import("./index").LoginResult>}
  */
 async function login(db, arg) {
   const result = await lib.login(arg);
@@ -67,14 +66,15 @@ async function login(db, arg) {
 
 /**
  * @param {Map<string, Session>} db
- * @param {import("./index").CredentialsFromCookieArg} arg
- * @returns {Promise<import("./index").LogoutResult>}
+ * @param {import("./index").CredentialFromCookieArg} arg
  */
 async function logout(db, arg) {
-  const credentials = await lib.credentialsFromCookie(arg);
-  if (credentials === undefined) throw new Error();
+  const credential = await lib.credentialFromCookie(arg);
+  if (credential.data === undefined) {
+    return { cookie: credential.cookie, action: undefined };
+  }
 
-  const result = await lib.logout({ credentials });
+  const result = await lib.logout({ credentialData: credential.data });
   runAction(db, result.action);
 
   return result;
@@ -83,18 +83,20 @@ async function logout(db, arg) {
 /**
  * @param {Map<string, Session>} db
  * @param {import("./index").Config} config
- * @param {import("./index").CredentialsFromCookieArg} arg
+ * @param {import("./index").CredentialFromCookieArg} arg
  */
 async function consume(db, config, arg) {
-  const credentials = await lib.credentialsFromCookie(arg);
-  if (credentials === undefined) return undefined;
+  const credential = await lib.credentialFromCookie(arg);
+  if (credential.data === undefined) {
+    return { state: "MalformedCookie", data: undefined, cookie: credential.cookie };
+  }
 
-  const data = db.get(credentials.idHash);
+  const data = db.get(credential.data.idHash);
 
   /** @type {import("./index").Session} */
   const session = data !== undefined ? { found: true, data } : { found: false };
 
-  const result = await lib.consume({ credentials, config, session });
+  const result = await lib.consume({ credentialData: credential.data, config, session });
   runAction(db, result.action);
 
   if (result.state === "SessionActive") {
