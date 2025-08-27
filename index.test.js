@@ -133,7 +133,7 @@ async function consume(db, config, arg) {
     cookie = session.cookie.value;
   }
   {
-    const session = await consume(db, config, { cookie: cookie });
+    const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
     if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
@@ -484,7 +484,7 @@ async function consume(db, config, arg) {
 //
 //
 //   let result = await login(db, {config   });
-//   const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
+//   const credentials = await lib.credentialsFromCookie({ cookie.value });
 //  if (credentials === undefined) throw new Error();
 //   const prevToken = credentials;
 // let session = db.get(credentials.idHash);
