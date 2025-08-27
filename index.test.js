@@ -491,27 +491,34 @@ async function consume(db, config, arg) {
     if (attackerSession?.state !== "SessionForked") throw new Error();
   }
 }
-//
-// {
-//   console.info("# consume: state SessionActive with second last credentials");
-//
-//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//
-//
-//   let result = await login(db, {config   });
-//   const prevToken = credentials;
-// let session = db.get(credentials.idHash);
-//
-//
-//   date = ("2023-10-01T00:11:00Z");
-//
-//   let session = await consume(db, config, { credentials: prevToken });
-//   if (session?.state !== "TokenRotated") throw new Error();
-//   credentials = session.cookie.value;
-//
-//   session = await consume(db, config, { credentials: prevToken });
-//   if (session?.state !== "SessionActive") throw new Error();
-// }
+
+{
+  console.info("# consume: state SessionActive with previous cookie");
+
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let prevCookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
+  const config = { ...testConfig, dateNow: () => new Date(date) };
+
+  {
+    date = "2023-10-01T00:00:00Z";
+    const session = await login(db, { config });
+    cookie = session.cookie.value;
+    prevCookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:11:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    cookie = session.cookie.value;
+  }
+  {
+    const session = await consume(db, config, { cookie: prevCookie });
+    if (session?.state !== "SessionActive") throw new Error();
+  }
+}
+
 //
 // {
 //   console.info("# consume: state SessionActive on race condition");
@@ -519,7 +526,7 @@ async function consume(db, config, arg) {
 //   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
 //
 //
-//   let result = await login(db, {config   });
+//   const session = await login(db, {config   });
 //   const credentials = await lib.credentialsFromCookie({ cookie.value });
 //  if (credentials === undefined) throw new Error();
 //   const prevToken = credentials;
