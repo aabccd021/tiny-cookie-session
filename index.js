@@ -99,9 +99,17 @@ export async function credentialsFromCookie(arg) {
  * @returns {Promise<import("./index").ConsumeResult>}
  */
 export async function consume(arg) {
+  if (!arg.session.found) {
+    return {
+      state: "SessionNotFound",
+      cookie: logoutCookie,
+      action: undefined,
+    };
+  }
+
   const requestTokenHash = await hash(arg.credentials.token);
-  const isOddToken = requestTokenHash === arg.session.oddTokenHash;
-  const isEvenToken = requestTokenHash === arg.session.evenTokenHash;
+  const isOddToken = requestTokenHash === arg.session.data.oddTokenHash;
+  const isEvenToken = requestTokenHash === arg.session.data.evenTokenHash;
 
   if (!isOddToken && !isEvenToken) {
     return {
@@ -115,7 +123,7 @@ export async function consume(arg) {
   }
 
   const now = arg.config?.dateNow?.() ?? new Date();
-  if (arg.session.exp.getTime() <= now.getTime()) {
+  if (arg.session.data.exp.getTime() <= now.getTime()) {
     return {
       state: "SessionExpired",
       cookie: logoutCookie,
@@ -126,8 +134,8 @@ export async function consume(arg) {
     };
   }
 
-  const isLatestToken = arg.session.isLatestTokenOdd ? isOddToken : isEvenToken;
-  const shouldRotate = arg.session.tokenExp.getTime() <= now.getTime() && isLatestToken;
+  const isLatestToken = arg.session.data.isLatestTokenOdd ? isOddToken : isEvenToken;
+  const shouldRotate = arg.session.data.tokenExp.getTime() <= now.getTime() && isLatestToken;
   if (!shouldRotate) {
     return {
       state: "SessionActive",
@@ -153,7 +161,7 @@ export async function consume(arg) {
   };
 
   const tokenHashStr = await hash(token);
-  const isNextOddToken = !arg.session.isLatestTokenOdd;
+  const isNextOddToken = !arg.session.data.isLatestTokenOdd;
   const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
   const tokenExp = new Date(now.getTime() + tokenExpiresIn);
 

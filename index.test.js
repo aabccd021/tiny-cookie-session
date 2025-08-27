@@ -90,11 +90,11 @@ async function consume(db, config, arg) {
   if (credentials === undefined) return undefined;
 
   const data = db.get(credentials.idHash);
-  if (data === undefined) {
-    return { state: "SessionNotFound", data: undefined, cookie: lib.logoutCookie };
-  }
 
-  const result = await lib.consume({ credentials, config, session: data });
+  /** @type {import("./index").Session} */
+  const session = data !== undefined ? { found: true, data } : { found: false };
+
+  const result = await lib.consume({ credentials, config, session });
   runAction(db, result.action);
 
   if (result.state === "SessionActive") {
@@ -103,6 +103,10 @@ async function consume(db, config, arg) {
 
   if (result.state === "TokenRotated") {
     return { state: result.state, data, cookie: result.cookie };
+  }
+
+  if (result.state === "SessionNotFound") {
+    return { state: result.state, data: undefined, cookie: result.cookie };
   }
 
   if (result.state === "SessionExpired") {

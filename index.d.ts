@@ -73,19 +73,33 @@ type LoginResult = {
 
 export const login: (arg: LoginArg) => Promise<LoginResult>;
 
+export type Session =
+  | {
+      readonly found: true;
+      readonly data: {
+        readonly oddTokenHash: string;
+        readonly evenTokenHash?: string;
+        readonly exp: Date;
+        readonly tokenExp: Date;
+        readonly isLatestTokenOdd: boolean;
+      };
+    }
+  | {
+      readonly found: false;
+    };
+
 export type ConsumeArg = {
   readonly credentials: Credentials;
-  readonly session: {
-    readonly oddTokenHash: string;
-    readonly evenTokenHash?: string;
-    readonly exp: Date;
-    readonly tokenExp: Date;
-    readonly isLatestTokenOdd: boolean;
-  };
+  readonly session: Session;
   readonly config?: Config;
 };
 
 export type ConsumeResult =
+  | {
+      readonly state: "SessionNotFound";
+      readonly cookie: Cookie;
+      readonly action: undefined;
+    }
   | {
       readonly state: "SessionForked";
       readonly cookie: Cookie;
