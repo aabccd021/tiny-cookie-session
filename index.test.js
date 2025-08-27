@@ -521,7 +521,7 @@ async function consume(db, config, arg) {
 }
 
 {
-  console.info("# consume: state SessionActive with previous cookie after two rotations");
+  console.info("# consume: state SessionActive with previous cookie after 2 rotations");
 
   /** @type {string} */ let cookie;
   /** @type {string} */ let prevCookie;
@@ -543,6 +543,103 @@ async function consume(db, config, arg) {
   }
   {
     date = "2023-10-01T00:22:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
+    cookie = session.cookie.value;
+  }
+  {
+    const session = await consume(db, config, { cookie: prevCookie });
+    if (session?.state !== "SessionActive") throw new Error();
+  }
+  {
+    const session = await consume(db, config, { cookie: cookie });
+    if (session?.state !== "SessionActive") throw new Error();
+  }
+}
+
+{
+  console.info("# consume: state SessionActive with previous cookie after 3 rotations");
+
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let prevCookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
+  const config = { ...testConfig, dateNow: () => new Date(date) };
+
+  {
+    date = "2023-10-01T00:00:00Z";
+    const session = await login(db, { config });
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:11:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:22:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:33:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
+    cookie = session.cookie.value;
+  }
+  {
+    const session = await consume(db, config, { cookie: prevCookie });
+    if (session?.state !== "SessionActive") throw new Error();
+  }
+  {
+    const session = await consume(db, config, { cookie: cookie });
+    if (session?.state !== "SessionActive") throw new Error();
+  }
+}
+
+{
+  console.info("# consume: state SessionActive with previous cookie after 4 rotations");
+
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let prevCookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
+  const config = { ...testConfig, dateNow: () => new Date(date) };
+
+  {
+    date = "2023-10-01T00:00:00Z";
+    const session = await login(db, { config });
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:11:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:22:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:33:00Z";
+    const session = await consume(db, config, { cookie });
+    if (session?.state !== "TokenRotated") throw new Error();
+    prevCookie = cookie;
+    cookie = session.cookie.value;
+  }
+  {
+    date = "2023-10-01T00:44:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
     prevCookie = cookie;
