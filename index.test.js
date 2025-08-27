@@ -112,6 +112,7 @@ async function consume(db, arg) {
   {
     const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
     if (credentials === undefined) throw new Error();
+
     const session = db.get(credentials.idHash);
     if (session?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
     if (session?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
@@ -134,9 +135,11 @@ async function consume(db, arg) {
     date = new Date("2023-10-01T00:01:00Z");
     const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
     if (credentials === undefined) throw new Error();
+
     const logoutResult = await logout(db, { credentials });
     if (logoutResult.cookie.value !== "") throw new Error();
     if (logoutResult.cookie.options.maxAge !== 0) throw new Error();
+
     const session = db.get(credentials.idHash);
     if (session !== undefined) throw new Error();
   }
@@ -156,8 +159,10 @@ async function consume(db, arg) {
   {
     const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
     if (credentials === undefined) throw new Error();
+
     const session = db.get(credentials.idHash);
     if (session === undefined) throw new Error();
+
     const result = await consume(db, { credentials, config, session });
     if (result.state !== "SessionActive") throw new Error();
     if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
@@ -179,10 +184,13 @@ async function consume(db, arg) {
 
   {
     date = new Date("2023-10-01T00:09:00Z");
+
     const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
     if (credentials === undefined) throw new Error();
+
     const session = db.get(credentials.idHash);
     if (session === undefined) throw new Error();
+
     const result = await consume(db, { credentials, config, session });
     if (result.state !== "SessionActive") throw new Error();
     if (session.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
@@ -204,14 +212,18 @@ async function consume(db, arg) {
 
   {
     date = new Date("2023-10-01T00:11:00Z");
+
     const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
     if (credentials === undefined) throw new Error();
+
     const session = db.get(credentials.idHash);
     if (session === undefined) throw new Error();
+
     const result = await consume(db, { credentials, config, session });
     if (result.state !== "TokenRotated") throw new Error();
     if (result.cookie.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
       throw new Error();
+
     if (session === undefined) throw new Error();
     if (session.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
     if (session.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
