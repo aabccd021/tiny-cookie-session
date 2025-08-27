@@ -9,13 +9,6 @@ import * as lib from ".";
  * @property {boolean} isLatestTokenOdd
  */
 
-/**
- * @returns {Map<string, Session>}
- */
-function createDb() {
-  return new Map();
-}
-
 const testConfig = {
   tokenExpiresIn: 10 * 60 * 1000,
   sessionExpiresIn: 5 * 60 * 60 * 1000,
@@ -126,12 +119,10 @@ async function consume(db, config, arg) {
 
 {
   console.info("# login");
-  /** @type {string} */
-  let cookie;
-  /** @type {string} */
-  let date;
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
-  const db = createDb();
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -151,12 +142,10 @@ async function consume(db, config, arg) {
 
 {
   console.info("# logout");
-  /** @type {string} */
-  let cookie;
-  /** @type {string} */
-  let date;
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
-  const db = createDb();
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -179,12 +168,11 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state SessionActive after login");
-  /** @type {string} */
-  let cookie;
-  /** @type {string} */
-  let date;
+
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
-  const db = createDb();
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -202,12 +190,11 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state SessionActive after 9 minutes");
-  /** @type {string} */
-  let cookie;
-  /** @type {string} */
-  let date;
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
+
   const config = { ...testConfig, dateNow: () => new Date(date) };
-  const db = createDb();
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -226,12 +213,10 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state TokenRotated after 11 minutes");
-  /** @type {string} */
-  let cookie;
-  /** @type {string} */
-  let date;
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
-  const db = createDb();
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -252,12 +237,11 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state SessionActive after TokenRotated");
-  /** @type {string} */
-  let cookie;
-  /** @type {string} */
-  let date;
+
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
-  const db = createDb();
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -282,12 +266,11 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state Expired after 6 hours");
-  /** @type {string} */
-  let cookie;
-  /** @type {string} */
-  let date;
+
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
-  const db = createDb();
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -311,12 +294,11 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state SessionActive after TokenRotated twice");
-  /** @type {string} */
-  let cookie;
-  /** @type {string} */
-  let date;
+
+  /** @type {string} */ let cookie;
+  /** @type {string} */ let date;
+  /** @type {Map<string, Session>} */ const db = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
-  const db = createDb();
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -348,7 +330,7 @@ async function consume(db, config, arg) {
 // {
 //   console.info("# consume: state SessionActive after re-login");
 //   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//   const db = createDb();
+//
 //
 //   let loginResult = await login(db, {config   });
 //
@@ -368,7 +350,7 @@ async function consume(db, config, arg) {
 // {
 //   console.info("# consume: state TokenStolen, user, user, attacker");
 //   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//   const db = createDb();
+//
 //
 //   const userCookie = await login(db, {config   });
 //   let userToken = userCookie.value;
@@ -401,7 +383,7 @@ async function consume(db, config, arg) {
 // {
 //   console.info("# consume: state TokenStolen, attacker, attacker, user");
 //   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//   const db = createDb();
+//
 //
 //   const userCookie = await login(db, {config   });
 //   const userToken = userCookie.value;
@@ -434,7 +416,7 @@ async function consume(db, config, arg) {
 // {
 //   console.info("# consume: state TokenStolen, attacker, user, attacker, user");
 //   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//   const db = createDb();
+//
 //
 //   const userCookie = await login(db, {config   });
 //   const userToken = userCookie.value;
@@ -460,7 +442,7 @@ async function consume(db, config, arg) {
 // {
 //   console.info("# consume: state TokenStolen, user, attacker, user, attacker");
 //   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//   const db = createDb();
+//
 //
 //   const userCookie = await login(db, {config   });
 //   let userToken = userCookie.value;
@@ -487,7 +469,7 @@ async function consume(db, config, arg) {
 //   console.info("# consume: state SessionActive with second last credentials");
 //
 //   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//   const db = createDb();
+//
 //
 //   let result = await login(db, {config   });
 //   const prevToken = credentials;
@@ -508,7 +490,7 @@ async function consume(db, config, arg) {
 //   console.info("# consume: state SessionActive on race condition");
 //
 //   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
-//   const db = createDb();
+//
 //
 //   let result = await login(db, {config   });
 //   const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
