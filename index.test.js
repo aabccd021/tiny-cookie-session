@@ -132,7 +132,6 @@ async function consume(db, config, arg) {
       throw new Error();
     cookie = session.cookie.value;
   }
-
   {
     const session = await consume(db, config, { cookie: cookie });
     if (session?.state !== "SessionActive") throw new Error();
@@ -154,14 +153,12 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
-
   {
     date = "2023-10-01T00:01:00Z";
     const session = await logout(db, { cookie });
     if (session.cookie.value !== "") throw new Error();
     if (session.cookie.options.maxAge !== 0) throw new Error();
   }
-
   {
     const session = await consume(db, config, { cookie });
     if (session !== undefined) throw new Error();
@@ -181,7 +178,6 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
-
   {
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
@@ -204,7 +200,6 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
-
   {
     date = "2023-10-01T00:09:00Z";
     const session = await consume(db, config, { cookie });
@@ -227,7 +222,6 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
-
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, config, { cookie });
@@ -252,14 +246,12 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
-
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
     cookie = session.cookie.value;
   }
-
   {
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
@@ -281,7 +273,6 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
-
   {
     date = "2023-10-01T06:00:00Z";
     const session = await consume(db, config, { cookie });
@@ -289,7 +280,6 @@ async function consume(db, config, arg) {
     if (session.cookie.value !== "") throw new Error();
     if (session.cookie.options.maxAge !== 0) throw new Error();
   }
-
   {
     const session = await consume(db, config, { cookie });
     if (session !== undefined) throw new Error();
@@ -309,21 +299,18 @@ async function consume(db, config, arg) {
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
-
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
     cookie = session.cookie.value;
   }
-
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
     cookie = session.cookie.value;
   }
-
   {
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
