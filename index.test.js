@@ -289,6 +289,7 @@ async function consume(db, arg) {
 
   {
     date = new Date("2023-10-01T00:22:00Z");
+
     const credentials = await lib.credentialsFromCookie({ cookie: cookie.value });
     if (credentials === undefined) throw new Error();
 
