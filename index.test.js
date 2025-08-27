@@ -236,32 +236,40 @@ function runAction(sessions, action) {
   if (session !== undefined) throw new Error();
 }
 
-// {
-//   console.info("# consume: state SessionActive after TokenRotated twice");
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
-//   const sessions = createDb();
-//
-//   const loginResult = await login({ config   });
-// runAction(sessions, loginResult.action);
-//   const credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
-//  if (credentials === undefined) throw new Error();
-//
-// let session = sessions.get(credentials.idHash);
-// if (session === undefined) throw new Error();
-//   date = new Date("2023-10-01T00:11:00Z");
-//   let consumeResult = await consume({ credentials, config, session });
-// runAction(sessions, consumeResult.action);
-//   if (consumeResult.state !== "TokenRotated") throw new Error();
-//   credentials = session.cookie.value;
-//
-//   date = new Date("2023-10-01T00:22:00Z");
-//   session = await consume({ credentials, config, session });
-//   if (consumeResult.state !== "TokenRotated") throw new Error();
-//   credentials = session.cookie.value;
-//
-//   session = await consume({ credentials, config, session });
-//   if (consumeResult.state !== "SessionActive") throw new Error();
-// }
+{
+  console.info("# consume: state SessionActive after TokenRotated twice");
+  let date = new Date("2023-10-01T00:00:00Z");
+  const config = { ...testConfig, dateNow: () => date };
+  const sessions = createDb();
+
+  const loginResult = await login({ config });
+  runAction(sessions, loginResult.action);
+  let credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
+  if (credentials === undefined) throw new Error();
+
+  const session = sessions.get(credentials.idHash);
+  if (session === undefined) throw new Error();
+
+  date = new Date("2023-10-01T00:11:00Z");
+  let consumeResult = await consume({ credentials, config, session });
+  runAction(sessions, consumeResult.action);
+  if (consumeResult.state !== "TokenRotated") throw new Error();
+
+  credentials = await credentialsFromCookie({ cookie: consumeResult.cookie.value });
+  if (credentials === undefined) throw new Error();
+
+  date = new Date("2023-10-01T00:22:00Z");
+  consumeResult = await consume({ credentials, config, session });
+  runAction(sessions, consumeResult.action);
+  if (consumeResult.state !== "TokenRotated") throw new Error();
+
+  credentials = await credentialsFromCookie({ cookie: consumeResult.cookie.value });
+  if (credentials === undefined) throw new Error();
+
+  consumeResult = await consume({ credentials, config, session });
+  runAction(sessions, consumeResult.action);
+  if (consumeResult.state !== "SessionActive") throw new Error();
+}
 //
 // {
 //   console.info("# consume: state NotFound after logout");
@@ -455,7 +463,7 @@ function runAction(sessions, action) {
 //   if (consumeResult.state !== "TokenRotated") throw new Error();
 //   credentials = session.cookie.value;
 //
-//   session = await consume(config, { credentials: prevToken });
+//   consumeResult = await consume(config, { credentials: prevToken });
 //   if (consumeResult.state !== "SessionActive") throw new Error();
 // }
 //
