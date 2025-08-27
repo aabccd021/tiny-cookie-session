@@ -128,13 +128,13 @@ async function consume(db, config, arg) {
   console.info("# login");
   /** @type {string} */
   let cookie;
-  /** @type {Date} */
+  /** @type {string} */
   let date;
-  const config = { ...testConfig, dateNow: () => date };
+  const config = { ...testConfig, dateNow: () => new Date(date) };
   const db = createDb();
 
   {
-    date = new Date("2023-10-01T00:00:00Z");
+    date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
     if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
       throw new Error();
@@ -153,19 +153,19 @@ async function consume(db, config, arg) {
   console.info("# logout");
   /** @type {string} */
   let cookie;
-  /** @type {Date} */
+  /** @type {string} */
   let date;
-  const config = { ...testConfig, dateNow: () => date };
+  const config = { ...testConfig, dateNow: () => new Date(date) };
   const db = createDb();
 
   {
-    date = new Date("2023-10-01T00:00:00Z");
+    date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
 
   {
-    date = new Date("2023-10-01T00:01:00Z");
+    date = "2023-10-01T00:01:00Z";
     const session = await logout(db, { cookie });
     if (session.cookie.value !== "") throw new Error();
     if (session.cookie.options.maxAge !== 0) throw new Error();
@@ -181,13 +181,13 @@ async function consume(db, config, arg) {
   console.info("# consume: state SessionActive after login");
   /** @type {string} */
   let cookie;
-  /** @type {Date} */
+  /** @type {string} */
   let date;
-  const config = { ...testConfig, dateNow: () => date };
+  const config = { ...testConfig, dateNow: () => new Date(date) };
   const db = createDb();
 
   {
-    date = new Date("2023-10-01T00:00:00Z");
+    date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
@@ -204,19 +204,19 @@ async function consume(db, config, arg) {
   console.info("# consume: state SessionActive after 9 minutes");
   /** @type {string} */
   let cookie;
-  /** @type {Date} */
+  /** @type {string} */
   let date;
-  const config = { ...testConfig, dateNow: () => date };
+  const config = { ...testConfig, dateNow: () => new Date(date) };
   const db = createDb();
 
   {
-    date = new Date("2023-10-01T00:00:00Z");
+    date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
 
   {
-    date = new Date("2023-10-01T00:09:00Z");
+    date = "2023-10-01T00:09:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
     if (session.data.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
@@ -228,19 +228,19 @@ async function consume(db, config, arg) {
   console.info("# consume: state TokenRotated after 11 minutes");
   /** @type {string} */
   let cookie;
-  /** @type {Date} */
+  /** @type {string} */
   let date;
-  const config = { ...testConfig, dateNow: () => date };
+  const config = { ...testConfig, dateNow: () => new Date(date) };
   const db = createDb();
 
   {
-    date = new Date("2023-10-01T00:00:00Z");
+    date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
 
   {
-    date = new Date("2023-10-01T00:11:00Z");
+    date = "2023-10-01T00:11:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
     if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
@@ -254,19 +254,19 @@ async function consume(db, config, arg) {
   console.info("# consume: state SessionActive after TokenRotated");
   /** @type {string} */
   let cookie;
-  /** @type {Date} */
+  /** @type {string} */
   let date;
-  const config = { ...testConfig, dateNow: () => date };
+  const config = { ...testConfig, dateNow: () => new Date(date) };
   const db = createDb();
 
   {
-    date = new Date("2023-10-01T00:00:00Z");
+    date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
 
   {
-    date = new Date("2023-10-01T00:11:00Z");
+    date = "2023-10-01T00:11:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
     cookie = session.cookie.value;
@@ -284,19 +284,19 @@ async function consume(db, config, arg) {
   console.info("# consume: state Expired after 6 hours");
   /** @type {string} */
   let cookie;
-  /** @type {Date} */
+  /** @type {string} */
   let date;
-  const config = { ...testConfig, dateNow: () => date };
+  const config = { ...testConfig, dateNow: () => new Date(date) };
   const db = createDb();
 
   {
-    date = new Date("2023-10-01T00:00:00Z");
+    date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
 
   {
-    date = new Date("2023-10-01T06:00:00Z");
+    date = "2023-10-01T06:00:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionExpired") throw new Error();
     if (session.cookie.value !== "") throw new Error();
@@ -313,26 +313,26 @@ async function consume(db, config, arg) {
   console.info("# consume: state SessionActive after TokenRotated twice");
   /** @type {string} */
   let cookie;
-  /** @type {Date} */
+  /** @type {string} */
   let date;
-  const config = { ...testConfig, dateNow: () => date };
+  const config = { ...testConfig, dateNow: () => new Date(date) };
   const db = createDb();
 
   {
-    date = new Date("2023-10-01T00:00:00Z");
+    date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
     cookie = session.cookie.value;
   }
 
   {
-    date = new Date("2023-10-01T00:11:00Z");
+    date = "2023-10-01T00:11:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
     cookie = session.cookie.value;
   }
 
   {
-    date = new Date("2023-10-01T00:22:00Z");
+    date = "2023-10-01T00:22:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
     cookie = session.cookie.value;
@@ -347,18 +347,18 @@ async function consume(db, config, arg) {
 //
 // {
 //   console.info("# consume: state SessionActive after re-login");
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
 //   const db = createDb();
 //
 //   let loginResult = await login(db, {config   });
 //
 // let session = db.get(credentials.idHash);
 //
-//   date = new Date("2023-10-01T00:11:00Z");
+//   date = ("2023-10-01T00:11:00Z");
 //   cookie = await logout(db, config, { credentials });
 //   credentials = cookie.value;
 //
-//   date = new Date("2023-10-01T00:14:00Z");
+//   date = ("2023-10-01T00:14:00Z");
 //   loginResult = await login(db, {config   });
 //
 //   const session = await consume(db, config, { credentials: cookie.value });
@@ -367,7 +367,7 @@ async function consume(db, config, arg) {
 //
 // {
 //   console.info("# consume: state TokenStolen, user, user, attacker");
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
 //   const db = createDb();
 //
 //   const userCookie = await login(db, {config   });
@@ -375,12 +375,12 @@ async function consume(db, config, arg) {
 //
 //   const attackerToken = userToken;
 //
-//   date = new Date("2023-10-01T00:11:00Z");
+//   date = ("2023-10-01T00:11:00Z");
 //   let userSession = await consume(db, config, { credentials: userToken });
 //   if (userSession.state !== "TokenRotated") throw new Error();
 //   userToken = userSession.cookie.value;
 //
-//   date = new Date("2023-10-01T00:22:00Z");
+//   date = ("2023-10-01T00:22:00Z");
 //   userSession = await consume(db, config, { credentials: userToken });
 //   if (userSession.state !== "TokenRotated") throw new Error();
 //   userToken = userSession.cookie.value;
@@ -400,7 +400,7 @@ async function consume(db, config, arg) {
 //
 // {
 //   console.info("# consume: state TokenStolen, attacker, attacker, user");
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
 //   const db = createDb();
 //
 //   const userCookie = await login(db, {config   });
@@ -408,12 +408,12 @@ async function consume(db, config, arg) {
 //
 //   let attackerToken = userToken;
 //
-//   date = new Date("2023-10-01T00:11:00Z");
+//   date = ("2023-10-01T00:11:00Z");
 //   let attackerSession = await consume(db, config, { credentials: attackerToken });
 //   if (attackerSession.state !== "TokenRotated") throw new Error();
 //   attackerToken = attackerSession.cookie.value;
 //
-//   date = new Date("2023-10-01T00:22:00Z");
+//   date = ("2023-10-01T00:22:00Z");
 //   attackerSession = await consume(db, config, { credentials: attackerToken });
 //   if (attackerSession.state !== "TokenRotated") throw new Error();
 //   attackerToken = attackerSession.cookie.value;
@@ -433,19 +433,19 @@ async function consume(db, config, arg) {
 //
 // {
 //   console.info("# consume: state TokenStolen, attacker, user, attacker, user");
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
 //   const db = createDb();
 //
 //   const userCookie = await login(db, {config   });
 //   const userToken = userCookie.value;
 //   let attackerToken = userToken;
 //
-//   date = new Date("2023-10-01T00:11:00Z");
+//   date = ("2023-10-01T00:11:00Z");
 //   let attackerSession = await consume(db, config, { credentials: attackerToken });
 //   if (attackerSession.state !== "TokenRotated") throw new Error();
 //   attackerToken = attackerSession.cookie.value;
 //
-//   date = new Date("2023-10-01T00:22:00Z");
+//   date = ("2023-10-01T00:22:00Z");
 //   let userSession = await consume(db, config, { credentials: userToken });
 //   if (userSession.state !== "SessionActive") throw new Error();
 //
@@ -459,19 +459,19 @@ async function consume(db, config, arg) {
 //
 // {
 //   console.info("# consume: state TokenStolen, user, attacker, user, attacker");
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
 //   const db = createDb();
 //
 //   const userCookie = await login(db, {config   });
 //   let userToken = userCookie.value;
 //   const attackerToken = userToken;
 //
-//   date = new Date("2023-10-01T00:11:00Z");
+//   date = ("2023-10-01T00:11:00Z");
 //   let userSession = await consume(db, config, { credentials: userToken });
 //   if (userSession.state !== "TokenRotated") throw new Error();
 //   userToken = userSession.cookie.value;
 //
-//   date = new Date("2023-10-01T00:22:00Z");
+//   date = ("2023-10-01T00:22:00Z");
 //   let attackerSession = await consume(db, config, { credentials: attackerToken });
 //   if (attackerSession.state !== "SessionActive") throw new Error();
 //
@@ -486,7 +486,7 @@ async function consume(db, config, arg) {
 // {
 //   console.info("# consume: state SessionActive with second last credentials");
 //
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
 //   const db = createDb();
 //
 //   let result = await login(db, {config   });
@@ -494,7 +494,7 @@ async function consume(db, config, arg) {
 // let session = db.get(credentials.idHash);
 //
 //
-//   date = new Date("2023-10-01T00:11:00Z");
+//   date = ("2023-10-01T00:11:00Z");
 //
 //   let session = await consume(db, config, { credentials: prevToken });
 //   if (session?.state !== "TokenRotated") throw new Error();
@@ -507,7 +507,7 @@ async function consume(db, config, arg) {
 // {
 //   console.info("# consume: state SessionActive on race condition");
 //
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
+//   const config = { ...testConfig, dateNow: () => ("2023-10-01T00:00:00Z") };
 //   const db = createDb();
 //
 //   let result = await login(db, {config   });
@@ -521,7 +521,7 @@ async function consume(db, config, arg) {
 //
 // let session = db.get(credentials.idHash);
 //
-//   date = new Date("2023-10-01T00:11:00Z");
+//   date = ("2023-10-01T00:11:00Z");
 //
 //   await Promise.all([
 //     (async () => {
