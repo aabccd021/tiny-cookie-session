@@ -90,7 +90,9 @@ async function consume(db, config, arg) {
   if (credentials === undefined) return undefined;
 
   const data = db.get(credentials.idHash);
-  if (data === undefined) return undefined;
+  if (data === undefined) {
+    return { state: "SessionExpired", data: undefined, cookie: lib.logoutCookie };
+  }
 
   const result = await lib.consume({ credentials, config, session: data });
   runAction(db, result.action);
@@ -158,7 +160,7 @@ async function consume(db, config, arg) {
   }
   {
     const session = await consume(db, config, { cookie });
-    if (session !== undefined) throw new Error();
+    if (session?.state !== "SessionExpired") throw new Error();
   }
 }
 
@@ -178,8 +180,8 @@ async function consume(db, config, arg) {
   {
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
-    if (session.data.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
-    if (session.data.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
 }
 
@@ -201,8 +203,8 @@ async function consume(db, config, arg) {
     date = "2023-10-01T00:09:00Z";
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
-    if (session.data.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
-    if (session.data.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
 }
 
@@ -225,8 +227,8 @@ async function consume(db, config, arg) {
     if (session?.state !== "TokenRotated") throw new Error();
     if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
       throw new Error();
-    if (session.data.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
-    if (session.data.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
+    if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
+    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
   }
 }
 
@@ -252,8 +254,8 @@ async function consume(db, config, arg) {
   {
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
-    if (session.data.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
-    if (session.data.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
+    if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
+    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
   }
 }
 
@@ -279,7 +281,7 @@ async function consume(db, config, arg) {
   }
   {
     const session = await consume(db, config, { cookie });
-    if (session !== undefined) throw new Error();
+    if (session?.state !== "SessionExpired") throw new Error();
   }
 }
 
@@ -375,7 +377,7 @@ async function consume(db, config, arg) {
   }
   {
     const userSession = await consume(db, config, { cookie: userCookie });
-    if (userSession !== undefined) throw new Error();
+    if (userSession?.state !== "SessionExpired") throw new Error();
   }
 }
 
@@ -413,7 +415,7 @@ async function consume(db, config, arg) {
   }
   {
     const attackerSession = await consume(db, config, { cookie: userCookie });
-    if (attackerSession !== undefined) throw new Error();
+    if (attackerSession?.state !== "SessionExpired") throw new Error();
   }
 }
 
