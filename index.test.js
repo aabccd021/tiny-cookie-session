@@ -85,12 +85,12 @@ async function login(db, arg) {
  */
 async function logout(db, cookie) {
   if (cookie === undefined) {
-    return { cookie: undefined, action: undefined };
+    throw new Error();
   }
 
   const credential = await lib.credentialFromCookie({ cookie });
   if (credential.data === undefined) {
-    return { cookie: credential.cookie, action: undefined };
+    throw new Error();
   }
 
   const result = await lib.logout({ credentialData: credential.data });
@@ -111,12 +111,12 @@ async function logout(db, cookie) {
  */
 async function consume(db, cookie, config) {
   if (cookie === undefined) {
-    return { state: "CookieMissing", cookie: undefined, data: undefined };
+    throw new Error();
   }
 
   const credential = await lib.credentialFromCookie({ cookie });
   if (credential.data === undefined) {
-    return { state: "CookieMalformed", cookie: credential.cookie, data: undefined };
+    throw new Error();
   }
 
   const data = dbSelect(db, credential.data.idHash);
