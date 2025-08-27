@@ -103,14 +103,15 @@ export type ConsumeResult =
       readonly state: "SessionActive";
       readonly cookie: undefined;
       readonly action: undefined;
-    }
-  | {
-      readonly state: "CookieMalformed";
-      readonly cookie: Cookie;
-      readonly action: DeleteAction;
     };
 
 export const consume: (arg: ConsumeArg) => Promise<ConsumeResult>;
+
+export type CredentialsFromCookieArg = {
+  readonly cookie: string;
+};
+
+export type CredentialsFromCookieResult = Credentials | undefined;
 
 type credentialsFromCookie = (arg: { readonly cookie: string }) => Promise<Credentials | undefined>;
 export const credentialsFromCookie: credentialsFromCookie;

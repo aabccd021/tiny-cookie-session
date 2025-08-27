@@ -81,9 +81,10 @@ export async function logout(arg) {
 }
 
 /**
- * @type {import("./index").credentialsFromCookie}
+ * @param {import("./index").CredentialsFromCookieArg} arg
+ * @returns {Promise<import("./index").CredentialsFromCookieResult>}
  */
-export const credentialsFromCookie = async (arg) => {
+export async function credentialsFromCookie(arg) {
   const [id, token] = arg.cookie.split(":");
   if (id === undefined || token === undefined) {
     return undefined;
@@ -91,7 +92,7 @@ export const credentialsFromCookie = async (arg) => {
 
   const idHash = await hash(id);
   return { id, token, idHash };
-};
+}
 
 /**
  * @param {import("./index").ConsumeArg} arg
