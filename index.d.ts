@@ -49,17 +49,39 @@ export type DeleteAction = {
 
 export type Action = InsertAction | DeleteAction | UpdateAction;
 
-type logout = (arg: { readonly credentials: Credentials }) => Promise<{
+type LogoutArg = {
+  readonly credentials: Credentials;
+};
+
+type LogoutResult = {
   readonly cookie: Cookie;
   readonly action: DeleteAction;
-}>;
-export const logout: logout;
+};
 
-type login = (arg: { config?: Config }) => Promise<{
+export const logout: (arg: LogoutArg) => Promise<LogoutResult>;
+
+type LoginArg = {
+  readonly config?: Config;
+};
+
+type LoginResult = {
   readonly cookie: Cookie;
   readonly action: InsertAction;
-}>;
-export const login: login;
+};
+
+export const login: (arg: LoginArg) => Promise<LoginResult>;
+
+export type ConsumeArg = {
+  readonly credentials: Credentials;
+  readonly session: {
+    readonly oddTokenHash: string;
+    readonly evenTokenHash?: string;
+    readonly exp: Date;
+    readonly tokenExp: Date;
+    readonly isLatestTokenOdd: boolean;
+  };
+  readonly config?: Config;
+};
 
 export type ConsumeResult =
   | {
@@ -88,18 +110,7 @@ export type ConsumeResult =
       readonly action: DeleteAction;
     };
 
-type consume = (arg: {
-  readonly credentials: Credentials;
-  readonly session: {
-    readonly oddTokenHash: string;
-    readonly evenTokenHash?: string;
-    readonly exp: Date;
-    readonly tokenExp: Date;
-    readonly isLatestTokenOdd: boolean;
-  };
-  readonly config?: Config;
-}) => Promise<ConsumeResult>;
-export const consume: consume;
+export const consume: (arg: ConsumeArg) => Promise<ConsumeResult>;
 
 type credentialsFromCookie = (arg: { readonly cookie: string }) => Promise<Credentials | undefined>;
 export const credentialsFromCookie: credentialsFromCookie;

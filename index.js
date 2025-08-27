@@ -31,9 +31,10 @@ const hash = async (token) => {
 };
 
 /**
- * @type {import("./index").login}
+ * @param {import("./index").LoginArg} arg
+ * @returns {Promise<import("./index").LoginResult>}
  */
-export const login = async (arg) => {
+export async function login(arg) {
   const id = generateRandomHex();
   const token = generateRandomHex();
   const now = arg.config?.dateNow?.() ?? new Date();
@@ -63,12 +64,13 @@ export const login = async (arg) => {
       oddTokenHash: await hash(token),
     },
   };
-};
+}
 
 /**
- * @type {import("./index").logout}
+ * @param {import("./index").LogoutArg} arg
+ * @returns {Promise<import("./index").LogoutResult>}
  */
-export const logout = async (arg) => {
+export async function logout(arg) {
   return {
     cookie: logoutCookie,
     action: {
@@ -76,7 +78,7 @@ export const logout = async (arg) => {
       idHash: arg.credentials.idHash,
     },
   };
-};
+}
 
 /**
  * @type {import("./index").credentialsFromCookie}
@@ -92,9 +94,10 @@ export const credentialsFromCookie = async (arg) => {
 };
 
 /**
- * @type {import("./index").consume}
+ * @param {import("./index").ConsumeArg} arg
+ * @returns {Promise<import("./index").ConsumeResult>}
  */
-export const consume = async (arg) => {
+export async function consume(arg) {
   const requestTokenHash = await hash(arg.credentials.token);
   const isOddToken = requestTokenHash === arg.session.oddTokenHash;
   const isEvenToken = requestTokenHash === arg.session.evenTokenHash;
@@ -166,4 +169,4 @@ export const consume = async (arg) => {
       tokenExp,
     },
   };
-};
+}
