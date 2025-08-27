@@ -69,7 +69,7 @@ type LoginResult = {
   readonly action: InsertAction;
 };
 
-export const login: (arg: LoginArg) => Promise<LoginResult>;
+export const login: (arg?: LoginArg) => Promise<LoginResult>;
 
 export type Session =
   | {

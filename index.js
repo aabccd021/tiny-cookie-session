@@ -31,14 +31,14 @@ const hash = async (token) => {
 };
 
 /**
- * @param {import("./index").LoginArg} arg
+ * @param {import("./index").LoginArg} [arg]
  * @returns {Promise<import("./index").LoginResult>}
  */
 export async function login(arg) {
   const id = generateRandomHex();
   const token = generateRandomHex();
-  const now = arg.config?.dateNow?.() ?? new Date();
-  const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
+  const now = arg?.config?.dateNow?.() ?? new Date();
+  const sessionExpiresIn = arg?.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
   const expires = new Date(now.getTime() + sessionExpiresIn);
 
   /** @type {import("./index").Cookie} */
@@ -52,7 +52,7 @@ export async function login(arg) {
     },
   };
 
-  const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
+  const tokenExpiresIn = arg?.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
   return {
     cookie,
     action: {
