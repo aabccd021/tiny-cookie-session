@@ -126,16 +126,19 @@ async function consume(db, config, arg) {
 
 {
   console.info("# login");
-  const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
-  const db = createDb();
-
   /** @type {string} */
   let cookie;
+  /** @type {Date} */
+  let date;
+  const config = { ...testConfig, dateNow: () => date };
+  const db = createDb();
 
   {
+    date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
     if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
       throw new Error();
+
     cookie = session.cookie.value;
   }
 
@@ -149,15 +152,17 @@ async function consume(db, config, arg) {
 
 {
   console.info("# logout");
-  let date = new Date("2023-10-01T00:00:00Z");
+  /** @type {string} */
+  let cookie;
+  /** @type {Date} */
+  let date;
   const config = { ...testConfig, dateNow: () => date };
   const db = createDb();
 
-  /** @type {string} */
-  let cookie;
-
   {
+    date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
+
     cookie = session.cookie.value;
   }
 
@@ -176,14 +181,17 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state SessionActive after login");
-  const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
-  const db = createDb();
-
   /** @type {string} */
   let cookie;
+  /** @type {Date} */
+  let date;
+  const config = { ...testConfig, dateNow: () => date };
+  const db = createDb();
 
   {
+    date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
+
     cookie = session.cookie.value;
   }
 
@@ -197,21 +205,22 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state SessionActive after 9 minutes");
-  let date = new Date("2023-10-01T00:00:00Z");
+  /** @type {string} */
+  let cookie;
+  /** @type {Date} */
+  let date;
   const config = { ...testConfig, dateNow: () => date };
   const db = createDb();
 
-  /** @type {string} */
-  let cookie;
-
   {
+    date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
+
     cookie = session.cookie.value;
   }
 
   {
     date = new Date("2023-10-01T00:09:00Z");
-
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionActive") throw new Error();
     if (session.data.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
@@ -221,21 +230,22 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state TokenRotated after 11 minutes");
-  let date = new Date("2023-10-01T00:00:00Z");
+  /** @type {string} */
+  let cookie;
+  /** @type {Date} */
+  let date;
   const config = { ...testConfig, dateNow: () => date };
   const db = createDb();
 
-  /** @type {string} */
-  let cookie;
-
   {
+    date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
+
     cookie = session.cookie.value;
   }
 
   {
     date = new Date("2023-10-01T00:11:00Z");
-
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
     if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
@@ -247,21 +257,22 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state SessionActive after TokenRotated");
-  let date = new Date("2023-10-01T00:00:00Z");
+  /** @type {string} */
+  let cookie;
+  /** @type {Date} */
+  let date;
   const config = { ...testConfig, dateNow: () => date };
   const db = createDb();
 
-  /** @type {string} */
-  let cookie;
-
   {
+    date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
+
     cookie = session.cookie.value;
   }
 
   {
     date = new Date("2023-10-01T00:11:00Z");
-
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
 
@@ -278,21 +289,22 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state Expired after 6 hours");
-  let date = new Date("2023-10-01T00:00:00Z");
+  /** @type {string} */
+  let cookie;
+  /** @type {Date} */
+  let date;
   const config = { ...testConfig, dateNow: () => date };
   const db = createDb();
 
-  /** @type {string} */
-  let cookie;
-
   {
+    date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
+
     cookie = session.cookie.value;
   }
 
   {
     date = new Date("2023-10-01T06:00:00Z");
-
     const session = await consume(db, config, { cookie });
     if (session?.state !== "SessionExpired") throw new Error();
     if (session.cookie.value !== "") throw new Error();
@@ -307,21 +319,22 @@ async function consume(db, config, arg) {
 
 {
   console.info("# consume: state SessionActive after TokenRotated twice");
-  let date = new Date("2023-10-01T00:00:00Z");
+  /** @type {string} */
+  let cookie;
+  /** @type {Date} */
+  let date;
   const config = { ...testConfig, dateNow: () => date };
   const db = createDb();
 
-  /** @type {string} */
-  let cookie;
-
   {
+    date = new Date("2023-10-01T00:00:00Z");
     const session = await login(db, { config });
+
     cookie = session.cookie.value;
   }
 
   {
     date = new Date("2023-10-01T00:11:00Z");
-
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
 
@@ -330,7 +343,6 @@ async function consume(db, config, arg) {
 
   {
     date = new Date("2023-10-01T00:22:00Z");
-
     const session = await consume(db, config, { cookie });
     if (session?.state !== "TokenRotated") throw new Error();
 
