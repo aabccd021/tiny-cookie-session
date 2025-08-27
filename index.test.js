@@ -100,6 +100,9 @@ function runAction(sessions, action) {
 
   if (logoutResult.cookie.value !== "") throw new Error();
   if (logoutResult.cookie.options.maxAge !== 0) throw new Error();
+
+  const session = sessions.get(credentials.idHash);
+  if (session !== undefined) throw new Error();
 }
 
 {
@@ -270,30 +273,7 @@ function runAction(sessions, action) {
   runAction(sessions, consumeResult.action);
   if (consumeResult.state !== "SessionActive") throw new Error();
 }
-//
-// {
-//   console.info("# consume: state NotFound after logout");
-//   const config = { ...testConfig, dateNow: () => new Date("2023-10-01T00:00:00Z") };
-//   const sessions = createDb();
-//
-//   let loginResult = await login({ config   });
-// runAction(sessions, loginResult.action);
-//   const credentials = await credentialsFromCookie({ cookie: loginResult.cookie.value });
-//  if (credentials === undefined) throw new Error();
-//
-// let session = sessions.get(credentials.idHash);
-// if (session === undefined) throw new Error();
-//   date = new Date("2023-10-01T00:11:00Z");
-//   cookie = await logout(config, { credentials });
-//   credentials = cookie.value;
-//
-//   const consumeResult = await consume({ credentials, config, session });
-// runAction(sessions, consumeResult.action);
-//   if (consumeResult.state !== "NotFound") throw new Error();
-//
-//   if (consumeResult.cookie.value !== "") throw new Error();
-//   if (consumeResult.cookie.options.maxAge !== 0) throw new Error();
-// }
+
 //
 // {
 //   console.info("# consume: state SessionActive after re-login");
