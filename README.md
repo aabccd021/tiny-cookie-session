@@ -215,25 +215,32 @@ Bun.serve({
     if (url.pathname === "/user_id" && request.method === "GET") {
       const sessionCookie = parseCookie(request);
       if (sessionCookie === undefined) {
-        return Response.json("No Session Cookie", {
-          status: 400,
-          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
-        });
+        return Response.json("No Session Cookie", { status: 400 });
       }
 
       const credential = await tcs.credentialFromCookie({ cookie: sessionCookie });
       if (credential === undefined) {
         return Response.json("Malformed Session Cookie", {
           status: 400,
-          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
+          headers: { 
+            // This will delete the malformed cookie in the browser.
+            "Set-Cookie": serializeCookie(tcs.logoutCookie)
+          },
         });
       }
 
       const session = dbSelect(db, credential.idHash);
+
+      // Session might not be found if it was deleted manually by admin,
+      // or if deleted automatically when multiple sessions are not allowed,
+      // or if deleted automatically when session forking is detected.
       if (session === null) {
         return Response.json("Session Not Found", {
           status: 404,
-          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
+          headers: { 
+            // This will delete the stale cookie in the browser.
+            "Set-Cookie": serializeCookie(tcs.logoutCookie)
+          },
         });
       }
 
