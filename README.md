@@ -2,34 +2,34 @@
 
 **tiny-cookie-session** is a cookie-based session management library that detects session forking.
 
-When a session forking is detected, this library logs out both the attacker and the legitimate user.
+When session forking is detected, this library logs out both the attacker and the legitimate user.
 
 ## Important: Security limitations
 
-While this library detects session forking, it does not provide complete protection. 
+While this library detects session forking, it does not provide complete protection.
 You need to understand its limitations before using it in production.
 
 ### How session id and token are stored
 
-This library uses random generated session id and token to identify a session.
+This library uses randomly generated session id and token to identify a session.
 
-The session id is a long-lived identifier for the session, 
+The session id is a long-lived identifier for the session,
 while the token is a short-lived value that is rotated periodically.
 
-The session id and token are stored in a cookie in a format like this `${sessionId}:${token}`.
+The session id and token are stored in a cookie in a format like this: `${sessionId}:${token}`.
 
-We also store session id and *two* latest tokens (hashes) in the database. 
-These two tokens are what currently considered as valid tokens for the session.
+We also store the session id and two latest tokens (hashes) in the database.
+These two tokens are what are currently considered valid tokens for the session.
 
 We store two tokens instead of one to handle a race condition, where the user makes two requests
 at the same time and either request could rotate the token.
 
-While the two latest tokens are considered valid, 
+While the two latest tokens are considered valid,
 only the latest one can be used to rotate the token.
 
 ### Detecting outdated cookies
 
-After a cookie is stolen and the token is rotated twice, 
+After a cookie is stolen and the token is rotated twice,
 either the attacker or the legitimate user will have an outdated token.
 
 When this outdated token is used, we will detect this as session forking and log out both parties.
@@ -38,69 +38,69 @@ We log out both parties because we cannot determine which party used the invalid
 
 It doesn't have to be the actual outdated token to be detected as session forking.
 
-As long as paired with a valid session id, any token value, 
-even the ones that were never issued, will be detected as session forking.
+As long as it's paired with a valid session id, any token value,
+even ones that were never issued, will be detected as session forking.
 
-This means theoritically, if the attacker can guess a valid session id,
+This means theoretically, if the attacker can guess a valid session id,
 they can use any random token value to log out the legitimate user.
 
-But practically this is not a concern because we used 256 bits of entropy for session id generation,
+But practically this is not a concern because we use 256 bits of entropy for session id generation,
 making it unguessable.
 
-### If the attacker stole an old cookie
+### If the attacker steals an old cookie
 
-If the attacker stole a cookie, and the user has already rotated the token twice since then,
+If the attacker steals a cookie, and the user has already rotated the token twice since then,
 when the attacker uses the cookie, both parties will be logged out.
 
-In this case, no harm was done to the legitimate user,
-just the user will be logged out unexpectedly.
+In this case, no harm is done to the legitimate user,
+except the user will be logged out unexpectedly.
 
-### If the attacker stole a recent cookie
+### If the attacker steals a recent cookie
 
-If the attacker stole a cookie, and the user has not rotated the token twice since then,
+If the attacker steals a cookie, and the user has not rotated the token twice since then,
 the attacker can use the cookie.
 
 For this library to detect session forking, two conditions must be met after the cookie is stolen:
 
 1. The token must be rotated at least twice.
-1. The user must use the session again.
+2. The user must use the session again.
 
-The token rotation on condition one can be achieved by any combination of the user and the attacker 
+The token rotation in condition one can be achieved by any combination of the user and the attacker
 making requests: (user, user), (user, attacker), (attacker, user), or (attacker, attacker).
 
 Until these two conditions are met, the attacker can use the stolen cookie.
 
-This means, there are two worst-case scenarios where we can't detect session forking:
+This means there are two worst-case scenarios where we can't detect session forking:
 
 1. The attacker steals a cookie, and the legitimate user never uses the session again (inactive).
 2. The attacker steals a cookie, and logs out the legitimate user.
 
 We can't detect session forking in these scenarios.
 
-These problem can not be solved unless the user has some way to prove their identity,
+These problems cannot be solved unless the user has some way to prove their identity,
 like how it's done in Device Bound Session Credentials (DBSC).
 
 The best we can do is to set a short session expiration time (`sessionExpiresIn`),
-and also show "Log out other devices" screen everytime the user logs in.
+and also show a "Log out other devices" screen every time the user logs in.
 
 Setting a short session expiration time will limit the window of opportunity for the attacker,
 but it will also inconvenience legitimate users by requiring them to log in more frequently.
 
-One way to making it safer is by restricting users to have only one active session at a time.
+One way to make it safer is by restricting users to have only one active session at a time.
 As opposed to manually logging out other devices, this will automatically log out
-other devices when the user logs in from a new device, one less human interaction required.
+other devices when the user logs in from a new device, requiring one less human interaction.
 
 Another way is to implement "Don't remember me" functionality,
 which deletes the cookie when the browser is closed.
-This can be done easily by removing `Expires` and `Max-Age` attributes from the session cookie.
+This can be done easily by removing the `Expires` and `Max-Age` attributes from the session cookie.
 
 ### Persistent cookie theft
 
 If the cookie is stolen repeatedly (e.g., via persistent background malware),
 it can't be prevented by any cookie-based mechanism, including this library or even DBSC.
 
-The user is cooked at this point. 
-The only solution to this is to log in from a clean device and log out all other devices.
+The user is cooked at this point.
+The only solution is to log in from a clean device and log out all other devices.
 
 ## Installation
 
@@ -147,10 +147,12 @@ db.run(`
 
 function dbSelect(idHash: string) {
   const row: any = db
-    .query(`
+    .query(
+      `
       SELECT user_id, exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd
       FROM session WHERE id_hash = :id_hash
-    `)
+    `,
+    )
     .get({ id_hash: idHash });
 
   if (row === null) {
@@ -163,15 +165,17 @@ function dbSelect(idHash: string) {
     tokenExp: new Date(row.token_exp),
     oddTokenHash: row.odd_token_hash,
     evenTokenHash: row.even_token_hash,
-    isLatestTokenOdd: row.is_latest_token_odd === 1
+    isLatestTokenOdd: row.is_latest_token_odd === 1,
   };
 }
 
 function dbInsert(action: tcs.InsertAction, userId: string) {
-  db.query(`
+  db.query(
+    `
     INSERT INTO session (id_hash, user_id, exp, odd_token_hash, token_exp, is_latest_token_odd)
     VALUES (:id_hash, :user_id, :exp, :odd_token_hash, :token_exp, :is_latest_token_odd)
-  `).run({
+  `,
+  ).run({
     id_hash: action.idHash,
     user_id: userId,
     exp: action.exp.toISOString(),
@@ -182,7 +186,8 @@ function dbInsert(action: tcs.InsertAction, userId: string) {
 }
 
 function dbUpdate(action: tcs.UpdateAction) {
-  db.query(`
+  db.query(
+    `
     UPDATE session
     SET 
       exp = :exp,
@@ -191,7 +196,8 @@ function dbUpdate(action: tcs.UpdateAction) {
       even_token_hash = COALESCE(:even_token_hash, even_token_hash),
       is_latest_token_odd = :is_latest_token_odd
     WHERE id_hash = :id_hash
-  `).run({
+  `,
+  ).run({
     id_hash: action.idHash,
     exp: action.exp.toISOString(),
     token_exp: action.tokenExp.toISOString(),
@@ -208,7 +214,7 @@ function dbDelete(action: tcs.DeleteAction) {
 async function login(request: Request) {
   const body = await request.formData();
 
-  // User ID should be obtained from trusted source.
+  // User ID should be obtained from a trusted source.
   const userId = body.get("user_id")?.toString();
   if (userId === undefined || userId === "") {
     return new Response("No User ID");
@@ -223,7 +229,7 @@ async function login(request: Request) {
   }
 
   return new Response("Logged in", {
-    headers: { "Set-Cookie": serializeCookie(cookie), },
+    headers: { "Set-Cookie": serializeCookie(cookie) },
   });
 }
 
@@ -251,7 +257,7 @@ async function logout(request: Request) {
   }
 
   return new Response("Logged out", {
-    headers: { "Set-Cookie": serializeCookie(cookie), },
+    headers: { "Set-Cookie": serializeCookie(cookie) },
   });
 }
 
@@ -311,22 +317,21 @@ Bun.serve({
     return new Response("Not Found", { status: 404 });
   },
 });
-
 ```
 
 ## Updating Session
 
-When updating a session, you need to be careful to not removing existing token.
+When updating a session, you need to be careful not to remove existing tokens.
 
 The library might return `undefined` for either `oddTokenHash` or `evenTokenHash` in the
 `UpdateAction`, which means you should not update that column, not set it to `NULL`.
 
-When done naively on a SQL query, you might accidentally set the `even_token_hash` to `NULL`:
+When done naively in a SQL query, you might accidentally set the `even_token_hash` to `NULL`:
 
 ```sql
 UPDATE session
 SET
-  odd_token_hash = :odd_token_hash,     
+  odd_token_hash = :odd_token_hash,
   even_token_hash = :even_token_hash
 ```
 
@@ -335,11 +340,11 @@ Instead, you should use `COALESCE` to only update the column when the value is n
 ```sql
 UPDATE session
 SET
-  odd_token_hash = COALESCE(:odd_token_hash, odd_token_hash), 
+  odd_token_hash = COALESCE(:odd_token_hash, odd_token_hash),
   even_token_hash = COALESCE(:even_token_hash, even_token_hash)
 ```
 
-The same applies for in memory storage as shown on [test](./index.test.js).
+The same applies to in-memory storage as shown in the [test](./index.test.js).
 
 ```ts
 if (action.oddTokenHash !== undefined) {
@@ -352,10 +357,10 @@ if (action.evenTokenHash !== undefined) {
 
 ## Log out on malformed cookie or session not found
 
-As given in the example above, you can use `tcs.logoutCookie` to log out the user when the cookie 
+As shown in the example above, you can use `tcs.logoutCookie` to log out the user when the cookie
 is malformed or the session is not found.
 
-Not implementing this will not cause any security issues, but it will leave stale cookies in 
+Not implementing this will not cause any security issues, but it will leave stale cookies in
 the user's browser.
 
 ```ts
@@ -376,22 +381,21 @@ if (session === null) {
 
 ## Garbage collection of expired sessions
 
-Since this library doesn't automatically delete expired sessions for inactive users, 
+Since this library doesn't automatically delete expired sessions for inactive users,
 you'll need to implement your own garbage collection mechanism:
-
 
 ```js
 // Run this periodically
 db.query("DELETE FROM session WHERE exp < :now").run({ now: Date.now() });
 ```
 
-Doing or not doing garbage collection on expired sessions is always safe and has no security 
-implications, since those sessions would be rejected as "SessionExpired" anyway if a user tried 
+Doing or not doing garbage collection on expired sessions is always safe and has no security
+implications, since those sessions would be rejected as "SessionExpired" anyway if a user tried
 to use them.
 
 ## Force logout session
 
-This library allows you to immediately invalidate sessions by deleting them from the storage 
+This library allows you to immediately invalidate sessions by deleting them from the storage
 backend.
 
 Unlike JWT, the session logout is effective immediately when this is done.
@@ -411,7 +415,7 @@ db.query(`DELETE FROM session`).run();
 
 This library sets `SameSite=Strict` and does not set `Path` by default.
 
-This is the strictest setting for a cookie, which is good default for a library.
+This is the strictest setting for a cookie, which is a good default for a library.
 
 But practically, you usually want `Path=/` and `SameSite=Lax` for session cookies.
 
@@ -421,7 +425,7 @@ To do that, you can override the default options returned by this library:
 import * as tcs from "tiny-cookie-session";
 
 function serializeCookie(cookie: tcs.Cookie): string {
-  const options = { ...cookie.options, path: "/", sameSite: "lax", };
+  const options = { ...cookie.options, path: "/", sameSite: "lax" };
   return new Bun.Cookie("mysession", cookie.value, options).serialize();
 }
 ```
@@ -430,12 +434,12 @@ function serializeCookie(cookie: tcs.Cookie): string {
 
 This library does not handle cookie serialization and parsing.
 
-You need to do it outside this library, by using your web framework's built-in functionality 
- or a third-party library.
+You need to do it outside this library, by using your web framework's built-in functionality
+or a third-party library.
 
-if you use [Bun Cookie](https://bun.sh/docs/api/cookie) or
+If you use [Bun Cookie](https://bun.sh/docs/api/cookie) or
 [cookie](https://www.npmjs.com/package/cookie),
-you can directly use `value` and `option` as argumets to serialize the cookie.
+you can directly use `value` and `options` as arguments to serialize the cookie.
 
 ```ts
 import * as tcs from "tiny-cookie-session";
@@ -450,7 +454,7 @@ cookieLib.serialize("mysession", cookie.value, cookie.options);
 
 ## Cookie Signing
 
-The main benefit of signed cookies is being able to detect tampered cookie without 
+The main benefit of signed cookies is being able to detect tampered cookies without
 reaching the storage backend, but this isn't strictly required for this library to work or to
 provide security.
 
@@ -469,7 +473,7 @@ function unsignCookie(signedValue: string): string {
 
 function serializeAndSignCookie(cookie: tcs.Cookie): string {
   const signedValue = signCookie(cookie.value);
-  return new Bun.Cookie("mysession", signCookie, cookie.options).serialize();
+  return new Bun.Cookie("mysession", signedValue, cookie.options).serialize();
 }
 
 function parseAndUnsignCookie(request: Request): string | undefined {
@@ -492,12 +496,12 @@ import * as tcs from "tiny-cookie-session";
 
 const config = {
   sessionExpiresIn: 5 * 60 * 60 * 1000, // 5 hours
-  tokenExpiresIn: 10 * 60 * 1000,    // 10 minutes
+  tokenExpiresIn: 10 * 60 * 1000, // 10 minutes
 };
 
-tcs.consume({ config, /* other params */ })
+tcs.consume({ config /* other params */ });
 
-tcs.login({ config })
+tcs.login({ config });
 ```
 
 ### Session Expiration Time
@@ -505,11 +509,11 @@ tcs.login({ config })
 The `sessionExpiresIn` value controls how long a session can remain active without user interaction,
 often referred to as "log out after X minutes of inactivity."
 
-For example, with `sessionExpiresIn: 30 * 60 * 1000` (30 minutes), 
+For example, with `sessionExpiresIn: 30 * 60 * 1000` (30 minutes),
 a user can remain logged in indefinitely by making requests at least every 29 minutes.
 
-When the user makes a request before the session expires, 
-the session's expiration time will be extended both in the database's `exp` column and 
+When the user makes a request before the session expires,
+the session's expiration time will be extended both in the database's `exp` column and
 in the cookie's `Expires` attribute.
 
 Your choice for session expiration time should balance security and user experience.
@@ -522,11 +526,11 @@ When a token expires but the session is still valid, the system generates a new 
 
 Set to 2 minutes by default.
 
-The longer you set `tokenExpiresIn`, 
-the longer an attacker can use a stolen token before the session forking is detected.
+The longer you set `tokenExpiresIn`,
+the longer an attacker can use a stolen token before session forking is detected.
 
 So you should set this to a value as short as possible,
-but still longer than the longest http request time your users might experience.
+but still longer than the longest HTTP request time your users might experience.
 
 For example, if your app might need to upload a large file in a single request,
 and that upload could take up to 3 minutes on a slow connection,
@@ -543,23 +547,25 @@ to each function call.
 ```ts
 import * as tcs from "tiny-cookie-session";
 
-async function handleRequest(request: Request, securityType: 'strict' | 'lenient') {
+async function handleRequest(request: Request, securityType: "strict" | "lenient") {
+  const config =
+    securityType === "strict"
+      ? {
+          sessionExpiresIn: 30 * 60 * 1000, // 30 minutes
+          tokenExpiresIn: 2 * 60 * 1000, // 2 minutes
+        }
+      : {
+          sessionExpiresIn: 24 * 60 * 60 * 1000, // 24 hours
+          tokenExpiresIn: 10 * 60 * 1000, // 10 minutes
+        };
 
-  const config = securityType === 'strict' ? {
-    sessionExpiresIn: 30 * 60 * 1000, // 30 minutes
-    tokenExpiresIn: 2 * 60 * 1000,    // 2 minutes
-  } : {
-    sessionExpiresIn: 24 * 60 * 60 * 1000, // 24 hours
-    tokenExpiresIn: 10 * 60 * 1000,        // 10 minutes
-  };
-
-  await tcs.consume({ config, /* other params */ });
+  await tcs.consume({ config /* other params */ });
 }
 ```
 
 ## Session Id and Token Security
 
-This library uses 256 bits of entropy for session id and token generation, 
+This library uses 256 bits of entropy for session id and token generation,
 exceeding industry recommendations:
 
 - OWASP recommends at least 64 bits of entropy ([OWASP Guidelines](https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length))
@@ -567,22 +573,22 @@ exceeding industry recommendations:
 - Lucia uses 160 bits of entropy in their example ([Lucia Source](https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88))
 - Auth.js uses 256 bits of entropy in their tests ([Auth.js Source](https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/test/actions/session.test.ts#L146))
 
-Since the session id and token itself are already a random string with high entropy 
+Since the session id and token are already random strings with high entropy
 (unlike a password), we don't need additional processing like salting or peppering.
 
-The session id and token are hashed using SHA-256 before being stored in the database. 
+The session id and token are hashed using SHA-256 before being stored in the database.
 This way a database leak would not lead to session hijacking.
 
-Hashing the id and token on every request might seem expensive, 
+Hashing the id and token on every request might seem expensive,
 but it's no more demanding than cookie signing, which is a common practice in web services.
 
-Also, [we don't have to use `crypto.timingSafeEqual` when comparing tokens because we are comparing 
+Also, [we don't have to use `crypto.timingSafeEqual` when comparing tokens because we are comparing
 hashes of high entropy values](https://security.stackexchange.com/questions/237116/using-timingsafeequal#comment521092_237133).
 
 ## CSRF
 
 This library focuses solely on session management and does not implement CSRF protection.
-You should implement CSRF protection for your entire application before using any functions from 
+You should implement CSRF protection for your entire application before using any functions from
 this library.
 
 ## Comparison with other session management methods
@@ -616,7 +622,7 @@ this library.
 - If the token is stolen, the attacker can use it until the next rotation.
 - The user notices nothing and can continue using the system as usual.
 
-## LICENCE
+## LICENSE
 
 ```
 Zero-Clause BSD
@@ -625,9 +631,9 @@ Zero-Clause BSD
 Permission to use, copy, modify, and/or distribute this software for
 any purpose with or without fee is hereby granted.
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
-OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLEs
+OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE
 FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY
 DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
 AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
