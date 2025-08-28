@@ -113,7 +113,7 @@ function login(request: Request) {
   // User ID should be obtained from trusted source.
   const userId = body.get("user_id")?.toString();
   if (userId === undefined || userId === "") {
-    return Response.json("No User ID", { status: 400 });
+    return new Response("No User ID");
   }
 
   const { action, cookie } = await tcs.login();
@@ -125,7 +125,6 @@ function login(request: Request) {
   }
 
   return new Response("Logged in", {
-    status: 200,
     headers: { "Set-Cookie": serializeCookie(cookie), },
   });
 }
@@ -133,16 +132,14 @@ function login(request: Request) {
 function logout(request: Request) {
   const sessionCookie = parseCookie(request);
   if (sessionCookie === undefined) {
-    return Response.json("No Session Cookie", {
-      status: 400,
+    return new Response("No Session Cookie", {
       headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
     });
   }
 
   const credential = await tcs.credentialFromCookie({ cookie: sessionCookie });
   if (credential === undefined) {
-    return Response.json("Malformed Session Cookie", {
-      status: 400,
+    return new Response("Malformed Session Cookie", {
       headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
     });
   }
@@ -156,7 +153,6 @@ function logout(request: Request) {
   }
 
   return new Response("Logged out", {
-    status: 200,
     headers: { "Set-Cookie": serializeCookie(cookie), },
   });
 }
@@ -164,21 +160,19 @@ function logout(request: Request) {
 function getUserId(request: Request) {
   const sessionCookie = parseCookie(request);
   if (sessionCookie === undefined) {
-    return Response.json("No Session Cookie", { status: 400 });
+    return new Response("No Session Cookie");
   }
 
   const credential = await tcs.credentialFromCookie({ cookie: sessionCookie });
   if (credential === undefined) {
-    return Response.json("Malformed Session Cookie", {
-      status: 400,
+    return new Response("Malformed Session Cookie", {
       headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
     });
   }
 
   const session = dbSelect(credential.idHash);
   if (session === null) {
-    return Response.json("Session Not Found", {
-      status: 404,
+    return new Response("Session Not Found", {
       headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
     });
   }
@@ -199,11 +193,11 @@ function getUserId(request: Request) {
   }
 
   if (state === "SessionActive" || state === "TokenRotated") {
-    return Response.json({ userId: session.userId }, { status: 200, headers });
+    return new Response({ userId: session.userId }, { headers });
   }
 
   if (state === "SessionForked" || state === "SessionExpired") {
-    return Response.json(, { status: 403, headers });
+    return new Response({ headers });
   }
 
   state satisfies never;
@@ -217,7 +211,7 @@ Bun.serve({
     if (url.pathname === "/logout" && request.method === "POST") return logout(request);
     if (url.pathname === "/user_id" && request.method === "GET") return getUserId(request);
 
-    return Response.json("Not Found", { status: 404 });
+    return new Response("Not Found", { status: 404 });
   },
 });
 ```
