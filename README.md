@@ -343,6 +343,8 @@ db.query(`DELETE FROM session`).run();
 
 ## Log Out Other Devices
 
+## Config per user
+
 ## Choosing `sessionExpiresIn` and `tokenExpiresIn`
 
 ### Session Expiration Time
