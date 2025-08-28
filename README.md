@@ -331,7 +331,7 @@ For example, if your app might need to upload a large file in a single request,
 and that upload could take up to 3 minutes on a slow connection,
 you should set `tokenExpiresIn` to 3 minutes.
 
-## Session Token Security
+## Session Id and Token Security
 
 This library uses 256 bits of entropy for session id and token, exceeding industry recommendations:
 
@@ -344,7 +344,7 @@ Since the session id and token itself are already a random string with high entr
 we don't need additional processing like salting or peppering.
 
 The session id and token are hashed using SHA-256 before being stored in the database. 
-This way a database leak would not lead to token theft.
+This way a database leak would not lead to session hijacking.
 
 Hashing the id and token on every request might seem expensive, 
 but it's no more demanding than cookie signing, which is a common practice in web services.
