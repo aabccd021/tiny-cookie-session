@@ -40,13 +40,13 @@ making it unguessable.
 
 ### Attack Scenarios and Outcomes
 
-| Scenario                                                         | Detection Possible? | Attacker can use the session until          |
-| ---------------------------------------------------------------- | ------------------- | ------------------------------------------- |
-| Attacker steals old cookie (older than two rotations)            | Yes                 | Never                                       |
-| Attacker steals recent cookie, user uses the session after that  | Yes                 | The user's next request after two rotations |
-| Attacker steals cookie, legitimate user never uses session again | No                  | indefinitely                                |
-| Attacker steals cookie, logs out legitimate user                 | No                  | indefinitely                                |
-| Persistent cookie theft (e.g., malware)                          | No                  | indefinitely                                |
+| Scenario                                                  | Detection Possible? | Attacker can use the session until          |
+| --------------------------------------------------------- | ------------------- | ------------------------------------------- |
+| Attacker steals old cookie (older than two rotations)     | Yes                 | Never                                       |
+| Attacker steals cookie, user uses the session after that  | Yes                 | The user's next request after two rotations |
+| Attacker steals cookie, user never uses the session again | No                  | indefinitely                                |
+| Attacker steals cookie, logs out legitimate user          | No                  | indefinitely                                |
+| Persistent cookie theft (e.g., malware)                   | No                  | indefinitely                                |
 
 ### If the attacker steals an old cookie
 
