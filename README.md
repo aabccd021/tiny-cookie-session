@@ -63,7 +63,7 @@ the attacker can use the cookie.
 For this library to detect session forking, two conditions must be met after the cookie is stolen:
 
 1. The token must be rotated at least twice.
-2. The user must use the session again.
+2. A party with outdated token must make a request after that.
 
 The token rotation in condition one can be achieved by any combination of the user and the attacker
 making requests: (user, user), (user, attacker), (attacker, user), or (attacker, attacker).
