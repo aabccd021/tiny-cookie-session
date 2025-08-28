@@ -175,7 +175,8 @@ Bun.serve({
       const { action, cookie } = await tcs.login({ config: sessionConfig });
 
       if (action.type === "insert") {
-        dbInsert(db, action, userId);
+        const platform = request.headers.get("Sec-CH-UA-Platform") ?? undefined;
+        dbInsert(db, action, userId, platform);
       } else {
         action.type satisfies never;
       }
