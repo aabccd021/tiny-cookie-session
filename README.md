@@ -17,7 +17,7 @@ import * as sqlite from "bun:sqlite";
 import * as tcs from "tiny-cookie-session";
 
 function serializeCookie(cookie: tcs.Cookie): string {
-  return new Bun.Cookie("mysession", cookie.value, options).serialize();
+  return new Bun.Cookie("mysession", cookie.value, cookie.options).serialize();
 }
 
 function parseCookie(request: Request): string | undefined {
@@ -46,7 +46,7 @@ db.run(`
 `);
 
 function dbSelect(idHash: string) {
-  const row = db
+  const row: any = db
     .query(`
       SELECT user_id, exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd
       FROM session WHERE id_hash = :id_hash
@@ -105,7 +105,7 @@ function dbDelete(action: tcs.DeleteAction) {
   db.query("DELETE FROM session WHERE id_hash = :id_hash").run({ id_hash: action.idHash });
 }
 
-function login(request: Request) {
+async function login(request: Request) {
   const body = await request.formData();
 
   // User ID should be obtained from trusted source.
@@ -127,7 +127,7 @@ function login(request: Request) {
   });
 }
 
-function logout(request: Request) {
+async function logout(request: Request) {
   const sessionCookie = parseCookie(request);
   if (sessionCookie === undefined) {
     return new Response("No Session Cookie", {
@@ -155,7 +155,7 @@ function logout(request: Request) {
   });
 }
 
-function getUserId(request: Request) {
+async function getUserId(request: Request) {
   const sessionCookie = parseCookie(request);
   if (sessionCookie === undefined) {
     return new Response("No Session Cookie");
@@ -191,26 +191,26 @@ function getUserId(request: Request) {
   }
 
   if (state === "SessionActive" || state === "TokenRotated") {
-    return new Response({ userId: session.userId }, { headers });
+    return new Response(`UserId: ${session.userId}`, { headers });
   }
 
   if (state === "SessionForked" || state === "SessionExpired") {
-    return new Response({ headers });
+    return new Response("", { headers });
   }
 
   state satisfies never;
+  throw new Error("Unreachable");
 }
 
 Bun.serve({
-  fetch: async (request) => {
+  fetch: (request) => {
     const url = new URL(request.url);
     if (url.pathname === "/login" && request.method === "POST") return login(request);
     if (url.pathname === "/logout" && request.method === "POST") return logout(request);
     if (url.pathname === "/user_id" && request.method === "GET") return getUserId(request);
     return new Response("Not Found", { status: 404 });
   },
-});
-```
+});```
 
 ## Garbage Collecting Expired Sessions
 
