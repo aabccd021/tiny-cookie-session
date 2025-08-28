@@ -16,63 +16,42 @@ bun install github:aabccd021/tiny-cookie-session
 import * as sqlite from "bun:sqlite";
 import * as tcs from "tiny-cookie-session";
 
-// Cookie signing is optional and not handled by tiny-cookie-session.
-function signCookie(value: string): string {
-  return value;
-}
-
-function unsignCookie(value: string): string {
-  return value;
-}
-
 function serializeCookie(cookie: tcs.Cookie): string {
-  const options = { 
-      ...cookie.options, 
-      // Path is not set by default. 
-      // "/" makes the cookie available to all paths.
-      path: "/",
-      // SameSite is set to "Strict" by default. 
-      // "Lax" allows user to navigate (GET) to the site from an external link.
-      sameSite: "Lax",
-  }
-
-  // We use Bun.Cookie here, but it's also compatible with https://www.npmjs.com/package/cookie.
-  return new Bun.Cookie("mysession", signCookie(cookie.value), options).serialize();
+  return new Bun.Cookie("mysession", cookie.value, options).serialize();
 }
 
 function parseCookie(request: Request): string | undefined {
   const cookieHeader = request.headers.get("Cookie");
-  if (cookieHeader === null) {
-    return undefined;
-  }
+  if (cookieHeader === null) return undefined;
 
-  // We use Bun.CookieMap here, but it's also compatible with https://www.npmjs.com/package/cookie.
   const sessionCookie = new Bun.CookieMap(cookieHeader).get("mysession");
-  if (sessionCookie === null) {
-    return undefined;
-  }
+  if (sessionCookie === null) return undefined;
 
-  return unsignCookie(sessionCookie);
+  return sessionCookie;
 }
 
-function dbSelect(db: sqlite.Database, idHash: string) {
+const db = new sqlite.Database(":memory:");
+
+db.run(`
+  CREATE TABLE session (
+    id_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    exp TEXT NOT NULL,
+    odd_token_hash TEXT NOT NULL,
+    even_token_hash TEXT,
+    token_exp TEXT NOT NULL,
+    is_latest_token_odd INTEGER NOT NULL,
+    CHECK (is_latest_token_odd IN (0, 1))
+  )
+`);
+
+function dbSelect(idHash: string) {
   const row = db
-    .query<
-      {
-        user_id: string;
-        exp: string;
-        token_exp: string;
-        odd_token_hash: string;
-        even_token_hash: string | null;
-        is_latest_token_odd: number;
-        platform: string | null;
-      },
-      sqlite.SQLQueryBindings
-    >(
+    .query(
       `
-      SELECT user_id, exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd, platform
-      FROM session WHERE id_hash = :id_hash
-    `,
+        SELECT user_id, exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd
+        FROM session WHERE id_hash = :id_hash
+      `,
     )
     .get({ id_hash: idHash });
 
@@ -86,15 +65,14 @@ function dbSelect(db: sqlite.Database, idHash: string) {
     tokenExp: new Date(row.token_exp),
     oddTokenHash: row.odd_token_hash,
     evenTokenHash: row.even_token_hash,
-    isLatestTokenOdd: row.is_latest_token_odd === 1,
-    platform: row.platform ?? undefined,
+    isLatestTokenOdd: row.is_latest_token_odd === 1
   };
 }
 
-function dbInsert(db: sqlite.Database, action: tcs.InsertAction, userId: string, platform?: string) {
+function dbInsert(action: tcs.InsertAction, userId: string) {
   db.query(`
-    INSERT INTO session (id_hash, user_id, exp, odd_token_hash, token_exp, is_latest_token_odd, platform)
-    VALUES (:id_hash, :user_id, :exp, :odd_token_hash, :token_exp, :is_latest_token_odd, :platform)
+    INSERT INTO session (id_hash, user_id, exp, odd_token_hash, token_exp, is_latest_token_odd)
+    VALUES (:id_hash, :user_id, :exp, :odd_token_hash, :token_exp, :is_latest_token_odd)
   `).run({
     id_hash: action.idHash,
     user_id: userId,
@@ -102,11 +80,10 @@ function dbInsert(db: sqlite.Database, action: tcs.InsertAction, userId: string,
     odd_token_hash: action.oddTokenHash,
     token_exp: action.tokenExp.toISOString(),
     is_latest_token_odd: action.isLatestTokenOdd ? 1 : 0,
-    platform: platform ?? null,
   });
 }
 
-function dbUpdate(db: sqlite.Database, action: tcs.UpdateAction) {
+function dbUpdate(action: tcs.UpdateAction) {
   db.query(`
     UPDATE session
     SET 
@@ -126,182 +103,119 @@ function dbUpdate(db: sqlite.Database, action: tcs.UpdateAction) {
   });
 }
 
-function dbDelete(db: sqlite.Database, action: tcs.DeleteAction) {
+function dbDelete(action: tcs.DeleteAction) {
   db.query("DELETE FROM session WHERE id_hash = :id_hash").run({ id_hash: action.idHash });
 }
 
-const db = new sqlite.Database(":memory:");
+function login(request: Request) {
+  const body = await request.formData();
 
-db.run(`
-  CREATE TABLE session (
-    id_hash TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    exp TEXT NOT NULL,
-    odd_token_hash TEXT NOT NULL,
-    even_token_hash TEXT,
-    token_exp TEXT NOT NULL,
-    is_latest_token_odd INTEGER NOT NULL,
-    platform TEXT,
-    CHECK (is_latest_token_odd IN (0, 1))
-  )
-`);
+  // User ID should be obtained from trusted source.
+  const userId = body.get("user_id")?.toString();
+  if (userId === undefined || userId === "") {
+    return Response.json("No User ID", { status: 400 });
+  }
 
-const appConfig = {
-  isMultipleSessionAllowed: false,
-};
+  const { action, cookie } = await tcs.login();
 
-const sessionConfig = {
-  sessionExpiresIn: 30 * 60 * 1000, // 30 minutes
-  tokenExpiresIn: 2 * 60 * 1000, // 2 minutes
+  if (action.type === "insert") {
+    dbInsert(action, userId);
+  } else {
+    action.type satisfies never;
+  }
+
+  return new Response("Logged in", {
+    status: 200,
+    headers: { "Set-Cookie": serializeCookie(cookie), },
+  });
+}
+
+function logout(request: Request) {
+  const sessionCookie = parseCookie(request);
+  if (sessionCookie === undefined) {
+    return Response.json("No Session Cookie", {
+      status: 400,
+      headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
+    });
+  }
+
+  const credential = await tcs.credentialFromCookie({ cookie: sessionCookie });
+  if (credential === undefined) {
+    return Response.json("Malformed Session Cookie", {
+      status: 400,
+      headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
+    });
+  }
+
+  const { action, cookie } = await tcs.logout({ credential });
+
+  if (action.type === "delete") {
+    dbDelete(action);
+  } else {
+    action.type satisfies never;
+  }
+
+  return new Response("Logged out", {
+    status: 200,
+    headers: { "Set-Cookie": serializeCookie(cookie), },
+  });
+}
+
+function getUserId(request: Request) {
+  const sessionCookie = parseCookie(request);
+  if (sessionCookie === undefined) {
+    return Response.json("No Session Cookie", { status: 400 });
+  }
+
+  const credential = await tcs.credentialFromCookie({ cookie: sessionCookie });
+  if (credential === undefined) {
+    return Response.json("Malformed Session Cookie", {
+      status: 400,
+      headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
+    });
+  }
+
+  const session = dbSelect(credential.idHash);
+  if (session === null) {
+    return Response.json("Session Not Found", {
+      status: 404,
+      headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
+    });
+  }
+
+  const { action, cookie, state } = await tcs.consume({ credential, session });
+
+  if (action?.type === "delete") {
+    dbDelete(action);
+  } else if (action?.type === "update") {
+    dbUpdate(action);
+  } else if (action !== undefined) {
+    action satisfies never;
+  }
+
+  const headers = new Headers();
+  if (cookie !== undefined) {
+    headers.set("Set-Cookie", serializeCookie(cookie));
+  }
+
+  if (state === "SessionActive" || state === "TokenRotated") {
+    return Response.json({ userId: session.userId }, { status: 200, headers });
+  }
+
+  if (state === "SessionForked" || state === "SessionExpired") {
+    return Response.json(, { status: 403, headers });
+  }
+
+  state satisfies never;
 }
 
 Bun.serve({
   fetch: async (request) => {
     const url = new URL(request.url);
 
-    if (url.pathname === "/login" && request.method === "POST") {
-      const body = await request.formData();
-
-      // User ID should be obtained from trusted source.
-      const userId = body.get("user_id")?.toString();
-      if (userId === undefined || userId === "") {
-        return Response.json("No User ID", { status: 400 });
-      }
-
-      if (!appConfig.isMultipleSessionAllowed) {
-        db.query("DELETE FROM session WHERE user_id = :user_id").run({ user_id: userId });
-      }
-
-      const { action, cookie } = await tcs.login({ config: sessionConfig });
-
-      if (action.type === "insert") {
-        const platform = request.headers.get("Sec-CH-UA-Platform") ?? undefined;
-        dbInsert(db, action, userId, platform);
-      } else {
-        action.type satisfies never;
-      }
-
-      let page = "<h1>Signed In</h1>";
-
-      if (appConfig.isMultipleSessionAllowed) {
-        const sessions = db
-          .query<{ id_hash: string; platform: string | null; }, sqlite.SQLQueryBindings>(
-            "SELECT id_hash, platform FROM session WHERE user_id = :user_id"
-          )
-          .all({ user_id: userId });
-        page += "<h2>Active Sessions</h2><ul>";
-        page += "<p>Please log out from devices you don't recognize.</p>";
-        page += "<ul>";
-        for (const session of sessions) {
-          page += `<li>Session ID: ${session.id_hash}, Platform: ${session.platform ?? "Unknown"}</li>`;
-        }
-        page += "</ul>";
-      }
-
-      return new Response(page, {
-        status: 200,
-        headers: {
-          "Content-Type": "text/html",
-          "Set-Cookie": serializeCookie(cookie),
-        },
-      });
-    }
-
-    if (url.pathname === "/logout" && request.method === "POST") {
-      const sessionCookie = parseCookie(request);
-      if (sessionCookie === undefined) {
-        return Response.json("No Session Cookie", {
-          status: 400,
-          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
-        });
-      }
-
-      const credential = await tcs.credentialFromCookie({ cookie: sessionCookie });
-      if (credential === undefined) {
-        return Response.json("Malformed Session Cookie", {
-          status: 400,
-          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
-        });
-      }
-
-      const { action, cookie } = await tcs.logout({ credential });
-
-      if (action.type === "delete") {
-        dbDelete(db, action);
-      } else {
-        action.type satisfies never;
-      }
-
-      return new Response("Logged out", {
-        status: 200,
-        headers: {
-          "Set-Cookie": serializeCookie(cookie),
-        },
-      });
-    }
-
-    if (url.pathname === "/user_id" && request.method === "GET") {
-      const sessionCookie = parseCookie(request);
-      if (sessionCookie === undefined) {
-        return Response.json("No Session Cookie", { status: 400 });
-      }
-
-      const credential = await tcs.credentialFromCookie({ cookie: sessionCookie });
-      if (credential === undefined) {
-        return Response.json("Malformed Session Cookie", {
-          status: 400,
-          headers: { 
-            // This will delete the malformed cookie in the browser.
-            "Set-Cookie": serializeCookie(tcs.logoutCookie)
-          },
-        });
-      }
-
-      const session = dbSelect(db, credential.idHash);
-
-      // Session might not be found if it was deleted manually by admin,
-      // or if deleted automatically when multiple sessions are not allowed,
-      // or if deleted automatically when session forking is detected.
-      if (session === null) {
-        return Response.json("Session Not Found", {
-          status: 404,
-          headers: { 
-            // This will delete the stale cookie in the browser.
-            "Set-Cookie": serializeCookie(tcs.logoutCookie)
-          },
-        });
-      }
-
-      const { action, cookie, state } = await tcs.consume({ credential, session, config: sessionConfig });
-
-      if (action?.type === "delete") {
-        dbDelete(db, action);
-      } else if (action?.type === "update") {
-        dbUpdate(db, action);
-      } else if (action !== undefined) {
-        action satisfies never;
-      }
-
-      const headers = new Headers();
-      if (cookie !== undefined) {
-        headers.set("Set-Cookie", serializeCookie(cookie));
-      }
-
-      if (state === "SessionActive" || state === "TokenRotated") {
-        return Response.json({ userId: session.userId }, { status: 200, headers });
-      }
-
-      if (state === "SessionForked") {
-        console.warn(`Session forked for user ${session.userId}`);
-        return Response.json("Session Forked", { status: 403, headers });
-      }
-
-      if (state === "SessionExpired") {
-        return Response.json("Session Expired", { status: 403, headers });
-      }
-
-      state satisfies never;
-    }
+    if (url.pathname === "/login" && request.method === "POST") return login(request);
+    if (url.pathname === "/logout" && request.method === "POST") return logout(request);
+    if (url.pathname === "/user_id" && request.method === "GET") return getUserId(request);
 
     return Response.json("Not Found", { status: 404 });
   },
@@ -344,6 +258,10 @@ db.query(`DELETE FROM session`).run();
 ## Log Out Other Devices
 
 ## Config per user
+
+## Sign Cookie
+
+## Path and SameSite
 
 ## Choosing `sessionExpiresIn` and `tokenExpiresIn`
 
