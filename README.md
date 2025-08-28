@@ -241,7 +241,10 @@ to use them.
 ## Force logout session
 
 This library allows you to immediately invalidate sessions by deleting them from the storage 
-backend:
+backend.
+
+Unlike JWT, the session logout is effective immediately when this is done.
+
 
 ```js
 // Force logout a specific session
