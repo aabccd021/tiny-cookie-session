@@ -28,34 +28,28 @@ only the latest one can be used to rotate the token.
 
 After a cookie is stolen and the token is rotated twice,
 either the attacker or the legitimate user will have an outdated token.
-
 When this outdated token is used, we will detect this as session forking and log out both parties.
-
 We log out both parties because we cannot determine which party used the invalid token.
 
 It doesn't have to be the actual outdated token to be detected as session forking.
-
 As long as it's paired with a valid session id, any token value,
 even ones that were never issued, will be detected as session forking.
-
 This means theoretically, if the attacker can guess a valid session id,
 they can use any random token value to log out the legitimate user.
-
 But practically this is not a concern because we use 256 bits of entropy for session id generation,
 making it unguessable.
 
 ### If the attacker steals an old cookie
 
-If the attacker steals a cookie, and the user has already rotated the token twice since then,
-when the attacker uses the cookie, both parties will be logged out.
-
-In this case, no harm is done to the legitimate user,
-except the user will be logged out unexpectedly.
+If the attacker steals a cookie and the user has already rotated the token twice since then,
+both parties will be logged out when the attacker uses the cookie.
+In this case, no harm is done to the legitimate user, except the user will be logged out 
+unexpectedly.
 
 ### If the attacker steals a recent cookie
 
 If the attacker steals a cookie, and the user has not rotated the token twice since then,
-the attacker can use the cookie.
+the attacker can use the cookie until this library detects it as session forking.
 
 For this library to detect session forking, two conditions must be met after the cookie is stolen:
 
@@ -64,7 +58,6 @@ For this library to detect session forking, two conditions must be met after the
 
 The token rotation in condition one can be achieved by any combination of the user and the attacker
 making requests: (user, user), (user, attacker), (attacker, user), or (attacker, attacker).
-
 Until these two conditions are met, the attacker can use the stolen cookie.
 
 This means there are two worst-case scenarios where we can't detect session forking:
@@ -72,14 +65,11 @@ This means there are two worst-case scenarios where we can't detect session fork
 1. The attacker steals a cookie, and the legitimate user never uses the session again (inactive).
 2. The attacker steals a cookie, and logs out the legitimate user.
 
-We can't detect session forking in these scenarios.
-
-These problems cannot be solved unless the user has some way to prove their identity,
-like how it's done in Device Bound Session Credentials (DBSC).
+We can't detect session forking in these scenarios, and it cannot be solved unless the user has 
+some way to prove their identity, like how it's done in Device Bound Session Credentials (DBSC).
 
 The best we can do is to set a short session expiration time (`sessionExpiresIn`),
 and also show a "Log out other devices" screen every time the user logs in.
-
 Setting a short session expiration time will limit the window of opportunity for the attacker,
 but it will also inconvenience legitimate users by requiring them to log in more frequently.
 
