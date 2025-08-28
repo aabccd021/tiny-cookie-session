@@ -10,235 +10,229 @@ yarn add github:aabccd021/tiny-cookie-session
 bun install github:aabccd021/tiny-cookie-session
 ```
 
-## Configuration
+## Example Usage
 
-This library returns action objects that you need to execute against your database. You'll need to implement a way to handle these actions in your database of choice.
+```ts
+import * as sqlite from "bun:sqlite";
+import * as tcs from "tiny-cookie-session";
 
-### Bun SQLite Configuration Example
-
-```js
-import { Database } from "bun:sqlite";
-import { login, logout, credentialsFromCookie, consume } from "tiny-cookie-session";
-
-const db = new Database("sessions.db");
-db.run(`
-  CREATE TABLE IF NOT EXISTS session (
-    id_hash TEXT PRIMARY KEY,
-    odd_token_hash TEXT,
-    even_token_hash TEXT,
-    exp INTEGER NOT NULL,
-    token_exp INTEGER NOT NULL,
-    is_latest_token_odd BOOLEAN NOT NULL,
-    user_id TEXT NOT NULL
-  );
-`);
-
-// Create session configuration
-const config = {
-  sessionExpiresIn: 5 * 60 * 60 * 1000, // 5 hours
-  tokenExpiresIn: 10 * 60 * 1000, // 10 minutes
-};
-
-// Function to run actions returned by library functions
-async function runAction(action) {
-  if (!action) return;
-
-  if (action.type === "insert") {
-    db.query(`
-      INSERT INTO session (
-        id_hash, 
-        odd_token_hash, 
-        exp, 
-        token_exp, 
-        is_latest_token_odd,
-        user_id
-      )
-      VALUES (
-        :idHash, 
-        :oddTokenHash, 
-        :exp, 
-        :tokenExp, 
-        :isLatestTokenOdd,
-        :userId
-      )
-    `).run({
-      idHash: action.idHash,
-      oddTokenHash: action.oddTokenHash,
-      exp: action.exp.getTime(),
-      tokenExp: action.tokenExp.getTime(),
-      isLatestTokenOdd: action.isLatestTokenOdd ? 1 : 0,
-      userId: action.data.userId
-    });
-  }
-
-  if (action.type === "update") {
-    db.query(`
-      UPDATE session
-      SET 
-        odd_token_hash = COALESCE(:oddTokenHash, odd_token_hash),
-        even_token_hash = COALESCE(:evenTokenHash, even_token_hash),
-        exp = :exp,
-        token_exp = :tokenExp,
-        is_latest_token_odd = :isLatestTokenOdd
-      WHERE id_hash = :idHash
-    `).run({
-      idHash: action.idHash,
-      oddTokenHash: action.oddTokenHash,
-      evenTokenHash: action.evenTokenHash,
-      exp: action.exp.getTime(),
-      tokenExp: action.tokenExp.getTime(),
-      isLatestTokenOdd: action.isLatestTokenOdd ? 1 : 0
-    });
-  }
-
-  if (action.type === "delete") {
-    db.query(`
-      DELETE FROM session
-      WHERE id_hash = :idHash
-    `).run({ idHash: action.idHash });
-  }
+function serializeCookie(cookie: tcs.Cookie): string {
+  return new Bun.Cookie("mysession", cookie.value, cookie.options).serialize();
 }
 
-// Function to get session from database
-async function getSession(idHash) {
-  const row = db.query(`
-    SELECT 
-      odd_token_hash as oddTokenHash, 
-      even_token_hash as evenTokenHash, 
-      exp, 
-      token_exp as tokenExp, 
-      is_latest_token_odd as isLatestTokenOdd,
-      user_id as userId
-    FROM session
-    WHERE id_hash = :idHash
-  `).get({ idHash });
-  
-  if (!row) return undefined;
-  
+function parseCookie(request: Request): string | undefined {
+  const cookieHeader = request.headers.get("Cookie");
+  if (cookieHeader === null) {
+    return undefined;
+  }
+
+  const sessionCookie = new Bun.CookieMap(cookieHeader).get("mysession");
+  if (sessionCookie === null) {
+    return undefined;
+  }
+
+  return sessionCookie;
+}
+
+function dbSelect(db: sqlite.Database, idHash: string) {
+  const row = db
+    .query<
+      {
+        user_id: string;
+        exp: string;
+        odd_token_hash: string;
+        even_token_hash: string | null;
+        token_exp: string;
+        is_latest_token_odd: number;
+      },
+      sqlite.SQLQueryBindings
+    >(
+      `
+      SELECT user_id, exp, odd_token_hash, even_token_hash, token_exp, is_latest_token_odd
+      FROM sessions WHERE id_hash = :id_hash
+    `,
+    )
+    .get({ id_hash: idHash });
+
+  if (row === null) {
+    return null;
+  }
+
   return {
-    oddTokenHash: row.oddTokenHash,
-    evenTokenHash: row.evenTokenHash,
+    userId: row.user_id,
     exp: new Date(row.exp),
-    tokenExp: new Date(row.tokenExp),
-    isLatestTokenOdd: Boolean(row.isLatestTokenOdd),
-    data: { userId: row.userId }
+    oddTokenHash: row.odd_token_hash,
+    evenTokenHash: row.even_token_hash,
+    tokenExp: new Date(row.token_exp),
+    isLatestTokenOdd: row.is_latest_token_odd === 1,
   };
 }
-```
 
-### In-Memory Store Configuration Example
+function dbInsert(db: sqlite.Database, action: tcs.InsertAction, userId: string) {
+  db.query(`
+    INSERT INTO sessions (id_hash, user_id, exp, odd_token_hash, token_exp, is_latest_token_odd)
+    VALUES (:id_hash, :user_id, :exp, :odd_token_hash, :token_exp, :is_latest_token_odd)
+  `).run({
+    id_hash: action.idHash,
+    user_id: userId,
+    exp: action.exp.toISOString(),
+    odd_token_hash: action.oddTokenHash,
+    token_exp: action.tokenExp.toISOString(),
+    is_latest_token_odd: action.isLatestTokenOdd ? 1 : 0,
+  });
+}
 
-```js
-// See test file for implementation details
-```
+function dbUpdate(db: sqlite.Database, action: tcs.UpdateAction) {
+  db.query(`
+    UPDATE sessions
+    SET 
+      exp = :exp,
+      token_exp = :token_exp,
+      odd_token_hash = COALESCE(:odd_token_hash, odd_token_hash),
+      even_token_hash = COALESCE(:even_token_hash, even_token_hash),
+      is_latest_token_odd = :is_latest_token_odd
+    WHERE id_hash = :id_hash
+  `).run({
+    id_hash: action.idHash,
+    exp: action.exp.toISOString(),
+    token_exp: action.tokenExp.toISOString(),
+    odd_token_hash: action.oddTokenHash ?? null,
+    even_token_hash: action.evenTokenHash ?? null,
+    is_latest_token_odd: action.isLatestTokenOdd ? 1 : 0,
+  });
+}
 
-See [test](./index.test.js) for actual implementation and testing of the in-memory store.
+function dbDelete(db: sqlite.Database, action: tcs.DeleteAction) {
+  db.query("DELETE FROM sessions WHERE id_hash = :id_hash").run({ id_hash: action.idHash });
+}
 
-## Basic Usage
+const db = new sqlite.Database(":memory:");
 
-```js
-import { login, logout, credentialsFromCookie, consume } from "tiny-cookie-session";
-import { serve } from "bun";
+db.run(`
+  CREATE TABLE sessions (
+    id_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    exp TEXT NOT NULL,
+    odd_token_hash TEXT NOT NULL,
+    even_token_hash TEXT,
+    token_exp TEXT NOT NULL,
+    is_latest_token_odd INTEGER NOT NULL
+  )
+`);
 
-// Initialize your session config
-const config = {
-  sessionExpiresIn: 5 * 60 * 60 * 1000, // 5 hours
-  tokenExpiresIn: 10 * 60 * 1000, // 10 minutes
-};
-
-serve({
-  port: 3000,
-  async fetch(request) {
+Bun.serve({
+  fetch: async (request) => {
     const url = new URL(request.url);
 
-    // Login endpoint
-    if (url.pathname === "/login") {
-      // Authenticate user (not shown)
-      const userId = "user-123"; // From your authentication system
-      
-      const result = await login({ 
-        config,
-        data: { userId }
-      });
-      
-      // Run action to save session to database
-      await runAction(result.action);
-      
-      // Create a cookie using Bun's built-in Cookie API
-      const bunCookie = new Bun.Cookie("session", result.cookie.value, result.cookie.options);
+    if (url.pathname === "/login" && request.method === "POST") {
+      const body = await request.formData();
+      const userId = body.get("user_id")?.toString() ?? "";
 
-      return new Response("Logged in successfully", {
-        headers: { "Set-Cookie": bunCookie.serialize() },
+      const { action, cookie } = await tcs.login();
+      if (action.type === "insert") {
+        dbInsert(db, action, userId);
+      } else {
+        action.type satisfies never;
+      }
+
+      return new Response("Logged in", {
+        status: 200,
+        headers: {
+          "Set-Cookie": cookie.toString(),
+        },
       });
     }
 
-    // Logout endpoint
-    if (url.pathname === "/logout") {
-      const cookieHeader = request.headers.get("Cookie");
-      if (!cookieHeader) return new Response("Not logged in", { status: 401 });
-
-      const cookieValue = new Bun.CookieMap(cookieHeader).get("session");
-      if (!cookieValue) return new Response("Not logged in", { status: 401 });
-
-      const credentials = await credentialsFromCookie({ cookie: cookieValue });
-      if (!credentials) return new Response("Invalid session", { status: 401 });
-      
-      const result = await logout({ credentials });
-      await runAction(result.action);
-      
-      const bunCookie = new Bun.Cookie("session", result.cookie.value, result.cookie.options);
-
-      return new Response("Logged out successfully", {
-        headers: { "Set-Cookie": bunCookie.serialize() },
-      });
-    }
-
-    // Protected endpoint that requires authentication
-    if (url.pathname === "/profile") {
-      const cookieHeader = request.headers.get("Cookie");
-      if (!cookieHeader) return new Response("Not logged in", { status: 401 });
-
-      const cookieValue = new Bun.CookieMap(cookieHeader).get("session");
-      if (!cookieValue) return new Response("Not logged in", { status: 401 });
-
-      const credentials = await credentialsFromCookie({ cookie: cookieValue });
-      if (!credentials) return new Response("Invalid session", { status: 401 });
-      
-      const session = await getSession(credentials.idHash);
-      if (!session) return new Response("Session not found", { status: 401 });
-      
-      const result = await consume({ 
-        credentials,
-        config,
-        session
-      });
-      
-      // Handle different session states
-      if (result.state === "SessionExpired" || result.state === "SessionForked") {
-        await runAction(result.action);
-        const bunCookie = new Bun.Cookie("session", result.cookie.value, result.cookie.options);
-        return new Response("Session invalid", {
-          status: 401,
-          headers: { "Set-Cookie": bunCookie.serialize() },
+    if (url.pathname === "/logout" && request.method === "POST") {
+      const sessionCookie = parseCookie(request);
+      if (sessionCookie === undefined) {
+        return Response.json("No Session Cookie", {
+          status: 400,
+          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
         });
       }
 
-      if (result.state === "TokenRotated") {
-        await runAction(result.action);
-        // Set the new token in the response
-        const bunCookie = new Bun.Cookie("session", result.cookie.value, result.cookie.options);
-        return new Response(`Hello ${session.data.userId}`, {
-          headers: { "Set-Cookie": bunCookie.serialize() },
+      const credential = await tcs.credentialFromCookie({ cookie: sessionCookie });
+      if (credential === undefined) {
+        return Response.json("Malformed Session Cookie", {
+          status: 400,
+          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
         });
       }
 
-      if (result.state === "SessionActive") {
-        return new Response(`Hello ${session.data.userId}`);
+      const { action, cookie } = await tcs.logout({ credential });
+
+      if (action.type === "delete") {
+        dbDelete(db, action);
+      } else {
+        action.type satisfies never;
       }
+
+      return new Response("Logged out", {
+        status: 200,
+        headers: {
+          "Set-Cookie": serializeCookie(cookie),
+        },
+      });
     }
 
-    // Default response for unknown routes
-    return new Response("Not found", { status: 404 });
+    if (url.pathname === "/user_id" && request.method === "GET") {
+      const sessionCookie = parseCookie(request);
+      if (sessionCookie === undefined) {
+        return Response.json("No Session Cookie", {
+          status: 400,
+          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
+        });
+      }
+
+      const credential = await tcs.credentialFromCookie({ cookie: sessionCookie });
+      if (credential === undefined) {
+        return Response.json("Malformed Session Cookie", {
+          status: 400,
+          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
+        });
+      }
+
+      const session = dbSelect(db, credential.idHash);
+      if (session === null) {
+        return Response.json("Session Not Found", {
+          status: 404,
+          headers: { "Set-Cookie": serializeCookie(tcs.logoutCookie) },
+        });
+      }
+
+      const { action, cookie, state } = await tcs.consume({ credential, session });
+
+      if (action?.type === "delete") {
+        dbDelete(db, action);
+      } else if (action?.type === "update") {
+        dbUpdate(db, action);
+      } else if (action !== undefined) {
+        action satisfies never;
+      }
+
+      const headers = new Headers();
+      if (cookie) {
+        headers.set("Set-Cookie", serializeCookie(cookie));
+      }
+
+      if (state === "SessionActive" || state === "TokenRotated") {
+        return Response.json({ userId: session.userId }, { status: 200, headers });
+      }
+
+      if (state === "SessionForked") {
+        console.warn(`Session forked for user ${session.userId}`);
+        return Response.json("", { status: 403, headers });
+      }
+
+      if (state === "SessionExpired") {
+        return Response.json("Session Expired", { status: 403, headers });
+      }
+
+      state satisfies never;
+    }
+
+    return Response.json("Not Found", { status: 404 });
   },
 });
 ```

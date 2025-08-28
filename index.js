@@ -1,7 +1,7 @@
 /**
- * @type {import("./index").Cookie}
+ * @type {import("./index").logoutCookie}
  */
-const logoutCookie = {
+export const logoutCookie = {
   value: "",
   options: {
     httpOnly: true,
@@ -73,11 +73,11 @@ export async function login(arg) {
 export async function credentialFromCookie(arg) {
   const [id, token] = arg.cookie.split(":");
   if (id === undefined || token === undefined) {
-    return { data: undefined, cookie: logoutCookie };
+    return undefined;
   }
 
   const idHash = await hash(id);
-  return { data: { id, token, idHash } };
+  return { id, token, idHash };
 }
 
 /**
@@ -89,7 +89,7 @@ export async function logout(arg) {
     cookie: logoutCookie,
     action: {
       type: "delete",
-      idHash: arg.credentialData.idHash,
+      idHash: arg.credential.idHash,
     },
   };
 }
@@ -99,17 +99,9 @@ export async function logout(arg) {
  * @returns {Promise<import("./index").ConsumeResult>}
  */
 export async function consume(arg) {
-  if (!arg.session.found) {
-    return {
-      state: "SessionNotFound",
-      cookie: logoutCookie,
-      action: undefined,
-    };
-  }
-
-  const requestTokenHash = await hash(arg.credentialData.token);
-  const isOddToken = requestTokenHash === arg.session.data.oddTokenHash;
-  const isEvenToken = requestTokenHash === arg.session.data.evenTokenHash;
+  const requestTokenHash = await hash(arg.credential.token);
+  const isOddToken = requestTokenHash === arg.session.oddTokenHash;
+  const isEvenToken = requestTokenHash === arg.session.evenTokenHash;
 
   if (!isOddToken && !isEvenToken) {
     return {
@@ -117,25 +109,25 @@ export async function consume(arg) {
       cookie: logoutCookie,
       action: {
         type: "delete",
-        idHash: arg.credentialData.idHash,
+        idHash: arg.credential.idHash,
       },
     };
   }
 
   const now = arg.config?.dateNow?.() ?? new Date();
-  if (arg.session.data.exp.getTime() <= now.getTime()) {
+  if (arg.session.exp.getTime() <= now.getTime()) {
     return {
       state: "SessionExpired",
       cookie: logoutCookie,
       action: {
         type: "delete",
-        idHash: arg.credentialData.idHash,
+        idHash: arg.credential.idHash,
       },
     };
   }
 
-  const isLatestToken = arg.session.data.isLatestTokenOdd ? isOddToken : isEvenToken;
-  const shouldRotate = arg.session.data.tokenExp.getTime() <= now.getTime() && isLatestToken;
+  const isLatestToken = arg.session.isLatestTokenOdd ? isOddToken : isEvenToken;
+  const shouldRotate = arg.session.tokenExp.getTime() <= now.getTime() && isLatestToken;
   if (!shouldRotate) {
     return {
       state: "SessionActive",
@@ -150,7 +142,7 @@ export async function consume(arg) {
 
   /** @type {import("./index").Cookie} */
   const cookie = {
-    value: `${arg.credentialData.id}:${token}`,
+    value: `${arg.credential.id}:${token}`,
     options: {
       httpOnly: true,
       sameSite: "lax",
@@ -161,7 +153,7 @@ export async function consume(arg) {
   };
 
   const tokenHashStr = await hash(token);
-  const isNextOddToken = !arg.session.data.isLatestTokenOdd;
+  const isNextOddToken = !arg.session.isLatestTokenOdd;
   const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
   const tokenExp = new Date(now.getTime() + tokenExpiresIn);
 
@@ -170,7 +162,7 @@ export async function consume(arg) {
     cookie,
     action: {
       type: "update",
-      idHash: arg.credentialData.idHash,
+      idHash: arg.credential.idHash,
       isLatestTokenOdd: isNextOddToken,
       oddTokenHash: isNextOddToken ? tokenHashStr : undefined,
       evenTokenHash: isNextOddToken ? undefined : tokenHashStr,

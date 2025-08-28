@@ -19,7 +19,7 @@ export type Config = {
   readonly tokenExpiresIn?: number;
 };
 
-type CredentialData = {
+type Credential = {
   readonly id: string;
   readonly idHash: string;
   readonly token: string;
@@ -49,8 +49,10 @@ export type DeleteAction = {
 
 export type Action = InsertAction | DeleteAction | UpdateAction;
 
+export const logoutCookie: Cookie;
+
 type LogoutArg = {
-  readonly credentialData: CredentialData;
+  readonly credential: Credential;
 };
 
 type LogoutResult = {
@@ -71,33 +73,19 @@ type LoginResult = {
 
 export const login: (arg?: LoginArg) => Promise<LoginResult>;
 
-export type Session =
-  | {
-      readonly found: true;
-      readonly data: {
-        readonly oddTokenHash: string;
-        readonly evenTokenHash?: string;
-        readonly exp: Date;
-        readonly tokenExp: Date;
-        readonly isLatestTokenOdd: boolean;
-      };
-    }
-  | {
-      readonly found: false;
-    };
-
 export type ConsumeArg = {
-  readonly credentialData: CredentialData;
-  readonly session: Session;
+  readonly credential: Credential;
+  readonly session: {
+    readonly oddTokenHash: string;
+    readonly evenTokenHash?: string | null;
+    readonly exp: Date;
+    readonly tokenExp: Date;
+    readonly isLatestTokenOdd: boolean;
+  };
   readonly config?: Config;
 };
 
 export type ConsumeResult =
-  | {
-      readonly state: "SessionNotFound";
-      readonly cookie: Cookie;
-      readonly action: undefined;
-    }
   | {
       readonly state: "SessionForked";
       readonly cookie: Cookie;
@@ -125,14 +113,7 @@ export type CredentialFromCookieArg = {
   readonly cookie: string;
 };
 
-export type CredentialFromCookieResult =
-  | {
-      readonly data: CredentialData;
-    }
-  | {
-      readonly cookie: Cookie;
-      readonly data: undefined;
-    };
+export type CredentialFromCookieResult = Credential | undefined;
 
 type credentialFromCookie = (arg: {
   readonly cookie: string;

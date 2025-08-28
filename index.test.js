@@ -1,4 +1,4 @@
-import * as lib from ".";
+import * as tcs from ".";
 
 /**
  * @typedef {Object} Session
@@ -68,7 +68,7 @@ function dbUpdate(db, arg) {
  * @param {import("./index").LoginArg} arg
  */
 async function login(db, arg) {
-  const result = await lib.login(arg);
+  const result = await tcs.login(arg);
 
   if (result.action.type === "insert") {
     dbInsert(db, result.action);
@@ -88,12 +88,12 @@ async function logout(db, cookie) {
     return { cookie: undefined, action: undefined };
   }
 
-  const credential = await lib.credentialFromCookie({ cookie });
-  if (credential.data === undefined) {
-    return { cookie: credential.cookie, action: undefined };
+  const credential = await tcs.credentialFromCookie({ cookie });
+  if (credential === undefined) {
+    return { cookie: tcs.logoutCookie, action: undefined };
   }
 
-  const result = await lib.logout({ credentialData: credential.data });
+  const result = await tcs.logout({ credential: credential });
 
   if (result.action.type === "delete") {
     dbDelete(db, result.action);
@@ -114,17 +114,16 @@ async function consume(db, cookie, config) {
     return { state: "CookieMissing", cookie: undefined, data: undefined };
   }
 
-  const credential = await lib.credentialFromCookie({ cookie });
-  if (credential.data === undefined) {
-    return { state: "CookieMalformed", cookie: credential.cookie, data: undefined };
+  const credential = await tcs.credentialFromCookie({ cookie });
+  if (credential === undefined) {
+    return { state: "CookieMalformed", cookie: tcs.logoutCookie, data: undefined };
   }
 
-  const data = dbSelect(db, credential.data.idHash);
-
-  /** @type {import("./index").Session} */
-  const session = data !== undefined ? { found: true, data } : { found: false };
-
-  const result = await lib.consume({ credentialData: credential.data, config, session });
+  const session = dbSelect(db, credential.idHash);
+  if (session === undefined) {
+    return { state: "SessionNotFound", cookie: tcs.logoutCookie, data: undefined };
+  }
+  const result = await tcs.consume({ credential: credential, config, session });
 
   if (result.action?.type === "delete") {
     dbDelete(db, result.action);
@@ -135,15 +134,11 @@ async function consume(db, cookie, config) {
   }
 
   if (result.state === "SessionActive") {
-    return { state: "SessionActive", cookie: result.cookie, data };
+    return { state: "SessionActive", cookie: result.cookie, data: session };
   }
 
   if (result.state === "TokenRotated") {
-    return { state: "TokenRotated", cookie: result.cookie, data };
-  }
-
-  if (result.state === "SessionNotFound") {
-    return { state: "SessionNotFound", cookie: result.cookie, data: undefined };
+    return { state: "TokenRotated", cookie: result.cookie, data: session };
   }
 
   if (result.state === "SessionExpired") {
@@ -215,10 +210,11 @@ function setCookie(cookie, session) {
     const session = await logout(db, cookie);
     if (session.cookie?.value !== "") throw new Error();
     if (session.cookie.options.maxAge !== 0) throw new Error();
+    cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionNotFound") throw new Error();
+    if (session?.state !== "CookieMissing") throw new Error();
   }
 }
 
@@ -336,10 +332,11 @@ function setCookie(cookie, session) {
     if (session?.state !== "SessionExpired") throw new Error();
     if (session.cookie?.value !== "") throw new Error();
     if (session.cookie?.options.maxAge !== 0) throw new Error();
+    cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionNotFound") throw new Error();
+    if (session?.state !== "CookieMissing") throw new Error();
   }
 }
 
@@ -432,10 +429,11 @@ function setCookie(cookie, session) {
     if (attackerSession?.state !== "SessionForked") throw new Error();
     if (attackerSession.cookie?.value !== "") throw new Error();
     if (attackerSession.cookie?.options.maxAge !== 0) throw new Error();
+    attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "SessionNotFound") throw new Error();
+    if (attackerSession?.state !== "CookieMissing") throw new Error();
   }
   {
     const userSession = await consume(db, userCookie, config);
@@ -503,6 +501,7 @@ function setCookie(cookie, session) {
     date = "2023-10-01T00:22:00Z";
     const userSession = await consume(db, userCookie, config);
     if (userSession?.state !== "SessionActive") throw new Error();
+    userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
@@ -543,6 +542,7 @@ function setCookie(cookie, session) {
     date = "2023-10-01T00:22:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
     if (attackerSession?.state !== "SessionActive") throw new Error();
+    attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
