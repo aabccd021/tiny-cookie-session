@@ -5,7 +5,7 @@ export const logoutCookie = {
   value: "",
   options: {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     secure: true,
     maxAge: 0,
   },
@@ -46,7 +46,7 @@ export async function login(arg) {
     value: `${id}:${token}`,
     options: {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "strict",
       secure: true,
       expires,
     },
@@ -145,7 +145,7 @@ export async function consume(arg) {
     value: `${arg.credential.id}:${token}`,
     options: {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "strict",
       path: "/",
       secure: true,
       expires: exp,
