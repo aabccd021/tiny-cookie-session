@@ -204,11 +204,9 @@ function getUserId(request: Request) {
 Bun.serve({
   fetch: async (request) => {
     const url = new URL(request.url);
-
     if (url.pathname === "/login" && request.method === "POST") return login(request);
     if (url.pathname === "/logout" && request.method === "POST") return logout(request);
     if (url.pathname === "/user_id" && request.method === "GET") return getUserId(request);
-
     return new Response("Not Found", { status: 404 });
   },
 });
