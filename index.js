@@ -14,9 +14,13 @@ export const logoutCookie = {
 const defaultSessionExpiresIn = 1000 * 60 * 60 * 24 * 7;
 const defaultTokenExpiresIn = 1000 * 60 * 2;
 
-function generateRandomHex() {
+/**
+ * @returns {string}
+ */
+function generate256BitEntropyHex() {
+  const value = crypto.getRandomValues(new Uint8Array(32));
   // @ts-ignore https://tc39.es/proposal-arraybuffer-base64
-  return crypto.getRandomValues(new Uint8Array(32)).toHex();
+  return value.toHex();
 }
 
 /**
@@ -26,8 +30,9 @@ function generateRandomHex() {
 const hash = async (token) => {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = new Uint8Array(hashBuffer);
   // @ts-ignore https://tc39.es/proposal-arraybuffer-base64
-  return new Uint8Array(hashBuffer).toHex();
+  return hashArray.toHex();
 };
 
 /**
@@ -35,8 +40,8 @@ const hash = async (token) => {
  * @returns {Promise<import("./index").LoginResult>}
  */
 export async function login(arg) {
-  const id = generateRandomHex();
-  const token = generateRandomHex();
+  const id = generate256BitEntropyHex();
+  const token = generate256BitEntropyHex();
   const now = arg?.config?.dateNow?.() ?? new Date();
   const sessionExpiresIn = arg?.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
   const expires = new Date(now.getTime() + sessionExpiresIn);
@@ -138,7 +143,7 @@ export async function consume(arg) {
 
   const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
   const exp = new Date(now.getTime() + sessionExpiresIn);
-  const token = generateRandomHex();
+  const token = generate256BitEntropyHex();
 
   /** @type {import("./index").Cookie} */
   const cookie = {

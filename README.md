@@ -16,6 +16,15 @@ bun install github:aabccd021/tiny-cookie-session
 import * as sqlite from "bun:sqlite";
 import * as tcs from "tiny-cookie-session";
 
+// Cookie signing is optional and not handled by tiny-cookie-session.
+function signCookie(value: string): string {
+  return value;
+}
+
+function unsignCookie(value: string): string {
+  return value;
+}
+
 function serializeCookie(cookie: tcs.Cookie): string {
   const options = { 
       ...cookie.options, 
@@ -28,7 +37,7 @@ function serializeCookie(cookie: tcs.Cookie): string {
   }
 
   // We use Bun.Cookie here, but it's also compatible with https://www.npmjs.com/package/cookie.
-  return new Bun.Cookie("mysession", cookie.value, options).serialize();
+  return new Bun.Cookie("mysession", signCookie(cookie.value), options).serialize();
 }
 
 function parseCookie(request: Request): string | undefined {
@@ -43,7 +52,7 @@ function parseCookie(request: Request): string | undefined {
     return undefined;
   }
 
-  return sessionCookie;
+  return unsignCookie(sessionCookie);
 }
 
 function dbSelect(db: sqlite.Database, idHash: string) {
@@ -357,15 +366,6 @@ hashes of high entropy values](https://security.stackexchange.com/questions/2371
 This library focuses solely on session management and does not implement CSRF protection.
 You should implement CSRF protection for your entire application before using any functions from this library.
 
-## Signed Cookies
-
-This library doesn't sign cookies directly.
-
-The main benefit of signed cookies is detecting tampered cookie without reaching the storage backend, 
-but this isn't strictly required for this library to work or to provide security.
-
-You can implement cookie signing as an additional layer in your application if desired.
-
 ## Security Limitations
 
 While this library provides session forking detection, be aware of these limitations:
@@ -375,7 +375,7 @@ While this library provides session forking detection, be aware of these limitat
 1. Total session hijack, where the attacker logs out the user, will not be detected.
 1. Constant session forking (e.g., via persistent background malware) can't be prevented by any cookie-based mechanism, including this library and DBSC.
 
-## Comparison of Cookie-Based Session Management Approaches
+## `tiny-cookie-session` vs Device Bound Session Credentials (DBSC)
 
 ### Long-lived session ID
 
