@@ -247,13 +247,84 @@ db.query(`DELETE FROM session`).run();
 
 ## Log Out Other Devices
 
-## Config per user
-
-## Sign Cookie
-
 ## Path and SameSite
 
-## Choosing `sessionExpiresIn` and `tokenExpiresIn`
+## Serializing and Parsing Cookies
+
+This library does not handle cookie serialization and parsing.
+
+You need to do it outside this library, by using your web framework's built-in functionality 
+ or a third-party library.
+
+if you use [Bun Cookie](https://bun.sh/docs/api/cookie) or
+[cookie](https://www.npmjs.com/package/cookie),
+you can directly use `value` and `option` as argumets to serialize the cookie.
+
+```ts
+import * as tcs from "tiny-cookie-session";
+import * as cookieLib from "cookie";
+
+const { cookie } = await tcs.login();
+
+{
+  const serialized = new Bun.Cookie("mysession", cookie.value, cookie.options).serialize();
+}
+{
+  const serialized = cookieLib.serialize("mysession", cookie.value, cookie.options);
+}
+```
+
+## Cookie Signing
+
+The main benefit of signed cookies is being able to detect tampered cookie without 
+reaching the storage backend, but this isn't strictly required for this library to work or to
+provide security.
+
+You can implement cookie signing outside this library as an additional security layer.
+
+```ts
+import * as tcs from "tiny-cookie-session";
+
+// Dummy implementations, replace with real signing logic from a library
+function signCookie(value: string): string {
+  return value;
+}
+function unsignCookie(signedValue: string): string {
+  return signedValue;
+}
+
+function serializeCookie(cookie: tcs.Cookie): string {
+  const signedValue = signCookie(cookie.value);
+  return new Bun.Cookie("mysession", signCookie, cookie.options).serialize();
+}
+
+function parseCookie(request: Request): string | undefined {
+  const cookieHeader = request.headers.get("Cookie");
+  if (cookieHeader === null) return undefined;
+
+  const sessionCookie = new Bun.CookieMap(cookieHeader).get("mysession");
+  if (sessionCookie === null) return undefined;
+
+  return unsignCookie(sessionCookie);
+}
+```
+
+## Configuring Expiration Times
+
+You can use custom expiration times by passing configuration options to the functions:
+
+```ts
+import * as tcs from "tiny-cookie-session";
+
+const config = {
+  sessionExpiresIn: 5 * 60 * 60 * 1000, // 5 hours
+  tokenExpiresIn: 10 * 60 * 1000,    // 10 minutes
+};
+
+tcs.consume({ config, /* other params */ })
+
+tcs.login({ config })
+```
 
 ### Session Expiration Time
 
@@ -286,6 +357,31 @@ but still longer than the longest http request time your users might experience.
 For example, if your app might need to upload a large file in a single request,
 and that upload could take up to 3 minutes on a slow connection,
 you should set `tokenExpiresIn` to 3 minutes.
+
+### Different Expiration Times per User
+
+You can implement different expiration times for different users by passing custom configuration
+to each function call.
+
+```ts
+import * as tcs from "tiny-cookie-session";
+
+function handleRequest(request: Request) {
+
+  // get security type of the user from somewhere
+  const securityType = request.headers.get("X-Security-Type") ?? 'strict';
+
+  const config = securityType === 'strict' ? {
+    sessionExpiresIn: 30 * 60 * 1000, // 30 minutes
+    tokenExpiresIn: 2 * 60 * 1000,    // 2 minutes
+  } : {
+    sessionExpiresIn: 24 * 60 * 60 * 1000, // 24 hours
+    tokenExpiresIn: 10 * 60 * 1000,        // 10 minutes
+  };
+
+  tcs.consume({ config, /* other params */ });
+}
+```
 
 ## Session Id and Token Security
 

@@ -93,7 +93,7 @@ async function logout(db, cookie) {
     return { cookie: tcs.logoutCookie, action: undefined };
   }
 
-  const result = await tcs.logout({ credential: credential });
+  const result = await tcs.logout({ credential });
 
   if (result.action.type === "delete") {
     dbDelete(db, result.action);
@@ -123,7 +123,7 @@ async function consume(db, cookie, config) {
   if (session === undefined) {
     return { state: "SessionNotFound", cookie: tcs.logoutCookie, data: undefined };
   }
-  const result = await tcs.consume({ credential: credential, config, session });
+  const result = await tcs.consume({ credential, config, session });
 
   if (result.action?.type === "delete") {
     dbDelete(db, result.action);
