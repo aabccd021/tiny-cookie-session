@@ -12,15 +12,12 @@ You need to understand its limitations before using it in production.
 ### How session id and token are stored
 
 This library uses randomly generated session id and token to identify a session.
-
 The session id is a long-lived identifier for the session,
 while the token is a short-lived value that is rotated periodically.
-
 The session id and token are stored in a cookie in a format like this: `${sessionId}:${token}`.
 
 We also store the session id and two latest tokens (hashes) in the database.
 These two tokens are what are currently considered valid tokens for the session.
-
 We store two tokens instead of one to handle a race condition, where the user makes two requests
 at the same time and either request could rotate the token.
 
