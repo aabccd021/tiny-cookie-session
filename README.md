@@ -108,10 +108,16 @@ bun install github:aabccd021/tiny-cookie-session
 
 ## Example usage with Bun
 
+### Import the library
+
 ```ts
 import * as sqlite from "bun:sqlite";
 import * as tcs from "tiny-cookie-session";
+```
 
+### Helper functions to serialize and parse cookies
+
+```ts
 function serializeCookie(cookie: tcs.Cookie): string {
   return new Bun.Cookie("mysession", cookie.value, cookie.options).serialize();
 }
@@ -125,7 +131,11 @@ function parseCookie(request: Request): string | undefined {
 
   return sessionCookie;
 }
+```
 
+### Database setup
+
+```ts
 const db = new sqlite.Database(":memory:");
 
 db.run(`
@@ -206,7 +216,11 @@ function dbUpdate(action: tcs.UpdateAction) {
 function dbDelete(action: tcs.DeleteAction) {
   db.query("DELETE FROM session WHERE id_hash = :id_hash").run({ id_hash: action.idHash });
 }
+```
 
+### Handle Login
+
+```ts
 async function login(request: Request) {
   const body = await request.formData();
 
@@ -228,7 +242,11 @@ async function login(request: Request) {
     headers: { "Set-Cookie": serializeCookie(cookie) },
   });
 }
+```
 
+### Handle Logout
+
+```ts
 async function logout(request: Request) {
   const sessionCookie = parseCookie(request);
   if (sessionCookie === undefined) {
@@ -256,7 +274,11 @@ async function logout(request: Request) {
     headers: { "Set-Cookie": serializeCookie(cookie) },
   });
 }
+```
 
+### Get User ID
+
+```ts
 async function getUserId(request: Request) {
   const sessionCookie = parseCookie(request);
   if (sessionCookie === undefined) {
@@ -303,7 +325,11 @@ async function getUserId(request: Request) {
   state satisfies never;
   throw new Error("Unreachable");
 }
+```
 
+### Start the server
+
+```ts
 Bun.serve({
   fetch: (request) => {
     const url = new URL(request.url);
