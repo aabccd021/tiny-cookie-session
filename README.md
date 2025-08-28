@@ -3,29 +3,6 @@
 **tiny-cookie-session** is a cookie-based session management library that detects session forking.
 When session forking is detected, this library logs out both the attacker and the legitimate user.
 
-## How It Works
-
-```mermaid
-graph LR
-    subgraph Browser
-        Cookie["Cookie<br>sessionId:token"]
-    end
-    
-    subgraph Database
-        DB[(Session Storage)]
-        DB --> |stores| SID["Session ID Hash"]
-        DB --> |stores| UID["User ID"]
-        DB --> |stores| EXP["Expiration"]
-        DB --> |stores| OTH["Odd Token Hash"]
-        DB --> |stores| ETH["Even Token Hash"] 
-        DB --> |stores| LTO["Is Latest Token Odd?"]
-        DB --> |stores| TEXP["Token Expiration"]
-    end
-    
-    Cookie -.-> |sent with request| Server
-    Server --> |validate & rotate| DB
-```
-
 ## Important: Security limitations
 
 While this library detects session forking, it does not provide complete protection.
@@ -45,43 +22,6 @@ at the same time and either request could rotate the token.
 
 While the two latest tokens are considered valid,
 only the latest one can be used to rotate the token.
-
-### Session Forking Detection Process
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Attacker
-    participant Server
-    participant DB as Database
-    
-    Note over User,DB: Normal Operation
-    User->>Server: Request with sessionId:tokenA
-    Server->>DB: Validate sessionId:tokenA
-    DB->>Server: Valid - Latest token
-    Server->>DB: Rotate token (tokenA → tokenB)
-    Server->>User: Response with sessionId:tokenB
-    
-    Note over User,DB: Cookie Theft
-    Attacker-->>User: Steals cookie with tokenB
-    
-    User->>Server: Request with sessionId:tokenB
-    Server->>DB: Validate sessionId:tokenB
-    DB->>Server: Valid - Latest token
-    Server->>DB: Rotate token (tokenB → tokenC)
-    Server->>User: Response with sessionId:tokenC
-    
-    Attacker->>Server: Request with sessionId:tokenB (now outdated)
-    Server->>DB: Validate sessionId:tokenB
-    DB->>Server: Invalid - Token forking detected!
-    Server->>DB: Delete session
-    Server->>Attacker: Response with delete cookie
-    
-    User->>Server: Next request with sessionId:tokenC
-    Server->>DB: Validate sessionId:tokenC
-    DB->>Server: Session not found (was deleted)
-    Server->>User: Response with delete cookie
-```
 
 ### Detecting outdated cookies
 
@@ -157,25 +97,6 @@ it can't be prevented by any cookie-based mechanism, including this library or e
 
 The user is cooked at this point.
 The only solution is to log in from a clean device and log out all other devices.
-
-## Library API Flow
-
-```mermaid
-flowchart TD
-    A[User Request] --> B{Has Cookie?}
-    B -->|No| C[Login]
-    B -->|Yes| D[credentialFromCookie]
-    D -->|Invalid| E[Return logoutCookie]
-    D -->|Valid| F[consume]
-    
-    F -->|SessionActive| G[Continue Session]
-    F -->|TokenRotated| H[Set New Cookie]
-    F -->|SessionForked| I[Log out both parties]
-    F -->|SessionExpired| J[Session Expired]
-    
-    C --> K[Insert Session]
-    C --> L[Return New Cookie]
-```
 
 ## Installation
 
@@ -486,15 +407,6 @@ db.query("DELETE FROM session WHERE user_id = :userId").run({ userId });
 db.query(`DELETE FROM session`).run();
 ```
 
-## Configuration Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `sessionExpiresIn` | 24 hours | How long a session can remain active without user interaction |
-| `tokenExpiresIn` | 2 minutes | How frequently tokens are rotated when sessions are active |
-| `Path` | not set | Cookie path attribute (you should set to `/` for most apps) |
-| `SameSite` | `Strict` | Cookie SameSite attribute (you may want `Lax`) |
-
 ## Path and SameSite attributes
 
 This library sets `SameSite=Strict` and does not set `Path` by default.
@@ -592,6 +504,9 @@ tcs.login({ config });
 
 The `sessionExpiresIn` value controls how long a session can remain active without user interaction,
 often referred to as "log out after X minutes of inactivity."
+Your choice for session expiration time should balance security and user experience.
+
+Set to 7 days by default.
 
 For example, with `sessionExpiresIn: 30 * 60 * 1000` (30 minutes),
 a user can remain logged in indefinitely by making requests at least every 29 minutes.
@@ -600,19 +515,15 @@ When the user makes a request before the session expires,
 the session's expiration time will be extended both in the database's `exp` column and
 in the cookie's `Expires` attribute.
 
-Your choice for session expiration time should balance security and user experience.
-
 ### Token Expiration Time
 
 The `tokenExpiresIn` value controls how frequently tokens are rotated when sessions are active.
-
 When a token expires but the session is still valid, the system generates a new token.
 
 Set to 2 minutes by default.
 
 The longer you set `tokenExpiresIn`,
 the longer an attacker can use a stolen token before session forking is detected.
-
 So you should set this to a value as short as possible,
 but still longer than the longest HTTP request time your users might experience.
 
