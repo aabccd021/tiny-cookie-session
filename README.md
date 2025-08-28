@@ -65,11 +65,12 @@ function dbSelect(db: sqlite.Database, idHash: string) {
         odd_token_hash: string;
         even_token_hash: string | null;
         is_latest_token_odd: number;
+        platform: string | null;
       },
       sqlite.SQLQueryBindings
     >(
       `
-      SELECT user_id, exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd
+      SELECT user_id, exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd, platform
       FROM session WHERE id_hash = :id_hash
     `,
     )
@@ -86,13 +87,14 @@ function dbSelect(db: sqlite.Database, idHash: string) {
     oddTokenHash: row.odd_token_hash,
     evenTokenHash: row.even_token_hash,
     isLatestTokenOdd: row.is_latest_token_odd === 1,
+    platform: row.platform ?? undefined,
   };
 }
 
-function dbInsert(db: sqlite.Database, action: tcs.InsertAction, userId: string) {
+function dbInsert(db: sqlite.Database, action: tcs.InsertAction, userId: string, platform?: string) {
   db.query(`
-    INSERT INTO session (id_hash, user_id, exp, odd_token_hash, token_exp, is_latest_token_odd)
-    VALUES (:id_hash, :user_id, :exp, :odd_token_hash, :token_exp, :is_latest_token_odd)
+    INSERT INTO session (id_hash, user_id, exp, odd_token_hash, token_exp, is_latest_token_odd, platform)
+    VALUES (:id_hash, :user_id, :exp, :odd_token_hash, :token_exp, :is_latest_token_odd, :platform)
   `).run({
     id_hash: action.idHash,
     user_id: userId,
@@ -100,6 +102,7 @@ function dbInsert(db: sqlite.Database, action: tcs.InsertAction, userId: string)
     odd_token_hash: action.oddTokenHash,
     token_exp: action.tokenExp.toISOString(),
     is_latest_token_odd: action.isLatestTokenOdd ? 1 : 0,
+    platform: platform ?? null,
   });
 }
 
@@ -138,6 +141,7 @@ db.run(`
     even_token_hash TEXT,
     token_exp TEXT NOT NULL,
     is_latest_token_odd INTEGER NOT NULL,
+    platform TEXT,
     CHECK (is_latest_token_odd IN (0, 1))
   )
 `);
@@ -145,6 +149,11 @@ db.run(`
 const appConfig = {
   isMultipleSessionAllowed: false,
 };
+
+const sessionConfig = {
+  sessionExpiresIn: 30 * 60 * 1000, // 30 minutes
+  tokenExpiresIn: 2 * 60 * 1000, // 2 minutes
+}
 
 Bun.serve({
   fetch: async (request) => {
@@ -163,7 +172,7 @@ Bun.serve({
         db.query("DELETE FROM session WHERE user_id = :user_id").run({ user_id: userId });
       }
 
-      const { action, cookie } = await tcs.login();
+      const { action, cookie } = await tcs.login({ config: sessionConfig });
 
       if (action.type === "insert") {
         dbInsert(db, action, userId);
@@ -171,9 +180,27 @@ Bun.serve({
         action.type satisfies never;
       }
 
-      return new Response("Logged in", {
+      let page = "<h1>Signed In</h1>";
+
+      if (appConfig.isMultipleSessionAllowed) {
+        const sessions = db
+          .query<{ id_hash: string; platform: string | null; }, sqlite.SQLQueryBindings>(
+            "SELECT id_hash, platform FROM session WHERE user_id = :user_id"
+          )
+          .all({ user_id: userId });
+        page += "<h2>Active Sessions</h2><ul>";
+        page += "<p>Please log out from devices you don't recognize.</p>";
+        page += "<ul>";
+        for (const session of sessions) {
+          page += `<li>Session ID: ${session.id_hash}, Platform: ${session.platform ?? "Unknown"}</li>`;
+        }
+        page += "</ul>";
+      }
+
+      return new Response(page, {
         status: 200,
         headers: {
+          "Content-Type": "text/html",
           "Set-Cookie": serializeCookie(cookie),
         },
       });
@@ -244,7 +271,7 @@ Bun.serve({
         });
       }
 
-      const { action, cookie, state } = await tcs.consume({ credential, session });
+      const { action, cookie, state } = await tcs.consume({ credential, session, config: sessionConfig });
 
       if (action?.type === "delete") {
         dbDelete(db, action);
