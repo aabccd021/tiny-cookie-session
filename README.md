@@ -10,7 +10,7 @@ yarn add github:aabccd021/tiny-cookie-session
 bun install github:aabccd021/tiny-cookie-session
 ```
 
-## Example Usage
+## Example Usage with Bun
 
 ```ts
 import * as sqlite from "bun:sqlite";
