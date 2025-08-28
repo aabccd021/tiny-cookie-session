@@ -291,12 +291,14 @@ you'll need to implement your own garbage collection mechanism:
 db.query("DELETE FROM session WHERE exp < :now").run({ now: Date.now() });
 ```
 
-Doing or not doing garbage collection on expired sessions is always safe and has no security implications, 
-since those sessions would be rejected as "Expired" anyway if a user tried to use them.
+Doing or not doing garbage collection on expired sessions is always safe and has no security 
+implications, since those sessions would be rejected as "SessionExpired" anyway if a user tried 
+to use them.
 
 ## Force Logout Sessions
 
-This library allows you to immediately invalidate sessions by deleting them from the storage backend:
+This library allows you to immediately invalidate sessions by deleting them from the storage 
+backend:
 
 ```js
 // Force logout a specific session
