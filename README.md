@@ -245,7 +245,6 @@ backend.
 
 Unlike JWT, the session logout is effective immediately when this is done.
 
-
 ```js
 // Force logout a specific session
 db.query("DELETE FROM session WHERE id_hash = :idHash").run({ idHash });
