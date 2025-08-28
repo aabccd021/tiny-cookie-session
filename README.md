@@ -47,12 +47,10 @@ db.run(`
 
 function dbSelect(idHash: string) {
   const row = db
-    .query(
-      `
-        SELECT user_id, exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd
-        FROM session WHERE id_hash = :id_hash
-      `,
-    )
+    .query(`
+      SELECT user_id, exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd
+      FROM session WHERE id_hash = :id_hash
+    `)
     .get({ id_hash: idHash });
 
   if (row === null) {
