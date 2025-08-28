@@ -249,7 +249,26 @@ db.query(`DELETE FROM session`).run();
 
 ## Log Out Other Devices
 
+## Single Session per User
+
 ## Path and SameSite
+
+This library sets `SameSite=Strict` and does not set `Path` by default.
+
+This is the strictest setting for a cookie, which is good default for a library.
+
+But practically, you usually want `Path=/` and `SameSite=Lax` for session cookies.
+
+To do that, you can override the default options returned by this library:
+
+```ts
+import * as tcs from "tiny-cookie-session";
+
+function serializeCookie(cookie: tcs.Cookie): string {
+  const options = { ...cookie.options, path: "/", sameSite: "lax", };
+  return new Bun.Cookie("mysession", cookie.value, options).serialize();
+}
+```
 
 ## Serializing and Parsing Cookies
 
@@ -268,12 +287,9 @@ import * as cookieLib from "cookie";
 
 const { cookie } = await tcs.login();
 
-{
-  const serialized = new Bun.Cookie("mysession", cookie.value, cookie.options).serialize();
-}
-{
-  const serialized = cookieLib.serialize("mysession", cookie.value, cookie.options);
-}
+new Bun.Cookie("mysession", cookie.value, cookie.options).serialize();
+
+cookieLib.serialize("mysession", cookie.value, cookie.options);
 ```
 
 ## Cookie Signing
@@ -295,12 +311,12 @@ function unsignCookie(signedValue: string): string {
   return signedValue;
 }
 
-function serializeCookie(cookie: tcs.Cookie): string {
+function serializeAndSignCookie(cookie: tcs.Cookie): string {
   const signedValue = signCookie(cookie.value);
   return new Bun.Cookie("mysession", signCookie, cookie.options).serialize();
 }
 
-function parseCookie(request: Request): string | undefined {
+function parseAndUnsignCookie(request: Request): string | undefined {
   const cookieHeader = request.headers.get("Cookie");
   if (cookieHeader === null) return undefined;
 
@@ -368,10 +384,7 @@ to each function call.
 ```ts
 import * as tcs from "tiny-cookie-session";
 
-function handleRequest(request: Request) {
-
-  // get security type of the user from somewhere
-  const securityType = request.headers.get("X-Security-Type") ?? 'strict';
+async function handleRequest(request: Request, securityType: 'strict' | 'lenient') {
 
   const config = securityType === 'strict' ? {
     sessionExpiresIn: 30 * 60 * 1000, // 30 minutes
@@ -381,7 +394,7 @@ function handleRequest(request: Request) {
     tokenExpiresIn: 10 * 60 * 1000,        // 10 minutes
   };
 
-  tcs.consume({ config, /* other params */ });
+  await tcs.consume({ config, /* other params */ });
 }
 ```
 
