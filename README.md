@@ -210,7 +210,9 @@ Bun.serve({
     if (url.pathname === "/user_id" && request.method === "GET") return getUserId(request);
     return new Response("Not Found", { status: 404 });
   },
-});```
+});
+
+```
 
 ## Garbage Collecting Expired Sessions
 
