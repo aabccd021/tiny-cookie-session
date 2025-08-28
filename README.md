@@ -40,19 +40,19 @@ making it unguessable.
 
 ### Attack Scenarios and Outcomes
 
-| Scenario | Detection Possible? | Outcome |
-|----------|---------------------|---------|
-| Attacker steals old cookie (token rotated twice since) | Yes | Both parties logged out when attacker uses the cookie |
-| Attacker steals recent cookie | Yes, after conditions are met | Attacker can use cookie until session forking is detected |
-| Attacker steals cookie, legitimate user never uses session again | No | Attacker can use cookie until session expires |
-| Attacker steals cookie, logs out legitimate user | No | Attacker maintains access until session expires |
-| Persistent cookie theft (e.g., malware) | No | Cannot be prevented by cookie-based mechanisms |
+| Scenario                                                         | Detection Possible? | Attacker can use the session until          |
+| ---------------------------------------------------------------- | ------------------- | ------------------------------------------- |
+| Attacker steals old cookie (older than two rotations)            | Yes                 | Never                                       |
+| Attacker steals recent cookie, user uses the session after that  | Yes                 | The user's next request after two rotations |
+| Attacker steals cookie, legitimate user never uses session again | No                  | indefinitely                                |
+| Attacker steals cookie, logs out legitimate user                 | No                  | indefinitely                                |
+| Persistent cookie theft (e.g., malware)                          | No                  | indefinitely                                |
 
 ### If the attacker steals an old cookie
 
 If the attacker steals a cookie and the user has already rotated the token twice since then,
 both parties will be logged out when the attacker uses the cookie.
-In this case, no harm is done to the legitimate user, except the user will be logged out 
+In this case, no harm is done to the legitimate user, except the user will be logged out
 unexpectedly.
 
 ### If the attacker steals a recent cookie
@@ -74,7 +74,7 @@ This means there are two worst-case scenarios where we can't detect session fork
 1. The attacker steals a cookie, and the legitimate user never uses the session again (inactive).
 2. The attacker steals a cookie, and logs out the legitimate user.
 
-We can't detect session forking in these scenarios, and it cannot be solved unless the user has 
+We can't detect session forking in these scenarios, and it cannot be solved unless the user has
 some way to prove their identity, like how it's done in Device Bound Session Credentials (DBSC).
 
 The best we can do is to set a short session expiration time (`sessionExpiresIn`),
