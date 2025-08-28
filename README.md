@@ -360,9 +360,11 @@ You should implement CSRF protection for your entire application before using an
 ## Signed Cookies
 
 This library doesn't sign cookies directly.
-The main benefit of signed cookies is detecting cookie tampering without reaching the storage backend, but this isn't strictly required for this library to work or to provide security.
 
-You can implement cookie signing as an additional layer in your application if desired:
+The main benefit of signed cookies is detecting tampered cookie without reaching the storage backend, 
+but this isn't strictly required for this library to work or to provide security.
+
+You can implement cookie signing as an additional layer in your application if desired.
 
 ## Security Limitations
 
