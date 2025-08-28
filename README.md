@@ -10,7 +10,7 @@ yarn add github:aabccd021/tiny-cookie-session
 bun install github:aabccd021/tiny-cookie-session
 ```
 
-## Example Usage with Bun
+## Example usage with Bun
 
 ```ts
 import * as sqlite from "bun:sqlite";
@@ -214,7 +214,16 @@ Bun.serve({
 
 ```
 
-## Garbage Collecting Expired Sessions
+## Updating Session
+
+coalesce
+as given in the example above
+
+## Log out on malformed cookie or session not found
+
+as given in the example above
+
+## Garbage collection of expired sessions
 
 Since this library doesn't automatically delete expired sessions for inactive users, 
 you'll need to implement your own garbage collection mechanism:
@@ -229,7 +238,7 @@ Doing or not doing garbage collection on expired sessions is always safe and has
 implications, since those sessions would be rejected as "SessionExpired" anyway if a user tried 
 to use them.
 
-## Force Logout Sessions
+## Force logout session
 
 This library allows you to immediately invalidate sessions by deleting them from the storage 
 backend:
@@ -245,11 +254,11 @@ db.query("DELETE FROM session WHERE user_id = :userId").run({ userId });
 db.query(`DELETE FROM session`).run();
 ```
 
-## Remember Me
+## Remember me
 
-## Log Out Other Devices
+## Log out other devices
 
-## Single Session per User
+## Single session per user
 
 ## Path and SameSite
 
