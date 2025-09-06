@@ -104,7 +104,9 @@ function dbDeleteToken(db: sqlite.Database, action: tcs.DeleteTokenAction) {
 }
 
 function dbDeleteSession(db: sqlite.Database, action: tcs.DeleteSessionAction) {
-  db.query("DELETE FROM session WHERE id_hash = :id_hash").run({ id_hash: action.idHash });
+  db.query("DELETE FROM session WHERE id_hash = :id_hash").run({
+    id_hash: action.idHash,
+  });
 }
 
 async function login(db: sqlite.Database, arg: import("./index").LoginArg) {
@@ -152,12 +154,20 @@ async function consume(
 
   const credential = await tcs.credentialFromCookie({ cookie });
   if (credential === undefined) {
-    return { state: "CookieMalformed", cookie: tcs.logoutCookie, data: undefined };
+    return {
+      state: "CookieMalformed",
+      cookie: tcs.logoutCookie,
+      data: undefined,
+    };
   }
 
   const sessionData = dbSelect(db, credential.idHash);
   if (sessionData === undefined) {
-    return { state: "SessionNotFound", cookie: tcs.logoutCookie, data: undefined };
+    return {
+      state: "SessionNotFound",
+      cookie: tcs.logoutCookie,
+      data: undefined,
+    };
   }
   const session = await tcs.consume({ credential, config, sessionData });
 
@@ -173,15 +183,30 @@ async function consume(
   }
 
   if (session.state === "Active") {
-    return { state: "Active", cookie: session.cookie, action: session.action, data: sessionData };
+    return {
+      state: "Active",
+      cookie: session.cookie,
+      action: session.action,
+      data: sessionData,
+    };
   }
 
   if (session.state === "Expired") {
-    return { state: "Expired", cookie: session.cookie, action: session.action, data: undefined };
+    return {
+      state: "Expired",
+      cookie: session.cookie,
+      action: session.action,
+      data: undefined,
+    };
   }
 
   if (session.state === "Forked") {
-    return { state: "Forked", cookie: session.cookie, action: session.action, data: undefined };
+    return {
+      state: "Forked",
+      cookie: session.cookie,
+      action: session.action,
+      data: undefined,
+    };
   }
 
   session satisfies never;

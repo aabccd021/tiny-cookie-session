@@ -8,6 +8,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - run: nix run nixpkgs#prettier -- README.md .github --print-width 100 --check
-      - run: nix run nixpkgs#biome check
+      - run: nix run nixpkgs#biome -- check --indent-style=space --line-width=100
       - run: nix run nixpkgs#typescript
       - run: nix run nixpkgs#bun run index.test.ts
