@@ -49,7 +49,7 @@ These cases cannot be mitigated unless the user has some way to prove their iden
 
 #### If the user is inactive after the cookie is stolen
 
-The best we can do is to set a short session expiration time (`sessionExpiresIn`).
+One thing we can do is to set a short session expiration time (`sessionExpiresIn`).
 This will limit the window of opportunity for the attacker,
 but it will also inconvenience users by requiring them to log in more frequently.
 
