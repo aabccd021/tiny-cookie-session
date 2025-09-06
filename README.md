@@ -1,4 +1,4 @@
-# tiny-cookie-session
+# tiny-cookie-session :cookie:
 
 **tiny-cookie-session** is a cookie-based session management library that detects session forking.
 When session forking is detected, this library logs out both the attacker and the user.
