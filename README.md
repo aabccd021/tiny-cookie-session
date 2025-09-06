@@ -1,7 +1,7 @@
 # tiny-cookie-session
 
 **tiny-cookie-session** is a cookie-based session management library that detects session forking.
-When session forking is detected, this library logs out both the attacker and the legitimate user.
+When session forking is detected, this library logs out both the attacker and the user.
 
 ## Important: Security limitations
 
@@ -18,7 +18,7 @@ The session id and token are stored in a cookie.
 ### Detecting outdated cookies
 
 After a cookie is stolen and the token is rotated,
-either the attacker or the legitimate user will have an outdated token.
+either the attacker or the user will have an outdated token.
 When this outdated token is used, we will detect this as session forking and log out both parties.
 We log out both parties because we cannot determine which party used the invalid token.
 
@@ -29,47 +29,39 @@ We log out both parties because we cannot determine which party used the invalid
 | Attacker steals old cookie                                           | Yes                 | Never                              |
 | Attacker steals the latest cookie, user uses the session after that  | Yes                 | The user's next request            |
 | Attacker steals the latest cookie, user never uses the session again | No                  | Indefinitely                       |
-| Attacker steals the latest cookie, logs out legitimate user          | No                  | Indefinitely                       |
+| Attacker steals the latest cookie, logs out user                     | No                  | Indefinitely                       |
 | Persistent cookie theft (e.g., background malware)                   | No                  | Indefinitely                       |
 
 ### If the attacker steals an old cookie
 
 If the attacker steals an old cookie (stolen before the latest rotation),
 both parties will be logged out when the attacker uses the cookie.
-In this case, no harm is done to the legitimate user, except the user will be logged out
+In this case, no harm is done to the user, except the user will be logged out
 unexpectedly.
 
 ### If the attacker steals a recent cookie
 
-If the attacker steals a cookie, and the user has not rotated the token since then,
-the attacker can use the cookie until this library detects it as session forking.
+There are two worst-case scenarios where we can't detect session forking:
 
-For this library to detect session forking, two conditions must be met after the cookie is stolen:
-
-1. The token must be rotated.
-2. A party with an outdated token must make a request after the rotation.
-
-This means there are two worst-case scenarios where we can't detect session forking:
-
-1. The attacker steals a cookie, and the legitimate user never uses the session again (inactive).
-2. The attacker steals a cookie, and somehow (forcefully) logs out the legitimate user.
+1. The attacker steals a cookie, and the user never uses the session again (inactive).
+2. The attacker steals a cookie, and somehow (forcefully) logs out the user.
 
 These cases cannot be mitigated unless the user has some way to prove their identity, like how it's
 done in Device Bound Session Credentials (DBSC).
 
-### Mitigating inactive user
+#### If the user is inactive after the cookie is stolen
 
 The best we can do is to set a short session expiration time (`sessionExpiresIn`).
 This will limit the window of opportunity for the attacker,
-but it will also inconvenience legitimate users by requiring them to log in more frequently.
+but it will also inconvenience users by requiring them to log in more frequently.
 
-Another way is to implement "Don't remember me" functionality,
-which deletes the cookie when the browser is closed.
+A stricter way is to implement "Don't remember me" functionality, which deletes the cookie when the
+browser is closed.
 This can be done easily by removing the `Expires` and `Max-Age` attributes from the session cookie.
 In this case, the only way for the attacker to do harm is to steal "the last cookie used before
 closing the browser".
 
-### Mitigating forced logout
+#### If the attacker forcefully logs out the user
 
 To mitigate the risk of forced logout, we can implement "Log out other devices" functionality.
 This way when the user logs in again (after being logged out by the attacker),
@@ -80,7 +72,7 @@ so that logging in again will automatically log out all other devices, including
 This requires no human interaction (choosing devices to log out), making it safer than
 the previous approach.
 
-Although none of these approaches prevents the attacker from using the session until the user logs
+Although, none of these approaches prevents the attacker from using the session until the user logs
 in again.
 
 ### Persistent cookie theft
@@ -90,19 +82,6 @@ it can't be prevented by any cookie-based mechanism, including this library or e
 
 The user is cooked at this point. The only solution is to log in from a clean device and log out
 all other devices.
-
-## Minor security considerations
-
-It doesn't have to be the actual outdated token to be detected as session forking.
-As long as it's paired with a valid session id (in the cookie), any token value,
-even ones that were never issued, will be detected as session forking.
-
-This means theoretically, if the attacker can guess a valid session id,
-they can use any random token value to log out the legitimate user.
-But practically this is not a concern because we use 256 bits of entropy for session id generation,
-making it unguessable.
-Also, the implication of this attack is just logging out the legitimate user,
-no sensitive information is leaked.
 
 ## Installation
 
