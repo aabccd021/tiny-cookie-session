@@ -420,7 +420,7 @@ test("consume: state Active after re-login", async () => {
   }
 });
 
-test("consume: state Forked after [10m, user, user, attacker]", async () => {
+test("consume: state Forked after used by user, user, attacker", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -461,7 +461,7 @@ test("consume: state Forked after [10m, user, user, attacker]", async () => {
   }
 });
 
-test("consume: state Forked after [10m, attacker, attacker, user]", async () => {
+test("consume: state Forked after used by attacker, attacker, user", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -495,7 +495,7 @@ test("consume: state Forked after [10m, attacker, attacker, user]", async () => 
   }
 });
 
-test("consume: state Forked after [10m, attacker, user, attacker, user]", async () => {
+test("consume: state Forked after used by attacker, user, attacker, user", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -534,7 +534,7 @@ test("consume: state Forked after [10m, attacker, user, attacker, user]", async 
   }
 });
 
-test("consume: state Forked after [10m, user, attacker, user, attacker]", async () => {
+test("consume: state Forked after used by user, attacker, user, attacker", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
