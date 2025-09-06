@@ -10,22 +10,28 @@
     "noEmit": true,
 
     // JS
-    "allowJs": true,
     "checkJs": true,
 
     // Strict checks not handled by biome
     "strict": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "noImplicitReturns": true,
     "noUncheckedIndexedAccess": true,
-    "noUncheckedSideEffectImports": true,
+    "noImplicitReturns": true,
 
     // Only useful for class
     // "noImplicitOverride": true,
 
     // Only useful when we use try/catch
     // "useUnknownInCatchVariables": true,
+
+    // We don't do side-effect imports
+    // "noUncheckedSideEffectImports": true,
+
+    // Only matter for typescript file?
+    // "isolatedModules": true,
+    // "verbatimModuleSyntax": true,
+    // "erasableSyntaxOnly": true,
+
+    // Works anyway even if not set?
 
     // Handled by biome
     // "allowUnreachableCode": false,
