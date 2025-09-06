@@ -61,14 +61,13 @@ closing the browser.
 
 #### If the attacker forcefully logs out the user
 
-To mitigate the risk of forced logout, you can implement a "Log out other devices" feature.
-This way, when the user logs in again (after being logged out by the attacker),
-they can log out all other devices, including the attacker.
+One thing we can do is to implement a "Log out other devices" feature.
+This way, when the user logs in again they can log out all other devices, including the attacker.
 
 You can make it even safer by only allowing the user to have one active session at a time,
 so that logging in again will automatically log out all other devices, including the attacker.
-This requires no human interaction (choosing devices to log out), making it safer than
-the previous approach.
+This requires no manual action (choosing devices to log out), making it safer than the previous
+approach.
 
 However, none of these approaches prevents the attacker from using the session until the user logs
 in again.
