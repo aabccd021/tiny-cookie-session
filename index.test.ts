@@ -589,6 +589,7 @@ test("consume: state Active with previous cookie (race condition)", async () => 
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
+    expect(session?.action?.type).toEqual("UpdateSession");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -618,6 +619,7 @@ test("consume: state Active with previous cookie after 2 rotations", async () =>
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
+    expect(session?.action?.type).toEqual("UpdateSession");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -625,6 +627,7 @@ test("consume: state Active with previous cookie after 2 rotations", async () =>
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
+    expect(session?.action?.type).toEqual("UpdateSession");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -654,6 +657,7 @@ test("consume: state Active with previous cookie after 3 rotations", async () =>
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
+    expect(session?.action?.type).toEqual("UpdateSession");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -661,6 +665,7 @@ test("consume: state Active with previous cookie after 3 rotations", async () =>
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
+    expect(session?.action?.type).toEqual("UpdateSession");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -668,6 +673,7 @@ test("consume: state Active with previous cookie after 3 rotations", async () =>
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
+    expect(session?.action?.type).toEqual("UpdateSession");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
