@@ -8,7 +8,7 @@ When session forking is detected, this library logs out both the attacker and th
 While this library detects session forking, it does not provide complete protection.
 You should understand its limitations before using it in production.
 
-### How session id and token are stored
+### How session ID and token are stored
 
 This library uses randomly generated session IDs and tokens to identify a session.
 The session ID is a long-lived identifier for the session, while the token is a short-lived value
@@ -22,16 +22,6 @@ either the attacker or the user will have an outdated token.
 When this outdated token is used, it is detected as session forking and both parties are logged out.
 We log out both parties because we cannot determine which party used the invalid token.
 
-### Attack Scenarios and Outcomes
-
-| Scenario                                                             | Detection Possible? | Attacker can use the session until |
-| -------------------------------------------------------------------- | ------------------- | ---------------------------------- |
-| Attacker steals old cookie                                           | Yes                 | Never                              |
-| Attacker steals the latest cookie, user uses the session after that  | Yes                 | The user's next request            |
-| Attacker steals the latest cookie, user never uses the session again | No                  | Indefinitely                       |
-| Attacker steals the latest cookie, logs out user                     | No                  | Indefinitely                       |
-| Persistent cookie theft (e.g., background malware)                   | No                  | Indefinitely                       |
-
 ### If the attacker steals an old cookie
 
 If the attacker steals an old cookie (stolen before the latest rotation),
@@ -40,7 +30,11 @@ In this case, no harm is done to the user, except that the user will be logged o
 
 ### If the attacker steals a recent cookie
 
-There are two worst-case scenarios where we can't detect session forking:
+For most scenarios, session forking will be detected after the attacker uses the stolen cookie.
+In that case, the attacker can only use the session until the forking is detected.
+
+Although, there are two worst-case scenarios where we can't detect session forking,
+making the attacker able to use the session indefinitely:
 
 1. The attacker steals a cookie, and the user never uses the session again (inactive).
 2. The attacker steals a cookie, and somehow (forcefully) logs out the user.
@@ -67,8 +61,8 @@ There are two possible approaches to mitigate this risk:
 1. Implement a "Log out other devices" feature.
 2. Allow only one active session at a time.
 
-The "Log out other devices" feature enables the user to log out the attacker session on the next
-login. Allowing only one active session (the latest logged-in session) is safer since it's done all
+The "Log out other devices" feature enables the user to log out the attacker's session on the next
+login. Allowing only one active session (the latest logged-in session) is safer since it's done
 automatically.
 
 However, none of these approaches prevents the attacker from using the session until the user logs
