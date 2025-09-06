@@ -80,7 +80,7 @@ export const login: (arg?: LoginArg) => Promise<LoginResult>;
 
 export type ConsumeArg = {
   readonly credential: Credential;
-  readonly session: {
+  readonly sessionData: {
     readonly oddTokenHash?: string;
     readonly evenTokenHash?: string;
     readonly exp: Date;
@@ -92,27 +92,27 @@ export type ConsumeArg = {
 
 export type ConsumeResult =
   | {
-      readonly state: "SessionForked";
+      readonly state: "Forked";
       readonly cookie: Cookie;
       readonly action: DeleteAction;
     }
   | {
-      readonly state: "SessionExpired";
+      readonly state: "Expired";
       readonly cookie: Cookie;
       readonly action: DeleteAction;
     }
   | {
-      readonly state: "SessionActive";
+      readonly state: "Active";
       readonly cookie: Cookie;
       readonly action: UpdateAction;
     }
   | {
-      readonly state: "SessionActive";
+      readonly state: "Active";
       readonly cookie: undefined;
       readonly action: undefined;
     }
   | {
-      readonly state: "SessionActive";
+      readonly state: "Active";
       readonly cookie: undefined;
       readonly action: TokenDeletedAction;
     };

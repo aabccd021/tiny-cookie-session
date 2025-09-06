@@ -111,15 +111,15 @@ function dbDelete(db: sqlite.Database, action: tcs.DeleteAction) {
 }
 
 async function login(db: sqlite.Database, arg: import("./index").LoginArg) {
-  const result = await tcs.login(arg);
+  const session = await tcs.login(arg);
 
-  if (result.action.type === "insert") {
-    dbInsert(db, result.action);
+  if (session.action.type === "insert") {
+    dbInsert(db, session.action);
   } else {
-    result.action.type satisfies never;
+    session.action.type satisfies never;
   }
 
-  return result;
+  return session;
 }
 
 async function logout(db: sqlite.Database, cookie: string | undefined) {
@@ -132,16 +132,16 @@ async function logout(db: sqlite.Database, cookie: string | undefined) {
     return { cookie: tcs.logoutCookie, action: undefined };
   }
 
-  const result = await tcs.logout({ credential });
+  const session = await tcs.logout({ credential });
 
-  if (result.action.type === "delete") {
-    dbDelete(db, result.action);
+  if (session.action.type === "delete") {
+    dbDelete(db, session.action);
   } else {
-    result.action.type satisfies never;
+    session.action.type satisfies never;
     throw new Error("Unreachable");
   }
 
-  return result;
+  return session;
 }
 
 async function consume(
@@ -158,36 +158,36 @@ async function consume(
     return { state: "CookieMalformed", cookie: tcs.logoutCookie, data: undefined };
   }
 
-  const session = dbSelect(db, credential.idHash);
-  if (session === undefined) {
+  const sessionData = dbSelect(db, credential.idHash);
+  if (sessionData === undefined) {
     return { state: "SessionNotFound", cookie: tcs.logoutCookie, data: undefined };
   }
-  const result = await tcs.consume({ credential, config, session });
+  const session = await tcs.consume({ credential, config, sessionData });
 
-  if (result.action?.type === "delete") {
-    dbDelete(db, result.action);
-  } else if (result.action?.type === "update") {
-    dbUpdate(db, result.action);
-  } else if (result.action?.type === "tokenDelete") {
-    dbDeleteToken(db, result.action);
-  } else if (result.action !== undefined) {
-    result.action satisfies never;
+  if (session.action?.type === "delete") {
+    dbDelete(db, session.action);
+  } else if (session.action?.type === "update") {
+    dbUpdate(db, session.action);
+  } else if (session.action?.type === "tokenDelete") {
+    dbDeleteToken(db, session.action);
+  } else if (session.action !== undefined) {
+    session.action satisfies never;
     throw new Error("Unreachable");
   }
 
-  if (result.state === "SessionActive") {
-    return { state: "SessionActive", cookie: result.cookie, data: session };
+  if (session.state === "Active") {
+    return { state: "Active", cookie: session.cookie, data: sessionData };
   }
 
-  if (result.state === "SessionExpired") {
-    return { state: "SessionExpired", cookie: result.cookie, data: undefined };
+  if (session.state === "Expired") {
+    return { state: "Expired", cookie: session.cookie, data: undefined };
   }
 
-  if (result.state === "SessionForked") {
-    return { state: "SessionForked", cookie: result.cookie, data: undefined };
+  if (session.state === "Forked") {
+    return { state: "Forked", cookie: session.cookie, data: undefined };
   }
 
-  result satisfies never;
+  session satisfies never;
   throw new Error("Unreachable");
 }
 
@@ -220,11 +220,11 @@ test("login", async () => {
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
   }
@@ -254,7 +254,7 @@ test("logout", async () => {
   }
 });
 
-test("consume: state SessionActive after login", async () => {
+test("consume: state Active after login", async () => {
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -267,13 +267,13 @@ test("consume: state SessionActive after login", async () => {
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
   }
 });
 
-test("consume: state SessionActive after 9 minutes", async () => {
+test("consume: state Active after 9 minutes", async () => {
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -288,13 +288,13 @@ test("consume: state SessionActive after 9 minutes", async () => {
   {
     date = "2023-10-01T00:09:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
   }
 });
 
-test("consume: state SessionActive after 11 minutes", async () => {
+test("consume: state Active after 11 minutes", async () => {
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -308,18 +308,18 @@ test("consume: state SessionActive after 11 minutes", async () => {
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     expect(session.cookie?.options.expires?.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:21:00.000Z");
   }
 });
 
-test("consume: state SessionActive after SessionActive", async () => {
+test("consume: state Active after Active", async () => {
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -333,12 +333,12 @@ test("consume: state SessionActive after SessionActive", async () => {
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:21:00.000Z");
   }
@@ -358,7 +358,7 @@ test("consume: state Expired after 6 hours", async () => {
   {
     date = "2023-10-01T06:00:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionExpired");
+    expect(session?.state).toEqual("Expired");
     expect(session.cookie?.value).toEqual("");
     expect(session.cookie?.options.maxAge).toEqual(0);
     cookie = setCookie(cookie, session);
@@ -369,7 +369,7 @@ test("consume: state Expired after 6 hours", async () => {
   }
 });
 
-test("consume: state SessionActive after SessionActive twice", async () => {
+test("consume: state Active after Active twice", async () => {
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -383,22 +383,22 @@ test("consume: state SessionActive after SessionActive twice", async () => {
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
 });
 
-test("consume: state SessionActive after re-login", async () => {
+test("consume: state Active after re-login", async () => {
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -419,11 +419,11 @@ test("consume: state SessionActive after re-login", async () => {
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
 });
 
-test("consume: state SessionForked after used by user, user, attacker", async () => {
+test("consume: state Forked after used by user, user, attacker", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -439,18 +439,18 @@ test("consume: state SessionForked after used by user, user, attacker", async ()
   {
     date = "2023-10-01T00:11:00Z";
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("SessionActive");
+    expect(userSession?.state).toEqual("Active");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("SessionActive");
+    expect(userSession?.state).toEqual("Active");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("SessionForked");
+    expect(attackerSession?.state).toEqual("Forked");
     expect(attackerSession.cookie?.value).toEqual("");
     expect(attackerSession.cookie?.options.maxAge).toEqual(0);
     attackerCookie = setCookie(attackerCookie, attackerSession);
@@ -465,7 +465,7 @@ test("consume: state SessionForked after used by user, user, attacker", async ()
   }
 });
 
-test("consume: state SessionForked after used by attacker, attacker, user", async () => {
+test("consume: state Forked after used by attacker, attacker, user", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -481,18 +481,18 @@ test("consume: state SessionForked after used by attacker, attacker, user", asyn
   {
     date = "2023-10-01T00:11:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("SessionActive");
+    expect(attackerSession?.state).toEqual("Active");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("SessionActive");
+    expect(attackerSession?.state).toEqual("Active");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("SessionForked");
+    expect(userSession?.state).toEqual("Forked");
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
@@ -500,7 +500,7 @@ test("consume: state SessionForked after used by attacker, attacker, user", asyn
   }
 });
 
-test("consume: state SessionForked after used by attacker, user, attacker, user", async () => {
+test("consume: state Forked after used by attacker, user, attacker, user", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -516,23 +516,23 @@ test("consume: state SessionForked after used by attacker, user, attacker, user"
   {
     date = "2023-10-01T00:11:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("SessionActive");
+    expect(attackerSession?.state).toEqual("Active");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("SessionActive");
+    expect(userSession?.state).toEqual("Active");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("SessionActive");
+    expect(attackerSession?.state).toEqual("Active");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("SessionForked");
+    expect(userSession?.state).toEqual("Forked");
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
@@ -540,7 +540,7 @@ test("consume: state SessionForked after used by attacker, user, attacker, user"
   }
 });
 
-test("consume: state SessionForked after used by user, attacker, user, attacker", async () => {
+test("consume: state Forked after used by user, attacker, user, attacker", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -556,23 +556,23 @@ test("consume: state SessionForked after used by user, attacker, user, attacker"
   {
     date = "2023-10-01T00:11:00Z";
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("SessionActive");
+    expect(userSession?.state).toEqual("Active");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("SessionActive");
+    expect(attackerSession?.state).toEqual("Active");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("SessionActive");
+    expect(userSession?.state).toEqual("Active");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("SessionForked");
+    expect(attackerSession?.state).toEqual("Forked");
   }
   {
     const userSession = await consume(db, userCookie, config);
@@ -580,7 +580,7 @@ test("consume: state SessionForked after used by user, attacker, user, attacker"
   }
 });
 
-test("consume: state SessionActive with previous cookie (race condition)", async () => {
+test("consume: state Active with previous cookie (race condition)", async () => {
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -595,21 +595,21 @@ test("consume: state SessionActive with previous cookie (race condition)", async
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
 });
 
-test("consume: state SessionActive with previous cookie after 2 rotations", async () => {
+test("consume: state Active with previous cookie after 2 rotations", async () => {
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -624,28 +624,28 @@ test("consume: state SessionActive with previous cookie after 2 rotations", asyn
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
 });
 
-test("consume: state SessionActive with previous cookie after 3 rotations", async () => {
+test("consume: state Active with previous cookie after 3 rotations", async () => {
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -660,35 +660,35 @@ test("consume: state SessionActive with previous cookie after 3 rotations", asyn
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
 });
 
-test("consume: state SessionActive with previous cookie after 4 rotations", async () => {
+test("consume: state Active with previous cookie after 4 rotations", async () => {
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -703,37 +703,37 @@ test("consume: state SessionActive with previous cookie after 4 rotations", asyn
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:44:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("SessionActive");
+    expect(session?.state).toEqual("Active");
   }
 });

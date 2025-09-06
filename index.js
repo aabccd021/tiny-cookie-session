@@ -101,12 +101,12 @@ export async function logout(arg) {
  */
 export async function consume(arg) {
   const requestTokenHash = await hash(arg.credential.token);
-  const isOddToken = requestTokenHash === arg.session.oddTokenHash;
-  const isEvenToken = requestTokenHash === arg.session.evenTokenHash;
+  const isOddToken = requestTokenHash === arg.sessionData.oddTokenHash;
+  const isEvenToken = requestTokenHash === arg.sessionData.evenTokenHash;
 
   if (!isOddToken && !isEvenToken) {
     return {
-      state: "SessionForked",
+      state: "Forked",
       cookie: logoutCookie,
       action: {
         type: "delete",
@@ -116,9 +116,9 @@ export async function consume(arg) {
   }
 
   const now = arg.config?.dateNow?.() ?? new Date();
-  if (arg.session.exp.getTime() <= now.getTime()) {
+  if (arg.sessionData.exp.getTime() <= now.getTime()) {
     return {
-      state: "SessionExpired",
+      state: "Expired",
       cookie: logoutCookie,
       action: {
         type: "delete",
@@ -127,24 +127,24 @@ export async function consume(arg) {
     };
   }
 
-  const isLatestToken = arg.session.isLatestTokenOdd ? isOddToken : isEvenToken;
+  const isLatestToken = arg.sessionData.isLatestTokenOdd ? isOddToken : isEvenToken;
   if (!isLatestToken) {
     return {
-      state: "SessionActive",
+      state: "Active",
       cookie: undefined,
       action: undefined,
     };
   }
 
-  const isTokenExpired = arg.session.tokenExp.getTime() <= now.getTime();
+  const isTokenExpired = arg.sessionData.tokenExp.getTime() <= now.getTime();
   if (!isTokenExpired) {
     return {
-      state: "SessionActive",
+      state: "Active",
       cookie: undefined,
       action: {
         type: "tokenDelete",
         idHash: arg.credential.idHash,
-        tokenType: arg.session.isLatestTokenOdd ? "even" : "odd",
+        tokenType: arg.sessionData.isLatestTokenOdd ? "even" : "odd",
       },
     };
   }
@@ -166,12 +166,12 @@ export async function consume(arg) {
   };
 
   const tokenHashStr = await hash(token);
-  const isNextOddToken = !arg.session.isLatestTokenOdd;
+  const isNextOddToken = !arg.sessionData.isLatestTokenOdd;
   const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
   const tokenExp = new Date(now.getTime() + tokenExpiresIn);
 
   return {
-    state: "SessionActive",
+    state: "Active",
     cookie,
     action: {
       type: "update",
