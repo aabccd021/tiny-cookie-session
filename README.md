@@ -3,10 +3,6 @@
 **tiny-cookie-session** is a cookie-based session management library that detects session forking.
 When session forking is detected, this library logs out both the attacker and the legitimate user.
 
-## TODO
-
-- `configInit`
-
 ## Important: Security limitations
 
 While this library detects session forking, it does not provide complete protection.
