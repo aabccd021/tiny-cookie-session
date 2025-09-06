@@ -13,8 +13,7 @@ You need to understand its limitations before using it in production.
 This library uses randomly generated session id and token to identify a session.
 The session id is a long-lived identifier for the session,
 while the token is a short-lived value that is rotated periodically.
-The session id and token are stored in a cookie on the client side and in a database on the server
-side.
+The session id and token are stored in a cookie.
 
 ### Detecting outdated cookies
 
@@ -25,17 +24,17 @@ We log out both parties because we cannot determine which party used the invalid
 
 ### Attack Scenarios and Outcomes
 
-| Scenario                                                  | Detection Possible? | Attacker can use the session until           |
-| --------------------------------------------------------- | ------------------- | -------------------------------------------- |
-| Attacker steals old cookie (older than one)               | Yes                 | Never                                        |
-| Attacker steals cookie, user uses the session after that  | Yes                 | The user's next request after token rotation |
-| Attacker steals cookie, user never uses the session again | No                  | Indefinitely                                 |
-| Attacker steals cookie, logs out legitimate user          | No                  | Indefinitely                                 |
-| Persistent cookie theft (e.g., background malware)        | No                  | Indefinitely                                 |
+| Scenario                                                             | Detection Possible? | Attacker can use the session until |
+| -------------------------------------------------------------------- | ------------------- | ---------------------------------- |
+| Attacker steals old cookie                                           | Yes                 | Never                              |
+| Attacker steals the latest cookie, user uses the session after that  | Yes                 | The user's next request            |
+| Attacker steals the latest cookie, user never uses the session again | No                  | Indefinitely                       |
+| Attacker steals the latest cookie, logs out legitimate user          | No                  | Indefinitely                       |
+| Persistent cookie theft (e.g., background malware)                   | No                  | Indefinitely                       |
 
 ### If the attacker steals an old cookie
 
-If the attacker steals a cookie and the user has already rotated the token since then,
+If the attacker steals an old cookie (stolen before the latest rotation),
 both parties will be logged out when the attacker uses the cookie.
 In this case, no harm is done to the legitimate user, except the user will be logged out
 unexpectedly.
