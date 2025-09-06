@@ -39,10 +39,18 @@ const hash = async (token) => {
  */
 export async function login(arg) {
   const id = generate256BitEntropyHex();
+  const idHash = await hash(id);
+
   const token = generate256BitEntropyHex();
+  const tokenHash = await hash(token);
+
   const now = arg?.config?.dateNow?.() ?? new Date();
+
   const sessionExpiresIn = arg?.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
-  const expires = new Date(now.getTime() + sessionExpiresIn);
+  const sessionExp = new Date(now.getTime() + sessionExpiresIn);
+
+  const tokenExpiresIn = arg?.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
+  const tokenExp = new Date(now.getTime() + tokenExpiresIn);
 
   /** @type {import("./index").Cookie} */
   const cookie = {
@@ -51,20 +59,23 @@ export async function login(arg) {
       httpOnly: true,
       sameSite: "strict",
       secure: true,
-      expires,
+      expires: sessionExp,
     },
   };
 
-  const tokenExpiresIn = arg?.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
   return {
     cookie,
     action: {
-      type: "InsertSession",
-      idHash: await hash(id),
-      exp: expires,
-      isLatestTokenOdd: true,
-      tokenExp: new Date(now.getTime() + tokenExpiresIn),
-      oddTokenHash: await hash(token),
+      type: "UpsertSession",
+      reason: "SessionCreated",
+      idHash,
+      sessionData: {
+        isLatestTokenOdd: true,
+        oddTokenHash: tokenHash,
+        evenTokenHash: null,
+        sessionExp: sessionExp,
+        tokenExp: tokenExp,
+      },
     },
   };
 }
@@ -118,7 +129,7 @@ export async function consume(arg) {
   }
 
   const now = arg.config?.dateNow?.() ?? new Date();
-  if (arg.sessionData.exp.getTime() <= now.getTime()) {
+  if (arg.sessionData.sessionExp.getTime() <= now.getTime()) {
     return {
       state: "Expired",
       cookie: logoutCookie,
@@ -145,9 +156,16 @@ export async function consume(arg) {
     return {
       state: "Active",
       action: {
-        type: "DeleteToken",
+        type: "UpsertSession",
+        reason: "TokenDeleted",
         idHash: arg.credential.idHash,
-        tokenType: arg.sessionData.isLatestTokenOdd ? "even" : "odd",
+        sessionData: {
+          isLatestTokenOdd: arg.sessionData.isLatestTokenOdd,
+          oddTokenHash: arg.sessionData.isLatestTokenOdd ? arg.sessionData.oddTokenHash : null,
+          evenTokenHash: arg.sessionData.isLatestTokenOdd ? null : arg.sessionData.evenTokenHash,
+          sessionExp: arg.sessionData.sessionExp,
+          tokenExp: arg.sessionData.tokenExp,
+        },
       },
     };
   }
@@ -178,13 +196,16 @@ export async function consume(arg) {
     state: "Active",
     cookie,
     action: {
-      type: "UpdateSession",
+      type: "UpsertSession",
+      reason: "TokenRotated",
       idHash: arg.credential.idHash,
-      isLatestTokenOdd: isNextTokenOdd,
-      oddTokenHash: isNextTokenOdd ? nextTokenHash : undefined,
-      evenTokenHash: isNextTokenOdd ? undefined : nextTokenHash,
-      exp: nextSessionExp,
-      tokenExp: nextTokenExp,
+      sessionData: {
+        isLatestTokenOdd: isNextTokenOdd,
+        oddTokenHash: isNextTokenOdd ? nextTokenHash : arg.sessionData.oddTokenHash,
+        evenTokenHash: isNextTokenOdd ? arg.sessionData.evenTokenHash : nextTokenHash,
+        sessionExp: nextSessionExp,
+        tokenExp: nextTokenExp,
+      },
     },
   };
 }

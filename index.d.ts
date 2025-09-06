@@ -25,38 +25,26 @@ type Credential = {
   readonly token: string;
 };
 
-export type InsertSessionAction = {
-  readonly type: "InsertSession";
-  readonly idHash: string;
-  readonly exp: Date;
-  readonly oddTokenHash: string;
+export type SessionData = {
+  readonly sessionExp: Date;
+  readonly oddTokenHash: string | null;
+  readonly evenTokenHash: string | null;
   readonly tokenExp: Date;
   readonly isLatestTokenOdd: boolean;
 };
-export type UpdateSessionAction = {
-  readonly type: "UpdateSession";
-  readonly idHash: string;
-  readonly exp: Date;
-  readonly oddTokenHash?: string;
-  readonly evenTokenHash?: string;
-  readonly tokenExp: Date;
-  readonly isLatestTokenOdd: boolean;
-};
+
 export type DeleteSessionAction = {
   readonly type: "DeleteSession";
   readonly idHash: string;
 };
-export type DeleteTokenAction = {
-  readonly type: "DeleteToken";
+export type UpsertSessionAction = {
+  readonly type: "UpsertSession";
   readonly idHash: string;
-  readonly tokenType: "odd" | "even";
+  readonly reason: "SessionCreated" | "TokenRotated" | "TokenDeleted";
+  readonly sessionData: SessionData;
 };
 
-export type Action =
-  | InsertSessionAction
-  | DeleteSessionAction
-  | UpdateSessionAction
-  | DeleteTokenAction;
+export type Action = UpsertSessionAction | DeleteSessionAction;
 
 export const logoutCookie: Cookie;
 
@@ -77,20 +65,14 @@ type LoginArg = {
 
 type LoginResult = {
   readonly cookie: Cookie;
-  readonly action: InsertSessionAction;
+  readonly action: UpsertSessionAction;
 };
 
 export const login: (arg?: LoginArg) => Promise<LoginResult>;
 
 export type ConsumeArg = {
   readonly credential: Credential;
-  readonly sessionData: {
-    readonly oddTokenHash?: string;
-    readonly evenTokenHash?: string;
-    readonly exp: Date;
-    readonly tokenExp: Date;
-    readonly isLatestTokenOdd: boolean;
-  };
+  readonly sessionData: SessionData;
   readonly config?: Config;
 };
 
@@ -108,7 +90,7 @@ export type ConsumeResult =
   | {
       readonly state: "Active";
       readonly cookie?: Cookie;
-      readonly action?: UpdateSessionAction | DeleteTokenAction;
+      readonly action?: UpsertSessionAction;
     };
 
 export const consume: (arg: ConsumeArg) => Promise<ConsumeResult>;

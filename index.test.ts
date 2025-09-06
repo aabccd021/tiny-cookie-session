@@ -1,4 +1,3 @@
-import * as sqlite from "bun:sqlite";
 import * as tcs from ".";
 
 const testConfig = {
@@ -6,121 +5,25 @@ const testConfig = {
   sessionExpiresIn: 5 * 60 * 60 * 1000,
 };
 
-function dbInit() {
-  const db = new sqlite.Database(":memory:", { strict: true });
-
-  db.run(`
-    CREATE TABLE session (
-      id_hash TEXT PRIMARY KEY,
-      exp TEXT NOT NULL,
-      odd_token_hash TEXT,
-      even_token_hash TEXT,
-      token_exp TEXT NOT NULL,
-      is_latest_token_odd INTEGER NOT NULL,
-      CHECK (is_latest_token_odd IN (0, 1))
-    ) STRICT;
-  `);
-
-  return db;
+function dbSelect(db: Map<string, tcs.SessionData>, idHash: string) {
+  return db.get(idHash);
 }
 
-function dbSelect(db: sqlite.Database, idHash: string) {
-  const row = db
-    .query<
-      {
-        exp: string;
-        token_exp: string;
-        odd_token_hash: string | null;
-        even_token_hash: string | null;
-        is_latest_token_odd: number;
-      },
-      sqlite.SQLQueryBindings
-    >(`
-      SELECT exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd
-      FROM session WHERE id_hash = :id_hash
-    `)
-    .get({ id_hash: idHash });
-
-  if (row === null) {
-    return undefined;
-  }
-
-  return {
-    exp: new Date(row.exp),
-    tokenExp: new Date(row.token_exp),
-    oddTokenHash: row.odd_token_hash ?? undefined,
-    evenTokenHash: row.even_token_hash ?? undefined,
-    isLatestTokenOdd: row.is_latest_token_odd === 1,
-  };
+function dbUpsertSession(db: Map<string, tcs.SessionData>, action: tcs.UpsertSessionAction) {
+  db.set(action.idHash, action.sessionData);
 }
 
-function dbInsertSession(db: sqlite.Database, action: tcs.InsertSessionAction) {
-  db.query(`
-    INSERT INTO session (id_hash, exp, odd_token_hash, token_exp, is_latest_token_odd)
-    VALUES (:id_hash, :exp, :odd_token_hash, :token_exp, :is_latest_token_odd)
-  `).run({
-    id_hash: action.idHash,
-    exp: action.exp.toISOString(),
-    odd_token_hash: action.oddTokenHash,
-    token_exp: action.tokenExp.toISOString(),
-    is_latest_token_odd: action.isLatestTokenOdd ? 1 : 0,
-  });
+function dbDeleteSession(db: Map<string, tcs.SessionData>, action: tcs.DeleteSessionAction) {
+  db.delete(action.idHash);
 }
 
-function dbUpdateSession(db: sqlite.Database, action: tcs.UpdateSessionAction) {
-  // Make sure to use `COALESCE` to avoid overwriting existing token hashes with `NULL`.
-  db.query(`
-    UPDATE session
-    SET 
-      exp = :exp,
-      token_exp = :token_exp,
-      odd_token_hash = COALESCE(:odd_token_hash, odd_token_hash),
-      even_token_hash = COALESCE(:even_token_hash, even_token_hash),
-      is_latest_token_odd = :is_latest_token_odd
-    WHERE id_hash = :id_hash
-  `).run({
-    id_hash: action.idHash,
-    exp: action.exp.toISOString(),
-    token_exp: action.tokenExp.toISOString(),
-    odd_token_hash: action.oddTokenHash ?? null,
-    even_token_hash: action.evenTokenHash ?? null,
-    is_latest_token_odd: action.isLatestTokenOdd ? 1 : 0,
-  });
-}
-
-function dbDeleteToken(db: sqlite.Database, action: tcs.DeleteTokenAction) {
-  if (action.tokenType === "odd") {
-    db.query("UPDATE session SET odd_token_hash = NULL WHERE id_hash = :id_hash").run({
-      id_hash: action.idHash,
-    });
-  } else if (action.tokenType === "even") {
-    db.query("UPDATE session SET even_token_hash = NULL WHERE id_hash = :id_hash").run({
-      id_hash: action.idHash,
-    });
-  } else {
-    action.tokenType satisfies never;
-  }
-}
-
-function dbDeleteSession(db: sqlite.Database, action: tcs.DeleteSessionAction) {
-  db.query("DELETE FROM session WHERE id_hash = :id_hash").run({
-    id_hash: action.idHash,
-  });
-}
-
-async function login(db: sqlite.Database, arg: import("./index").LoginArg) {
+async function login(db: Map<string, tcs.SessionData>, arg: import("./index").LoginArg) {
   const session = await tcs.login(arg);
-
-  if (session.action.type === "InsertSession") {
-    dbInsertSession(db, session.action);
-  } else {
-    session.action.type satisfies never;
-  }
-
+  dbUpsertSession(db, session.action);
   return session;
 }
 
-async function logout(db: sqlite.Database, cookie: string | undefined) {
+async function logout(db: Map<string, tcs.SessionData>, cookie: string | undefined) {
   if (cookie === undefined) {
     return { cookie: undefined, action: undefined };
   }
@@ -131,24 +34,28 @@ async function logout(db: sqlite.Database, cookie: string | undefined) {
   }
 
   const session = await tcs.logout({ credential });
-
-  if (session.action.type === "DeleteSession") {
-    dbDeleteSession(db, session.action);
-  } else {
-    session.action.type satisfies never;
-    throw new Error("Unreachable");
-  }
-
+  dbDeleteSession(db, session.action);
   return session;
 }
 
 async function consume(
-  db: sqlite.Database,
+  db: Map<string, tcs.SessionData>,
   cookie: string | undefined,
   config: import("./index").Config,
-) {
+): Promise<{
+  readonly state:
+    | "CookieMissing"
+    | "CookieMalformed"
+    | "NotFound"
+    | "Active"
+    | "Expired"
+    | "Forked";
+  readonly action?: tcs.Action;
+  readonly cookie?: tcs.Cookie;
+  readonly data?: tcs.SessionData;
+}> {
   if (cookie === undefined) {
-    return { state: "CookieMissing", cookie: undefined, data: undefined };
+    return { state: "CookieMissing" };
   }
 
   const credential = await tcs.credentialFromCookie({ cookie });
@@ -156,60 +63,35 @@ async function consume(
     return {
       state: "CookieMalformed",
       cookie: tcs.logoutCookie,
-      data: undefined,
     };
   }
 
   const sessionData = dbSelect(db, credential.idHash);
   if (sessionData === undefined) {
     return {
-      state: "SessionNotFound",
+      state: "NotFound",
       cookie: tcs.logoutCookie,
-      data: undefined,
     };
   }
   const session = await tcs.consume({ credential, config, sessionData });
 
   if (session.action?.type === "DeleteSession") {
     dbDeleteSession(db, session.action);
-  } else if (session.action?.type === "UpdateSession") {
-    dbUpdateSession(db, session.action);
-  } else if (session.action?.type === "DeleteToken") {
-    dbDeleteToken(db, session.action);
+  } else if (session.action?.type === "UpsertSession") {
+    dbUpsertSession(db, session.action);
   } else if (session.action !== undefined) {
     session.action satisfies never;
     throw new Error("Unreachable");
   }
 
-  if (session.state === "Active") {
-    return {
-      state: "Active",
-      cookie: session.cookie,
-      action: session.action,
-      data: sessionData,
-    };
-  }
+  return {
+    state: session.state,
+    cookie: session.cookie,
+    action: session.action,
 
-  if (session.state === "Expired") {
-    return {
-      state: "Expired",
-      cookie: session.cookie,
-      action: session.action,
-      data: undefined,
-    };
-  }
-
-  if (session.state === "Forked") {
-    return {
-      state: "Forked",
-      cookie: session.cookie,
-      action: session.action,
-      data: undefined,
-    };
-  }
-
-  session satisfies never;
-  throw new Error("Unreachable");
+    // Only return session data if state is Active
+    data: session.state === "Active" ? sessionData : undefined,
+  };
 }
 
 function setCookie(
@@ -231,12 +113,13 @@ function setCookie(
   console.info("login");
   let cookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
     date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
+    console.log(session.cookie.options.expires?.toISOString());
     if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
       throw new Error();
     cookie = setCookie(cookie, session);
@@ -248,7 +131,7 @@ function setCookie(
   {
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
 }
@@ -257,7 +140,7 @@ function setCookie(
   console.info("logout");
   let cookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -282,7 +165,7 @@ function setCookie(
   console.info("consume: state Active after login");
   let cookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -293,7 +176,7 @@ function setCookie(
   {
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
 }
@@ -302,7 +185,7 @@ function setCookie(
   console.info("consume: state Active after 9 minutes");
   let cookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
 
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
@@ -315,7 +198,7 @@ function setCookie(
     date = "2023-10-01T00:09:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
 }
@@ -324,7 +207,7 @@ function setCookie(
   console.info("consume: state Active after 11 minutes");
   let cookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -342,7 +225,7 @@ function setCookie(
   {
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
+    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
   }
 }
@@ -351,7 +234,7 @@ function setCookie(
   console.info("consume: state Active after Active");
   let cookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -368,7 +251,7 @@ function setCookie(
   {
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
+    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
   }
 }
@@ -377,7 +260,7 @@ function setCookie(
   console.info("consume: state Expired after 6 hours");
   let cookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -403,7 +286,7 @@ function setCookie(
   console.info("consume: state Active after Active twice");
   let cookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -433,7 +316,7 @@ function setCookie(
   console.info("consume: state Active after re-login");
   let cookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -460,7 +343,7 @@ function setCookie(
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -493,7 +376,7 @@ function setCookie(
   }
   {
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "SessionNotFound") throw new Error();
+    if (userSession?.state !== "NotFound") throw new Error();
   }
 }
 
@@ -502,7 +385,7 @@ function setCookie(
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -528,7 +411,7 @@ function setCookie(
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "SessionNotFound") throw new Error();
+    if (attackerSession?.state !== "NotFound") throw new Error();
   }
 }
 
@@ -537,7 +420,7 @@ function setCookie(
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -568,7 +451,7 @@ function setCookie(
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "SessionNotFound") throw new Error();
+    if (attackerSession?.state !== "NotFound") throw new Error();
   }
 }
 
@@ -577,7 +460,7 @@ function setCookie(
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -608,7 +491,7 @@ function setCookie(
   }
   {
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "SessionNotFound") throw new Error();
+    if (userSession?.state !== "NotFound") throw new Error();
   }
 }
 
@@ -617,7 +500,7 @@ function setCookie(
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -629,7 +512,8 @@ function setCookie(
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpdateSession") throw new Error();
+    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -648,7 +532,7 @@ function setCookie(
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -660,7 +544,8 @@ function setCookie(
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpdateSession") throw new Error();
+    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -668,7 +553,8 @@ function setCookie(
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpdateSession") throw new Error();
+    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -687,7 +573,7 @@ function setCookie(
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -699,7 +585,8 @@ function setCookie(
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpdateSession") throw new Error();
+    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -707,7 +594,8 @@ function setCookie(
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpdateSession") throw new Error();
+    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -715,7 +603,8 @@ function setCookie(
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpdateSession") throw new Error();
+    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -734,7 +623,7 @@ function setCookie(
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
-  const db = dbInit();
+  const db = new Map<string, tcs.SessionData>();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -746,7 +635,8 @@ function setCookie(
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpdateSession") throw new Error();
+    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -754,7 +644,8 @@ function setCookie(
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpdateSession") throw new Error();
+    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -762,7 +653,8 @@ function setCookie(
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpdateSession") throw new Error();
+    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
