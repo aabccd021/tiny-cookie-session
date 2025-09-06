@@ -57,7 +57,7 @@ export async function login(arg) {
   return {
     cookie,
     action: {
-      type: "insert",
+      type: "InsertSession",
       idHash: await hash(id),
       exp: expires,
       isLatestTokenOdd: true,
@@ -89,7 +89,7 @@ export async function logout(arg) {
   return {
     cookie: logoutCookie,
     action: {
-      type: "delete",
+      type: "DeleteSession",
       idHash: arg.credential.idHash,
     },
   };
@@ -109,7 +109,7 @@ export async function consume(arg) {
       state: "Forked",
       cookie: logoutCookie,
       action: {
-        type: "delete",
+        type: "DeleteSession",
         idHash: arg.credential.idHash,
       },
     };
@@ -121,7 +121,7 @@ export async function consume(arg) {
       state: "Expired",
       cookie: logoutCookie,
       action: {
-        type: "delete",
+        type: "DeleteSession",
         idHash: arg.credential.idHash,
       },
     };
@@ -142,7 +142,7 @@ export async function consume(arg) {
       state: "Active",
       cookie: undefined,
       action: {
-        type: "tokenDelete",
+        type: "DeleteToken",
         idHash: arg.credential.idHash,
         tokenType: arg.sessionData.isLatestTokenOdd ? "even" : "odd",
       },
@@ -174,7 +174,7 @@ export async function consume(arg) {
     state: "Active",
     cookie,
     action: {
-      type: "update",
+      type: "UpdateSession",
       idHash: arg.credential.idHash,
       isLatestTokenOdd: isNextOddToken,
       oddTokenHash: isNextOddToken ? tokenHashStr : undefined,

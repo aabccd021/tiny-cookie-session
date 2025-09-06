@@ -55,7 +55,7 @@ function dbSelect(db: sqlite.Database, idHash: string) {
   };
 }
 
-function dbInsert(db: sqlite.Database, action: tcs.InsertAction) {
+function dbInsertSession(db: sqlite.Database, action: tcs.InsertSessionAction) {
   db.query(`
     INSERT INTO session (id_hash, exp, odd_token_hash, token_exp, is_latest_token_odd)
     VALUES (:id_hash, :exp, :odd_token_hash, :token_exp, :is_latest_token_odd)
@@ -68,7 +68,7 @@ function dbInsert(db: sqlite.Database, action: tcs.InsertAction) {
   });
 }
 
-function dbUpdate(db: sqlite.Database, action: tcs.UpdateAction) {
+function dbUpdateSession(db: sqlite.Database, action: tcs.UpdateSessionAction) {
   db.query(`
     UPDATE session
     SET 
@@ -88,33 +88,29 @@ function dbUpdate(db: sqlite.Database, action: tcs.UpdateAction) {
   });
 }
 
-function dbDeleteToken(db: sqlite.Database, action: tcs.TokenDeletedAction) {
+function dbDeleteToken(db: sqlite.Database, action: tcs.DeleteTokenAction) {
   if (action.tokenType === "odd") {
-    db.query(`
-      UPDATE session
-      SET odd_token_hash = NULL
-      WHERE id_hash = :id_hash
-    `).run({ id_hash: action.idHash });
+    db.query("UPDATE session SET odd_token_hash = NULL WHERE id_hash = :id_hash").run({
+      id_hash: action.idHash,
+    });
   } else if (action.tokenType === "even") {
-    db.query(`
-      UPDATE session
-      SET even_token_hash = NULL
-      WHERE id_hash = :id_hash
-    `).run({ id_hash: action.idHash });
+    db.query("UPDATE session SET even_token_hash = NULL WHERE id_hash = :id_hash").run({
+      id_hash: action.idHash,
+    });
   } else {
     action.tokenType satisfies never;
   }
 }
 
-function dbDelete(db: sqlite.Database, action: tcs.DeleteAction) {
+function dbDeleteSession(db: sqlite.Database, action: tcs.DeleteSessionAction) {
   db.query("DELETE FROM session WHERE id_hash = :id_hash").run({ id_hash: action.idHash });
 }
 
 async function login(db: sqlite.Database, arg: import("./index").LoginArg) {
   const session = await tcs.login(arg);
 
-  if (session.action.type === "insert") {
-    dbInsert(db, session.action);
+  if (session.action.type === "InsertSession") {
+    dbInsertSession(db, session.action);
   } else {
     session.action.type satisfies never;
   }
@@ -134,8 +130,8 @@ async function logout(db: sqlite.Database, cookie: string | undefined) {
 
   const session = await tcs.logout({ credential });
 
-  if (session.action.type === "delete") {
-    dbDelete(db, session.action);
+  if (session.action.type === "DeleteSession") {
+    dbDeleteSession(db, session.action);
   } else {
     session.action.type satisfies never;
     throw new Error("Unreachable");
@@ -164,11 +160,11 @@ async function consume(
   }
   const session = await tcs.consume({ credential, config, sessionData });
 
-  if (session.action?.type === "delete") {
-    dbDelete(db, session.action);
-  } else if (session.action?.type === "update") {
-    dbUpdate(db, session.action);
-  } else if (session.action?.type === "tokenDelete") {
+  if (session.action?.type === "DeleteSession") {
+    dbDeleteSession(db, session.action);
+  } else if (session.action?.type === "UpdateSession") {
+    dbUpdateSession(db, session.action);
+  } else if (session.action?.type === "DeleteToken") {
     dbDeleteToken(db, session.action);
   } else if (session.action !== undefined) {
     session.action satisfies never;

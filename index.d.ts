@@ -25,16 +25,16 @@ type Credential = {
   readonly token: string;
 };
 
-export type InsertAction = {
-  readonly type: "insert";
+export type InsertSessionAction = {
+  readonly type: "InsertSession";
   readonly idHash: string;
   readonly exp: Date;
   readonly oddTokenHash: string;
   readonly tokenExp: Date;
   readonly isLatestTokenOdd: boolean;
 };
-export type UpdateAction = {
-  readonly type: "update";
+export type UpdateSessionAction = {
+  readonly type: "UpdateSession";
   readonly idHash: string;
   readonly exp: Date;
   readonly oddTokenHash?: string;
@@ -42,17 +42,21 @@ export type UpdateAction = {
   readonly tokenExp: Date;
   readonly isLatestTokenOdd: boolean;
 };
-export type DeleteAction = {
-  readonly type: "delete";
+export type DeleteSessionAction = {
+  readonly type: "DeleteSession";
   readonly idHash: string;
 };
-export type TokenDeletedAction = {
-  readonly type: "tokenDelete";
+export type DeleteTokenAction = {
+  readonly type: "DeleteToken";
   readonly idHash: string;
   readonly tokenType: "odd" | "even";
 };
 
-export type Action = InsertAction | DeleteAction | UpdateAction | TokenDeletedAction;
+export type Action =
+  | InsertSessionAction
+  | DeleteSessionAction
+  | UpdateSessionAction
+  | DeleteTokenAction;
 
 export const logoutCookie: Cookie;
 
@@ -62,7 +66,7 @@ type LogoutArg = {
 
 type LogoutResult = {
   readonly cookie: Cookie;
-  readonly action: DeleteAction;
+  readonly action: DeleteSessionAction;
 };
 
 export const logout: (arg: LogoutArg) => Promise<LogoutResult>;
@@ -73,7 +77,7 @@ type LoginArg = {
 
 type LoginResult = {
   readonly cookie: Cookie;
-  readonly action: InsertAction;
+  readonly action: InsertSessionAction;
 };
 
 export const login: (arg?: LoginArg) => Promise<LoginResult>;
@@ -94,17 +98,17 @@ export type ConsumeResult =
   | {
       readonly state: "Forked";
       readonly cookie: Cookie;
-      readonly action: DeleteAction;
+      readonly action: DeleteSessionAction;
     }
   | {
       readonly state: "Expired";
       readonly cookie: Cookie;
-      readonly action: DeleteAction;
+      readonly action: DeleteSessionAction;
     }
   | {
       readonly state: "Active";
       readonly cookie: Cookie;
-      readonly action: UpdateAction;
+      readonly action: UpdateSessionAction;
     }
   | {
       readonly state: "Active";
@@ -114,7 +118,7 @@ export type ConsumeResult =
   | {
       readonly state: "Active";
       readonly cookie: undefined;
-      readonly action: TokenDeletedAction;
+      readonly action: DeleteTokenAction;
     };
 
 export const consume: (arg: ConsumeArg) => Promise<ConsumeResult>;
