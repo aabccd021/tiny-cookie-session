@@ -1,32 +1,23 @@
 import * as tcs from ".";
 
-/**
- * @typedef {Object} Session
- * @property {Date} exp
- * @property {Date} tokenExp
- * @property {string} oddTokenHash
- * @property {string} [evenTokenHash]
- * @property {boolean} isLatestTokenOdd
- */
+type Session = {
+  exp: Date;
+  tokenExp: Date;
+  oddTokenHash: string;
+  evenTokenHash?: string;
+  isLatestTokenOdd: boolean;
+};
 
 const testConfig = {
   tokenExpiresIn: 10 * 60 * 1000,
   sessionExpiresIn: 5 * 60 * 60 * 1000,
 };
 
-/**
- * @param {Map<string, Session>} db
- * @param {string} sessionIdHash
- */
-function dbSelect(db, sessionIdHash) {
+function dbSelect(db: Map<string, Session>, sessionIdHash: string): Session | undefined {
   return db.get(sessionIdHash);
 }
 
-/**
- * @param {Map<string, Session>} db
- * @param {import("./index").InsertAction} arg
- */
-function dbInsert(db, arg) {
+function dbInsert(db: Map<string, Session>, arg: import("./index").InsertAction): void {
   db.set(arg.idHash, {
     oddTokenHash: arg.oddTokenHash,
     evenTokenHash: undefined,
@@ -36,19 +27,11 @@ function dbInsert(db, arg) {
   });
 }
 
-/**
- * @param {Map<string, Session>} db
- * @param {import("./index").DeleteAction} arg
- */
-function dbDelete(db, arg) {
+function dbDelete(db: Map<string, Session>, arg: import("./index").DeleteAction): void {
   db.delete(arg.idHash);
 }
 
-/**
- * @param {Map<string, Session>} db
- * @param {import("./index").UpdateAction} arg
- */
-function dbUpdate(db, arg) {
+function dbUpdate(db: Map<string, Session>, arg: import("./index").UpdateAction): void {
   const session = db.get(arg.idHash);
   if (!session) throw new Error("Session not found for update");
 
@@ -63,11 +46,7 @@ function dbUpdate(db, arg) {
   session.exp = arg.exp;
 }
 
-/**
- * @param {Map<string, Session>} db
- * @param {import("./index").LoginArg} arg
- */
-async function login(db, arg) {
+async function login(db: Map<string, Session>, arg: import("./index").LoginArg) {
   const result = await tcs.login(arg);
 
   if (result.action.type === "insert") {
@@ -79,11 +58,7 @@ async function login(db, arg) {
   return result;
 }
 
-/**
- * @param {Map<string, Session>} db
- * @param {string | undefined} cookie
- */
-async function logout(db, cookie) {
+async function logout(db: Map<string, Session>, cookie: string | undefined) {
   if (cookie === undefined) {
     return { cookie: undefined, action: undefined };
   }
@@ -104,12 +79,11 @@ async function logout(db, cookie) {
   return result;
 }
 
-/**
- * @param {Map<string, Session>} db
- * @param {string | undefined} cookie
- * @param {import("./index").Config} config
- */
-async function consume(db, cookie, config) {
+async function consume(
+  db: Map<string, Session>,
+  cookie: string | undefined,
+  config: import("./index").Config,
+) {
   if (cookie === undefined) {
     return { state: "CookieMissing", cookie: undefined, data: undefined };
   }
@@ -152,12 +126,10 @@ async function consume(db, cookie, config) {
   throw new Error("Unexpected state");
 }
 
-/**
- * @param {string | undefined} cookie
- * @param {Object} session
- * @param {import("./index").Cookie | undefined} session.cookie
- */
-function setCookie(cookie, session) {
+function setCookie(
+  cookie: string | undefined,
+  session: { cookie?: import("./index").Cookie },
+): string | undefined {
   if (session.cookie === undefined) {
     return cookie;
   }
@@ -172,9 +144,9 @@ function setCookie(cookie, session) {
 {
   console.info("# login");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -195,9 +167,9 @@ function setCookie(cookie, session) {
 {
   console.info("# logout");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -221,9 +193,9 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state SessionActive after login");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -242,9 +214,9 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state SessionActive after 9 minutes");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
 
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
@@ -265,9 +237,9 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state TokenRotated after 11 minutes");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -289,9 +261,9 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state SessionActive after TokenRotated");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -316,9 +288,9 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state Expired after 6 hours");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -343,9 +315,9 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state SessionActive after TokenRotated twice");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -374,9 +346,9 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state SessionActive after re-login");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -400,10 +372,10 @@ function setCookie(cookie, session) {
 
 {
   console.info("# consume: state SessionForked after used by user, user, attacker");
-  /** @type {string | undefined} */ let userCookie;
-  /** @type {string | undefined} */ let attackerCookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let userCookie: string | undefined;
+  let attackerCookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -443,10 +415,10 @@ function setCookie(cookie, session) {
 
 {
   console.info("# consume: state SessionForked after used by attacker, attacker, user");
-  /** @type {string | undefined} */ let userCookie;
-  /** @type {string | undefined} */ let attackerCookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let userCookie: string | undefined;
+  let attackerCookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -479,10 +451,10 @@ function setCookie(cookie, session) {
 
 {
   console.info("# consume: state SessionForked after used by attacker, user, attacker, user");
-  /** @type {string | undefined} */ let userCookie;
-  /** @type {string | undefined} */ let attackerCookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let userCookie: string | undefined;
+  let attackerCookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -520,10 +492,10 @@ function setCookie(cookie, session) {
 
 {
   console.info("# consume: state SessionForked after used by user, attacker, user, attacker");
-  /** @type {string | undefined} */ let userCookie;
-  /** @type {string | undefined} */ let attackerCookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let userCookie: string | undefined;
+  let attackerCookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -562,10 +534,10 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state SessionActive with previous cookie (race condition)");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string | undefined} */ let prevCookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let prevCookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -593,10 +565,10 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state SessionActive with previous cookie after 2 rotations");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string | undefined} */ let prevCookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let prevCookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -631,10 +603,10 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state SessionActive with previous cookie after 3 rotations");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string | undefined} */ let prevCookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let prevCookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -676,10 +648,10 @@ function setCookie(cookie, session) {
 {
   console.info("# consume: state SessionActive with previous cookie after 4 rotations");
 
-  /** @type {string | undefined} */ let cookie;
-  /** @type {string | undefined} */ let prevCookie;
-  /** @type {string} */ let date;
-  /** @type {Map<string, Session>} */ const db = new Map();
+  let cookie: string | undefined;
+  let prevCookie: string | undefined;
+  let date: string;
+  const db: Map<string, Session> = new Map();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
