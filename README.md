@@ -90,7 +90,7 @@ bun install github:aabccd021/tiny-cookie-session
 
 ## Example usage with Bun and SQLite
 
-See [test/index.test.js](./test/index.test.js) for a complete example.
+See [index.test.js](./index.test.js) for a complete example.
 
 We will use above example as a reference for the code snippets below.
 
