@@ -69,6 +69,7 @@ function dbInsertSession(db: sqlite.Database, action: tcs.InsertSessionAction) {
 }
 
 function dbUpdateSession(db: sqlite.Database, action: tcs.UpdateSessionAction) {
+  // Make sure to use `COALESCE` to avoid overwriting existing token hashes with `NULL`.
   db.query(`
     UPDATE session
     SET 
