@@ -10,4 +10,4 @@ jobs:
       - run: nix run nixpkgs#prettier -- README.md .github --print-width 100 --check
       - run: nix run nixpkgs#biome check
       - run: nix run nixpkgs#typescript
-      - run: nix run nixpkgs#bun test
+      - run: nix run nixpkgs#bun run index.test.ts

@@ -8,12 +8,5 @@
   "formatter": {
     "indentStyle": "space",
     "lineWidth": 100
-  },
-  "linter": {
-    "rules": {
-      "suspicious": {
-        "noConsole": "error"
-      }
-    }
   }
 }

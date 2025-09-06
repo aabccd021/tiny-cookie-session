@@ -1,5 +1,5 @@
 import * as sqlite from "bun:sqlite";
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import * as tcs from ".";
 
 const testConfig = {
@@ -203,7 +203,8 @@ function setCookie(
   return session.cookie.value;
 }
 
-test("login", async () => {
+{
+  console.info("login");
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -225,9 +226,10 @@ test("login", async () => {
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
   }
-});
+}
 
-test("logout", async () => {
+{
+  console.info("logout");
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -249,9 +251,10 @@ test("logout", async () => {
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("CookieMissing");
   }
-});
+}
 
-test("consume: state Active after login", async () => {
+{
+  console.info("consume: state Active after login");
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -268,9 +271,10 @@ test("consume: state Active after login", async () => {
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
   }
-});
+}
 
-test("consume: state Active after 9 minutes", async () => {
+{
+  console.info("consume: state Active after 9 minutes");
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -289,9 +293,10 @@ test("consume: state Active after 9 minutes", async () => {
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
   }
-});
+}
 
-test("consume: state Active after 11 minutes", async () => {
+{
+  console.info("consume: state Active after 11 minutes");
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -314,9 +319,10 @@ test("consume: state Active after 11 minutes", async () => {
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:21:00.000Z");
   }
-});
+}
 
-test("consume: state Active after Active", async () => {
+{
+  console.info("consume: state Active after Active");
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -339,9 +345,10 @@ test("consume: state Active after Active", async () => {
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:21:00.000Z");
   }
-});
+}
 
-test("consume: state Expired after 6 hours", async () => {
+{
+  console.info("consume: state Expired after 6 hours");
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -364,9 +371,10 @@ test("consume: state Expired after 6 hours", async () => {
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("CookieMissing");
   }
-});
+}
 
-test("consume: state Active after Active twice", async () => {
+{
+  console.info("consume: state Active after Active twice");
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -393,9 +401,10 @@ test("consume: state Active after Active twice", async () => {
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
   }
-});
+}
 
-test("consume: state Active after re-login", async () => {
+{
+  console.info("consume: state Active after re-login");
   let cookie: string | undefined;
   let date: string;
   const db = dbInit();
@@ -418,9 +427,10 @@ test("consume: state Active after re-login", async () => {
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
   }
-});
+}
 
-test("consume: state Forked after used by user, user, attacker", async () => {
+{
+  console.info("consume: state Forked after used by user, user, attacker");
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -459,9 +469,10 @@ test("consume: state Forked after used by user, user, attacker", async () => {
     const userSession = await consume(db, userCookie, config);
     expect(userSession?.state).toEqual("SessionNotFound");
   }
-});
+}
 
-test("consume: state Forked after used by attacker, attacker, user", async () => {
+{
+  console.info("consume: state Forked after used by attacker, attacker, user");
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -493,9 +504,10 @@ test("consume: state Forked after used by attacker, attacker, user", async () =>
     const attackerSession = await consume(db, attackerCookie, config);
     expect(attackerSession?.state).toEqual("SessionNotFound");
   }
-});
+}
 
-test("consume: state Forked after used by attacker, user, attacker, user", async () => {
+{
+  console.info("consume: state Forked after used by attacker, user, attacker, user");
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -532,9 +544,10 @@ test("consume: state Forked after used by attacker, user, attacker, user", async
     const attackerSession = await consume(db, attackerCookie, config);
     expect(attackerSession?.state).toEqual("SessionNotFound");
   }
-});
+}
 
-test("consume: state Forked after used by user, attacker, user, attacker", async () => {
+{
+  console.info("consume: state Forked after used by user, attacker, user, attacker");
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -571,9 +584,10 @@ test("consume: state Forked after used by user, attacker, user, attacker", async
     const userSession = await consume(db, userCookie, config);
     expect(userSession?.state).toEqual("SessionNotFound");
   }
-});
+}
 
-test("consume: state Active with previous cookie (race condition)", async () => {
+{
+  console.info("consume: state Active with previous cookie (race condition)");
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -601,9 +615,10 @@ test("consume: state Active with previous cookie (race condition)", async () => 
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
   }
-});
+}
 
-test("consume: state Active with previous cookie after 2 rotations", async () => {
+{
+  console.info("consume: state Active with previous cookie after 2 rotations");
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -639,9 +654,10 @@ test("consume: state Active with previous cookie after 2 rotations", async () =>
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
   }
-});
+}
 
-test("consume: state Active with previous cookie after 3 rotations", async () => {
+{
+  console.info("consume: state Active with previous cookie after 3 rotations");
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -685,9 +701,10 @@ test("consume: state Active with previous cookie after 3 rotations", async () =>
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
   }
-});
+}
 
-test("consume: state Active with previous cookie after 4 rotations", async () => {
+{
+  console.info("consume: state Active with previous cookie after 4 rotations");
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -738,4 +755,4 @@ test("consume: state Active with previous cookie after 4 rotations", async () =>
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
   }
-});
+}
