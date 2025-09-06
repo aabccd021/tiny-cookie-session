@@ -1,53 +1,98 @@
+import * as sqlite from "bun:sqlite";
 import { expect, test } from "bun:test";
 import * as tcs from ".";
-
-type Session = {
-  exp: Date;
-  tokenExp: Date;
-  oddTokenHash: string;
-  evenTokenHash?: string;
-  isLatestTokenOdd: boolean;
-};
 
 const testConfig = {
   tokenExpiresIn: 10 * 60 * 1000,
   sessionExpiresIn: 5 * 60 * 60 * 1000,
 };
 
-function dbSelect(db: Map<string, Session>, sessionIdHash: string): Session | undefined {
-  return db.get(sessionIdHash);
+function dbInit() {
+  const db = new sqlite.Database(":memory:", { strict: true });
+
+  db.run(`
+    CREATE TABLE session (
+      id_hash TEXT PRIMARY KEY,
+      exp TEXT NOT NULL,
+      odd_token_hash TEXT NOT NULL,
+      even_token_hash TEXT,
+      token_exp TEXT NOT NULL,
+      is_latest_token_odd INTEGER NOT NULL,
+      CHECK (is_latest_token_odd IN (0, 1))
+    ) STRICT;
+  `);
+
+  return db;
 }
 
-function dbInsert(db: Map<string, Session>, arg: import("./index").InsertAction): void {
-  db.set(arg.idHash, {
-    oddTokenHash: arg.oddTokenHash,
-    evenTokenHash: undefined,
-    exp: arg.exp,
-    tokenExp: arg.tokenExp,
-    isLatestTokenOdd: true,
+function dbSelect(db: sqlite.Database, idHash: string) {
+  const row = db
+    .query<
+      {
+        exp: string;
+        token_exp: string;
+        odd_token_hash: string;
+        even_token_hash: string | null;
+        is_latest_token_odd: number;
+      },
+      sqlite.SQLQueryBindings
+    >(`
+      SELECT exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd
+      FROM session WHERE id_hash = :id_hash
+    `)
+    .get({ id_hash: idHash });
+
+  if (row === null) {
+    return undefined;
+  }
+
+  return {
+    exp: new Date(row.exp),
+    tokenExp: new Date(row.token_exp),
+    oddTokenHash: row.odd_token_hash,
+    evenTokenHash: row.even_token_hash,
+    isLatestTokenOdd: row.is_latest_token_odd === 1,
+  };
+}
+
+function dbInsert(db: sqlite.Database, action: tcs.InsertAction) {
+  db.query(`
+    INSERT INTO session (id_hash, exp, odd_token_hash, token_exp, is_latest_token_odd)
+    VALUES (:id_hash, :exp, :odd_token_hash, :token_exp, :is_latest_token_odd)
+  `).run({
+    id_hash: action.idHash,
+    exp: action.exp.toISOString(),
+    odd_token_hash: action.oddTokenHash,
+    token_exp: action.tokenExp.toISOString(),
+    is_latest_token_odd: action.isLatestTokenOdd ? 1 : 0,
   });
 }
 
-function dbDelete(db: Map<string, Session>, arg: import("./index").DeleteAction): void {
-  db.delete(arg.idHash);
+function dbUpdate(db: sqlite.Database, action: tcs.UpdateAction) {
+  db.query(`
+    UPDATE session
+    SET 
+      exp = :exp,
+      token_exp = :token_exp,
+      odd_token_hash = COALESCE(:odd_token_hash, odd_token_hash),
+      even_token_hash = COALESCE(:even_token_hash, even_token_hash),
+      is_latest_token_odd = :is_latest_token_odd
+    WHERE id_hash = :id_hash
+  `).run({
+    id_hash: action.idHash,
+    exp: action.exp.toISOString(),
+    token_exp: action.tokenExp.toISOString(),
+    odd_token_hash: action.oddTokenHash ?? null,
+    even_token_hash: action.evenTokenHash ?? null,
+    is_latest_token_odd: action.isLatestTokenOdd ? 1 : 0,
+  });
 }
 
-function dbUpdate(db: Map<string, Session>, arg: import("./index").UpdateAction): void {
-  const session = db.get(arg.idHash);
-  if (!session) throw new Error("Session not found for update");
-
-  if (arg.evenTokenHash !== undefined) {
-    session.evenTokenHash = arg.evenTokenHash;
-  }
-  if (arg.oddTokenHash !== undefined) {
-    session.oddTokenHash = arg.oddTokenHash;
-  }
-  session.isLatestTokenOdd = arg.isLatestTokenOdd;
-  session.tokenExp = arg.tokenExp;
-  session.exp = arg.exp;
+function dbDelete(db: sqlite.Database, action: tcs.DeleteAction) {
+  db.query("DELETE FROM session WHERE id_hash = :id_hash").run({ id_hash: action.idHash });
 }
 
-async function login(db: Map<string, Session>, arg: import("./index").LoginArg) {
+async function login(db: sqlite.Database, arg: import("./index").LoginArg) {
   const result = await tcs.login(arg);
 
   if (result.action.type === "insert") {
@@ -59,7 +104,7 @@ async function login(db: Map<string, Session>, arg: import("./index").LoginArg) 
   return result;
 }
 
-async function logout(db: Map<string, Session>, cookie: string | undefined) {
+async function logout(db: sqlite.Database, cookie: string | undefined) {
   if (cookie === undefined) {
     return { cookie: undefined, action: undefined };
   }
@@ -81,7 +126,7 @@ async function logout(db: Map<string, Session>, cookie: string | undefined) {
 }
 
 async function consume(
-  db: Map<string, Session>,
+  db: sqlite.Database,
   cookie: string | undefined,
   config: import("./index").Config,
 ) {
@@ -145,7 +190,7 @@ function setCookie(
 test("login", async () => {
   let cookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -165,7 +210,7 @@ test("login", async () => {
 test("logout", async () => {
   let cookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -189,7 +234,7 @@ test("logout", async () => {
 test("consume: state SessionActive after login", async () => {
   let cookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -208,7 +253,7 @@ test("consume: state SessionActive after login", async () => {
 test("consume: state SessionActive after 9 minutes", async () => {
   let cookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
 
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
@@ -229,7 +274,7 @@ test("consume: state SessionActive after 9 minutes", async () => {
 test("consume: state TokenRotated after 11 minutes", async () => {
   let cookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -242,6 +287,10 @@ test("consume: state TokenRotated after 11 minutes", async () => {
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("TokenRotated");
     expect(session.cookie?.options.expires?.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
+  }
+  {
+    const session = await consume(db, cookie, config);
+    expect(session?.state).toEqual("SessionActive");
     expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
     expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:21:00.000Z");
   }
@@ -250,7 +299,7 @@ test("consume: state TokenRotated after 11 minutes", async () => {
 test("consume: state SessionActive after TokenRotated", async () => {
   let cookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -275,7 +324,7 @@ test("consume: state SessionActive after TokenRotated", async () => {
 test("consume: state Expired after 6 hours", async () => {
   let cookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -300,7 +349,7 @@ test("consume: state Expired after 6 hours", async () => {
 test("consume: state SessionActive after TokenRotated twice", async () => {
   let cookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -329,7 +378,7 @@ test("consume: state SessionActive after TokenRotated twice", async () => {
 test("consume: state SessionActive after re-login", async () => {
   let cookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -355,7 +404,7 @@ test("consume: state SessionForked after used by user, user, attacker", async ()
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -397,7 +446,7 @@ test("consume: state SessionForked after used by attacker, attacker, user", asyn
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -432,7 +481,7 @@ test("consume: state SessionForked after used by attacker, user, attacker, user"
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -472,7 +521,7 @@ test("consume: state SessionForked after used by user, attacker, user, attacker"
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -512,7 +561,7 @@ test("consume: state SessionActive with previous cookie (race condition)", async
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -541,7 +590,7 @@ test("consume: state SessionActive with previous cookie after 2 rotations", asyn
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -577,7 +626,7 @@ test("consume: state SessionActive with previous cookie after 3 rotations", asyn
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {
@@ -620,7 +669,7 @@ test("consume: state SessionActive with previous cookie after 4 rotations", asyn
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
-  const db: Map<string, Session> = new Map();
+  const db = dbInit();
   const config = { ...testConfig, dateNow: () => new Date(date) };
 
   {

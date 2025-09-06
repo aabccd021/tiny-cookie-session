@@ -3,6 +3,10 @@
 **tiny-cookie-session** is a cookie-based session management library that detects session forking.
 When session forking is detected, this library logs out both the attacker and the legitimate user.
 
+## TODO
+
+- `configInit`
+
 ## Important: Security limitations
 
 While this library detects session forking, it does not provide complete protection.
@@ -152,7 +156,7 @@ db.run(`
 `);
 
 function dbSelect(idHash: string) {
-  const row: any = db
+  const row = db
     .query(
       `
       SELECT user_id, exp, token_exp, odd_token_hash, even_token_hash, is_latest_token_odd
