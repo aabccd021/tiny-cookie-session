@@ -228,8 +228,6 @@ a user can remain logged in indefinitely by making requests at least every 29 mi
 
 The `tokenExpiresIn` value controls how frequently tokens are rotated when sessions are active.
 When a token expires but the session is still valid, the system generates a new token.
-The longer you set `tokenExpiresIn`,
-the longer an attacker can use a stolen token before session forking is detected.
 
 You should set this to a value as short as possible, but still longer than the longest HTTP request
 time your users might experience.
