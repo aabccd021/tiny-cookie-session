@@ -46,8 +46,13 @@ export type DeleteAction = {
   readonly type: "delete";
   readonly idHash: string;
 };
+export type TokenDeletedAction = {
+  readonly type: "tokenDelete";
+  readonly idHash: string;
+  readonly tokenType: "odd" | "even";
+};
 
-export type Action = InsertAction | DeleteAction | UpdateAction;
+export type Action = InsertAction | DeleteAction | UpdateAction | TokenDeletedAction;
 
 export const logoutCookie: Cookie;
 
@@ -76,8 +81,8 @@ export const login: (arg?: LoginArg) => Promise<LoginResult>;
 export type ConsumeArg = {
   readonly credential: Credential;
   readonly session: {
-    readonly oddTokenHash: string;
-    readonly evenTokenHash?: string | null;
+    readonly oddTokenHash?: string;
+    readonly evenTokenHash?: string;
     readonly exp: Date;
     readonly tokenExp: Date;
     readonly isLatestTokenOdd: boolean;
@@ -97,7 +102,7 @@ export type ConsumeResult =
       readonly action: DeleteAction;
     }
   | {
-      readonly state: "TokenRotated";
+      readonly state: "SessionActive";
       readonly cookie: Cookie;
       readonly action: UpdateAction;
     }
@@ -105,6 +110,11 @@ export type ConsumeResult =
       readonly state: "SessionActive";
       readonly cookie: undefined;
       readonly action: undefined;
+    }
+  | {
+      readonly state: "SessionActive";
+      readonly cookie: undefined;
+      readonly action: TokenDeletedAction;
     };
 
 export const consume: (arg: ConsumeArg) => Promise<ConsumeResult>;

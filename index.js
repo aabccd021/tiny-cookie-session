@@ -128,12 +128,24 @@ export async function consume(arg) {
   }
 
   const isLatestToken = arg.session.isLatestTokenOdd ? isOddToken : isEvenToken;
-  const shouldRotate = arg.session.tokenExp.getTime() <= now.getTime() && isLatestToken;
-  if (!shouldRotate) {
+  if (!isLatestToken) {
     return {
       state: "SessionActive",
       cookie: undefined,
       action: undefined,
+    };
+  }
+
+  const isTokenExpired = arg.session.tokenExp.getTime() <= now.getTime();
+  if (!isTokenExpired) {
+    return {
+      state: "SessionActive",
+      cookie: undefined,
+      action: {
+        type: "tokenDelete",
+        idHash: arg.credential.idHash,
+        tokenType: arg.session.isLatestTokenOdd ? "even" : "odd",
+      },
     };
   }
 
@@ -159,7 +171,7 @@ export async function consume(arg) {
   const tokenExp = new Date(now.getTime() + tokenExpiresIn);
 
   return {
-    state: "TokenRotated",
+    state: "SessionActive",
     cookie,
     action: {
       type: "update",
