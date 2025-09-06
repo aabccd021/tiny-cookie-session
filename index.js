@@ -127,6 +127,8 @@ export async function consume(arg) {
     };
   }
 
+  // Hitting this point means old token is used while new token is already issued,
+  // which might happen when race condition happens (e.g. user sends multiple requests in parallel).
   const isLatestToken = arg.sessionData.isLatestTokenOdd ? isOddToken : isEvenToken;
   if (!isLatestToken) {
     return {
@@ -134,6 +136,8 @@ export async function consume(arg) {
     };
   }
 
+  // Hitting this point means new token after rotation is set on client side.
+  // So we will delete the old token we previously needed to handle race condition.
   const isTokenExpired = arg.sessionData.tokenExp.getTime() <= now.getTime();
   if (!isTokenExpired) {
     return {
@@ -147,25 +151,26 @@ export async function consume(arg) {
   }
 
   const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
-  const exp = new Date(now.getTime() + sessionExpiresIn);
-  const token = generate256BitEntropyHex();
+  const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
+
+  const nextSessionExp = new Date(now.getTime() + sessionExpiresIn);
+  const nextTokenExp = new Date(now.getTime() + tokenExpiresIn);
+  const nextToken = generate256BitEntropyHex();
+  const nextTokenHash = await hash(nextToken);
+
+  const isNextTokenOdd = !arg.sessionData.isLatestTokenOdd;
 
   /** @type {import("./index").Cookie} */
   const cookie = {
-    value: `${arg.credential.id}:${token}`,
+    value: `${arg.credential.id}:${nextToken}`,
     options: {
       httpOnly: true,
       sameSite: "strict",
       path: "/",
       secure: true,
-      expires: exp,
+      expires: nextSessionExp,
     },
   };
-
-  const tokenHashStr = await hash(token);
-  const isNextOddToken = !arg.sessionData.isLatestTokenOdd;
-  const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
-  const tokenExp = new Date(now.getTime() + tokenExpiresIn);
 
   return {
     state: "Active",
@@ -173,11 +178,11 @@ export async function consume(arg) {
     action: {
       type: "UpdateSession",
       idHash: arg.credential.idHash,
-      isLatestTokenOdd: isNextOddToken,
-      oddTokenHash: isNextOddToken ? tokenHashStr : undefined,
-      evenTokenHash: isNextOddToken ? undefined : tokenHashStr,
-      exp,
-      tokenExp,
+      isLatestTokenOdd: isNextTokenOdd,
+      oddTokenHash: isNextTokenOdd ? nextTokenHash : undefined,
+      evenTokenHash: isNextTokenOdd ? undefined : nextTokenHash,
+      exp: nextSessionExp,
+      tokenExp: nextTokenExp,
     },
   };
 }
