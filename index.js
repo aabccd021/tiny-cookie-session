@@ -18,9 +18,7 @@ const defaultTokenExpiresIn = 1000 * 60 * 2;
  * @returns {string}
  */
 function generate256BitEntropyHex() {
-  const value = crypto.getRandomValues(new Uint8Array(32));
-  // @ts-expect-error https://tc39.es/proposal-arraybuffer-base64
-  return value.toHex();
+  return crypto.getRandomValues(new Uint8Array(32)).toHex();
 }
 
 /**
@@ -30,9 +28,7 @@ function generate256BitEntropyHex() {
 const hash = async (token) => {
   const data = new TextEncoder().encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = new Uint8Array(hashBuffer);
-  // @ts-expect-error https://tc39.es/proposal-arraybuffer-base64
-  return hashArray.toHex();
+  return new Uint8Array(hashBuffer).toHex();
 };
 
 /**

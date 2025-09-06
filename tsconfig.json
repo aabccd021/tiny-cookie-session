@@ -2,7 +2,7 @@
   "compilerOptions": {
     // Environment Settings
     "module": "preserve",
-    "lib": ["esnext", "webworker"],
+    "lib": ["esnext"],
     "target": "esnext",
     "types": ["bun"],
 
@@ -26,6 +26,9 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "useUnknownInCatchVariables": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+
+    // Misc
+    "skipLibCheck": true
   }
 }

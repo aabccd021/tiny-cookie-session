@@ -1,4 +1,4 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import * as tcs from ".";
 
 type Session = {
@@ -151,15 +151,14 @@ test("login", async () => {
   {
     date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
-    if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
-      throw new Error();
+    expect(session.cookie.options.expires?.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
+    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
+    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
   }
 });
 
@@ -177,13 +176,13 @@ test("logout", async () => {
   {
     date = "2023-10-01T00:01:00Z";
     const session = await logout(db, cookie);
-    if (session.cookie?.value !== "") throw new Error();
-    if (session.cookie.options.maxAge !== 0) throw new Error();
+    expect(session.cookie?.value).toEqual("");
+    expect(session.cookie?.options.maxAge).toEqual(0);
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "CookieMissing") throw new Error();
+    expect(session?.state).toEqual("CookieMissing");
   }
 });
 
@@ -200,9 +199,9 @@ test("consume: state SessionActive after login", async () => {
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
+    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
+    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
   }
 });
 
@@ -221,9 +220,9 @@ test("consume: state SessionActive after 9 minutes", async () => {
   {
     date = "2023-10-01T00:09:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
+    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
+    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
   }
 });
 
@@ -241,11 +240,10 @@ test("consume: state TokenRotated after 11 minutes", async () => {
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
-    if (session.cookie?.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
-      throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
+    expect(session.cookie?.options.expires?.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
+    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
+    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:21:00.000Z");
   }
 });
 
@@ -263,14 +261,14 @@ test("consume: state SessionActive after TokenRotated", async () => {
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
-    if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
+    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
+    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:21:00.000Z");
   }
 });
 
@@ -288,14 +286,14 @@ test("consume: state Expired after 6 hours", async () => {
   {
     date = "2023-10-01T06:00:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionExpired") throw new Error();
-    if (session.cookie?.value !== "") throw new Error();
-    if (session.cookie?.options.maxAge !== 0) throw new Error();
+    expect(session?.state).toEqual("SessionExpired");
+    expect(session.cookie?.value).toEqual("");
+    expect(session.cookie?.options.maxAge).toEqual(0);
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "CookieMissing") throw new Error();
+    expect(session?.state).toEqual("CookieMissing");
   }
 });
 
@@ -313,18 +311,18 @@ test("consume: state SessionActive after TokenRotated twice", async () => {
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
 });
 
@@ -349,7 +347,7 @@ test("consume: state SessionActive after re-login", async () => {
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
 });
 
@@ -369,29 +367,29 @@ test("consume: state SessionForked after used by user, user, attacker", async ()
   {
     date = "2023-10-01T00:11:00Z";
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "TokenRotated") throw new Error();
+    expect(userSession?.state).toEqual("TokenRotated");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "TokenRotated") throw new Error();
+    expect(userSession?.state).toEqual("TokenRotated");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "SessionForked") throw new Error();
-    if (attackerSession.cookie?.value !== "") throw new Error();
-    if (attackerSession.cookie?.options.maxAge !== 0) throw new Error();
+    expect(attackerSession?.state).toEqual("SessionForked");
+    expect(attackerSession.cookie?.value).toEqual("");
+    expect(attackerSession.cookie?.options.maxAge).toEqual(0);
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "CookieMissing") throw new Error();
+    expect(attackerSession?.state).toEqual("CookieMissing");
   }
   {
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "SessionNotFound") throw new Error();
+    expect(userSession?.state).toEqual("SessionNotFound");
   }
 });
 
@@ -411,22 +409,22 @@ test("consume: state SessionForked after used by attacker, attacker, user", asyn
   {
     date = "2023-10-01T00:11:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "TokenRotated") throw new Error();
+    expect(attackerSession?.state).toEqual("TokenRotated");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "TokenRotated") throw new Error();
+    expect(attackerSession?.state).toEqual("TokenRotated");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "SessionForked") throw new Error();
+    expect(userSession?.state).toEqual("SessionForked");
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "SessionNotFound") throw new Error();
+    expect(attackerSession?.state).toEqual("SessionNotFound");
   }
 });
 
@@ -446,27 +444,27 @@ test("consume: state SessionForked after used by attacker, user, attacker, user"
   {
     date = "2023-10-01T00:11:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "TokenRotated") throw new Error();
+    expect(attackerSession?.state).toEqual("TokenRotated");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "SessionActive") throw new Error();
+    expect(userSession?.state).toEqual("SessionActive");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "TokenRotated") throw new Error();
+    expect(attackerSession?.state).toEqual("TokenRotated");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "SessionForked") throw new Error();
+    expect(userSession?.state).toEqual("SessionForked");
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "SessionNotFound") throw new Error();
+    expect(attackerSession?.state).toEqual("SessionNotFound");
   }
 });
 
@@ -486,27 +484,27 @@ test("consume: state SessionForked after used by user, attacker, user, attacker"
   {
     date = "2023-10-01T00:11:00Z";
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "TokenRotated") throw new Error();
+    expect(userSession?.state).toEqual("TokenRotated");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "SessionActive") throw new Error();
+    expect(attackerSession?.state).toEqual("SessionActive");
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "TokenRotated") throw new Error();
+    expect(userSession?.state).toEqual("TokenRotated");
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    if (attackerSession?.state !== "SessionForked") throw new Error();
+    expect(attackerSession?.state).toEqual("SessionForked");
   }
   {
     const userSession = await consume(db, userCookie, config);
-    if (userSession?.state !== "SessionNotFound") throw new Error();
+    expect(userSession?.state).toEqual("SessionNotFound");
   }
 });
 
@@ -525,17 +523,17 @@ test("consume: state SessionActive with previous cookie (race condition)", async
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
 });
 
@@ -554,24 +552,24 @@ test("consume: state SessionActive with previous cookie after 2 rotations", asyn
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
 });
 
@@ -590,31 +588,31 @@ test("consume: state SessionActive with previous cookie after 3 rotations", asyn
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
 });
 
@@ -633,37 +631,37 @@ test("consume: state SessionActive with previous cookie after 4 rotations", asyn
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:44:00Z";
     const session = await consume(db, cookie, config);
-    if (session?.state !== "TokenRotated") throw new Error();
+    expect(session?.state).toEqual("TokenRotated");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
   {
     const session = await consume(db, cookie, config);
-    if (session?.state !== "SessionActive") throw new Error();
+    expect(session?.state).toEqual("SessionActive");
   }
 });
