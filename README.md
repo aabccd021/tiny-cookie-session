@@ -88,8 +88,8 @@ in again.
 If the cookie is stolen persistently (e.g., via malware running in the background),
 it can't be prevented by any cookie-based mechanism, including this library or even DBSC.
 
-The user is compromised at this point.
-The only solution is to log in from a clean device and log out all other devices.
+The user is cooked at this point. The only solution is to log in from a clean device and log out
+all other devices.
 
 ## Minor security considerations
 
