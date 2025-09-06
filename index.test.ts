@@ -1,5 +1,4 @@
 import * as sqlite from "bun:sqlite";
-import { expect } from "bun:test";
 import * as tcs from ".";
 
 const testConfig = {
@@ -238,18 +237,19 @@ function setCookie(
   {
     date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
-    expect(session.cookie.options.expires?.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
+    if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
+      throw new Error();
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
-    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
+    if (session?.state !== "Active") throw new Error();
+    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
 }
 
@@ -268,13 +268,13 @@ function setCookie(
   {
     date = "2023-10-01T00:01:00Z";
     const session = await logout(db, cookie);
-    expect(session.cookie?.value).toEqual("");
-    expect(session.cookie?.options.maxAge).toEqual(0);
+    if (session.cookie?.value !== "") throw new Error();
+    if (session.cookie?.options.maxAge !== 0) throw new Error();
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("CookieMissing");
+    if (session?.state !== "CookieMissing") throw new Error();
   }
 }
 
@@ -292,9 +292,9 @@ function setCookie(
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
-    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
+    if (session?.state !== "Active") throw new Error();
+    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
 }
 
@@ -314,9 +314,9 @@ function setCookie(
   {
     date = "2023-10-01T00:09:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:00:00.000Z");
-    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:10:00.000Z");
+    if (session?.state !== "Active") throw new Error();
+    if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
+    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
 }
 
@@ -335,14 +335,15 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session.cookie?.options.expires?.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
+    if (session?.state !== "Active") throw new Error();
+    if (session.cookie?.options.expires?.toISOString() !== "2023-10-01T05:11:00.000Z")
+      throw new Error();
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
-    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:21:00.000Z");
+    if (session?.state !== "Active") throw new Error();
+    if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
+    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
   }
 }
 
@@ -361,14 +362,14 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session.data?.exp.toISOString()).toEqual("2023-10-01T05:11:00.000Z");
-    expect(session.data?.tokenExp.toISOString()).toEqual("2023-10-01T00:21:00.000Z");
+    if (session?.state !== "Active") throw new Error();
+    if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
+    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
   }
 }
 
@@ -387,14 +388,14 @@ function setCookie(
   {
     date = "2023-10-01T06:00:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Expired");
-    expect(session.cookie?.value).toEqual("");
-    expect(session.cookie?.options.maxAge).toEqual(0);
+    if (session?.state !== "Expired") throw new Error();
+    if (session.cookie?.value !== "") throw new Error();
+    if (session.cookie?.options.maxAge !== 0) throw new Error();
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("CookieMissing");
+    if (session?.state !== "CookieMissing") throw new Error();
   }
 }
 
@@ -413,18 +414,18 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
 }
 
@@ -450,7 +451,7 @@ function setCookie(
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
 }
 
@@ -471,28 +472,28 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("Active");
+    if (userSession?.state !== "Active") throw new Error();
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("Active");
+    if (userSession?.state !== "Active") throw new Error();
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("Forked");
-    expect(attackerSession.cookie?.value).toEqual("");
-    expect(attackerSession.cookie?.options.maxAge).toEqual(0);
+    if (attackerSession?.state !== "Forked") throw new Error();
+    if (attackerSession.cookie?.value !== "") throw new Error();
+    if (attackerSession.cookie?.options.maxAge !== 0) throw new Error();
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("CookieMissing");
+    if (attackerSession?.state !== "CookieMissing") throw new Error();
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("SessionNotFound");
+    if (userSession?.state !== "SessionNotFound") throw new Error();
   }
 }
 
@@ -513,21 +514,21 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("Active");
+    if (attackerSession?.state !== "Active") throw new Error();
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("Active");
+    if (attackerSession?.state !== "Active") throw new Error();
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("Forked");
+    if (userSession?.state !== "Forked") throw new Error();
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("SessionNotFound");
+    if (attackerSession?.state !== "SessionNotFound") throw new Error();
   }
 }
 
@@ -548,26 +549,26 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("Active");
+    if (attackerSession?.state !== "Active") throw new Error();
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("Active");
+    if (userSession?.state !== "Active") throw new Error();
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("Active");
+    if (attackerSession?.state !== "Active") throw new Error();
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("Forked");
+    if (userSession?.state !== "Forked") throw new Error();
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("SessionNotFound");
+    if (attackerSession?.state !== "SessionNotFound") throw new Error();
   }
 }
 
@@ -588,26 +589,26 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("Active");
+    if (userSession?.state !== "Active") throw new Error();
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("Active");
+    if (attackerSession?.state !== "Active") throw new Error();
     attackerCookie = setCookie(attackerCookie, attackerSession);
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("Active");
+    if (userSession?.state !== "Active") throw new Error();
     userCookie = setCookie(userCookie, userSession);
   }
   {
     const attackerSession = await consume(db, attackerCookie, config);
-    expect(attackerSession?.state).toEqual("Forked");
+    if (attackerSession?.state !== "Forked") throw new Error();
   }
   {
     const userSession = await consume(db, userCookie, config);
-    expect(userSession?.state).toEqual("SessionNotFound");
+    if (userSession?.state !== "SessionNotFound") throw new Error();
   }
 }
 
@@ -627,18 +628,18 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session?.action?.type).toEqual("UpdateSession");
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "UpdateSession") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
 }
 
@@ -658,26 +659,26 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session?.action?.type).toEqual("UpdateSession");
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "UpdateSession") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session?.action?.type).toEqual("UpdateSession");
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "UpdateSession") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
 }
 
@@ -697,34 +698,34 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session?.action?.type).toEqual("UpdateSession");
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "UpdateSession") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session?.action?.type).toEqual("UpdateSession");
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "UpdateSession") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session?.action?.type).toEqual("UpdateSession");
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "UpdateSession") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
 }
 
@@ -744,40 +745,40 @@ function setCookie(
   {
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session?.action?.type).toEqual("UpdateSession");
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "UpdateSession") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session?.action?.type).toEqual("UpdateSession");
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "UpdateSession") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
-    expect(session?.action?.type).toEqual("UpdateSession");
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "UpdateSession") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     date = "2023-10-01T00:44:00Z";
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
   {
     const session = await consume(db, prevCookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
   {
     const session = await consume(db, cookie, config);
-    expect(session?.state).toEqual("Active");
+    if (session?.state !== "Active") throw new Error();
   }
 }
