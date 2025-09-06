@@ -277,7 +277,6 @@ Since the session id and token are already random strings with high entropy
 
 The session id and token are hashed using SHA-256 before being stored in the database.
 This way a database leak would not lead to session hijacking.
-
 Hashing the id and token on every request might seem expensive,
 but it's no more demanding than cookie signing, which is a common practice in web services.
 
