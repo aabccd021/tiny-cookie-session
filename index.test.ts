@@ -690,6 +690,45 @@ test("consume: state Forked after [10m, user, 10m, attacker, user, attacker]", a
   }
 });
 
+test("consume: state Forked after [10m, user, attacker, user, attacker]", async () => {
+  let userCookie: string | undefined;
+  let attackerCookie: string | undefined;
+  let date: string;
+  const db = dbInit();
+  const config = { ...testConfig, dateNow: () => new Date(date) };
+
+  {
+    date = "2023-10-01T00:00:00Z";
+    const userSession = await login(db, { config });
+    userCookie = setCookie(userCookie, userSession);
+  }
+  attackerCookie = userCookie;
+  {
+    date = "2023-10-01T00:11:00Z";
+    const userSession = await consume(db, userCookie, config);
+    expect(userSession?.state).toEqual("Active");
+    userCookie = setCookie(userCookie, userSession);
+  }
+  {
+    const attackerSession = await consume(db, attackerCookie, config);
+    expect(attackerSession?.state).toEqual("Active");
+    attackerCookie = setCookie(attackerCookie, attackerSession);
+  }
+  {
+    const userSession = await consume(db, userCookie, config);
+    expect(userSession?.state).toEqual("Active");
+    userCookie = setCookie(userCookie, userSession);
+  }
+  {
+    const attackerSession = await consume(db, attackerCookie, config);
+    expect(attackerSession?.state).toEqual("Forked");
+  }
+  {
+    const userSession = await consume(db, userCookie, config);
+    expect(userSession?.state).toEqual("SessionNotFound");
+  }
+});
+
 test("consume: state Active with previous cookie (race condition)", async () => {
   let cookie: string | undefined;
   let prevCookie: string | undefined;
