@@ -173,15 +173,15 @@ async function consume(
   }
 
   if (session.state === "Active") {
-    return { state: "Active", cookie: session.cookie, data: sessionData };
+    return { state: "Active", cookie: session.cookie, action: session.action, data: sessionData };
   }
 
   if (session.state === "Expired") {
-    return { state: "Expired", cookie: session.cookie, data: undefined };
+    return { state: "Expired", cookie: session.cookie, action: session.action, data: undefined };
   }
 
   if (session.state === "Forked") {
-    return { state: "Forked", cookie: session.cookie, data: undefined };
+    return { state: "Forked", cookie: session.cookie, action: session.action, data: undefined };
   }
 
   session satisfies never;
@@ -697,6 +697,7 @@ test("consume: state Active with previous cookie after 4 rotations", async () =>
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
+    expect(session?.action?.type).toEqual("UpdateSession");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -704,6 +705,7 @@ test("consume: state Active with previous cookie after 4 rotations", async () =>
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
+    expect(session?.action?.type).toEqual("UpdateSession");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
@@ -711,6 +713,7 @@ test("consume: state Active with previous cookie after 4 rotations", async () =>
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
     expect(session?.state).toEqual("Active");
+    expect(session?.action?.type).toEqual("UpdateSession");
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
   }
