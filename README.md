@@ -45,29 +45,31 @@ There are two worst-case scenarios where we can't detect session forking:
 1. The attacker steals a cookie, and the user never uses the session again (inactive).
 2. The attacker steals a cookie, and somehow (forcefully) logs out the user.
 
-These cases cannot be mitigated unless the user has some way to prove their identity, as is done with Device Bound Session Credentials (DBSC).
+The only way to prevent these scenarios is to either use Device Bound Session Credentials (DBSC),
+or to identify attackers from other signals (e.g., IP address, User-Agent, geolocation, etc.).
 
 #### If the user is inactive after the cookie is stolen
 
-One thing we can do is to set a short session expiration time (`sessionExpiresIn`).
-This will limit the window of opportunity for the attacker,
-but it will also inconvenience users by requiring them to log in more frequently.
+There are two possible approaches to mitigate this risk:
 
-A stricter approach is to implement a "Don't remember me" option, which deletes the cookie when the
-browser is closed.
-This can be done by removing the `Expires` and `Max-Age` attributes from the session cookie.
-In this case, the only way for the attacker to do harm is to steal the last cookie used before
-closing the browser.
+1. Set a short session expiration time (`sessionExpiresIn`).
+2. Implement a "Don't remember me" option.
+
+The "Don't remember me" feature can be implemented by removing the `Expires` and `Max-Age`
+attributes from the session cookie.
+This way, the only way for the attacker to do harm is to steal the last cookie used before closing
+the browser.
 
 #### If the attacker forcefully logs out the user
 
-One thing we can do is to implement a "Log out other devices" feature.
-This way, when the user logs in again they can log out all other devices, including the attacker.
+There are two possible approaches to mitigate this risk:
 
-You can make it even safer by only allowing the user to have one active session at a time,
-so that logging in again will automatically log out all other devices, including the attacker.
-This requires no manual action (choosing devices to log out), making it safer than the previous
-approach.
+1. Implement a "Log out other devices" feature.
+2. Allow only one active session at a time.
+
+The "Log out other devices" feature enables the user to log out the attacker session on the next
+login. Allowing only one active session (the latest logged-in session) is safer since it's done all
+automatically.
 
 However, none of these approaches prevents the attacker from using the session until the user logs
 in again.
