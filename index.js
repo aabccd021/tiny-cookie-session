@@ -131,8 +131,6 @@ export async function consume(arg) {
   if (!isLatestToken) {
     return {
       state: "Active",
-      cookie: undefined,
-      action: undefined,
     };
   }
 
@@ -140,7 +138,6 @@ export async function consume(arg) {
   if (!isTokenExpired) {
     return {
       state: "Active",
-      cookie: undefined,
       action: {
         type: "DeleteToken",
         idHash: arg.credential.idHash,

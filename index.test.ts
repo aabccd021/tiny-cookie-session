@@ -419,7 +419,7 @@ test("consume: state Active after re-login", async () => {
   }
 });
 
-test("consume: state Forked after used by user, user, attacker", async () => {
+test("consume: state Forked after [10m, user, 10m, user, attacker]", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -461,7 +461,48 @@ test("consume: state Forked after used by user, user, attacker", async () => {
   }
 });
 
-test("consume: state Forked after used by attacker, attacker, user", async () => {
+test("consume: state Forked after [10m, user, user, attacker]", async () => {
+  let userCookie: string | undefined;
+  let attackerCookie: string | undefined;
+  let date: string;
+  const db = dbInit();
+  const config = { ...testConfig, dateNow: () => new Date(date) };
+
+  {
+    date = "2023-10-01T00:00:00Z";
+    const userSession = await login(db, { config });
+    userCookie = setCookie(userCookie, userSession);
+  }
+  attackerCookie = userCookie;
+  {
+    date = "2023-10-01T00:11:00Z";
+    const userSession = await consume(db, userCookie, config);
+    expect(userSession?.state).toEqual("Active");
+    userCookie = setCookie(userCookie, userSession);
+  }
+  {
+    const userSession = await consume(db, userCookie, config);
+    expect(userSession?.state).toEqual("Active");
+    userCookie = setCookie(userCookie, userSession);
+  }
+  {
+    const attackerSession = await consume(db, attackerCookie, config);
+    expect(attackerSession?.state).toEqual("Forked");
+    expect(attackerSession.cookie?.value).toEqual("");
+    expect(attackerSession.cookie?.options.maxAge).toEqual(0);
+    attackerCookie = setCookie(attackerCookie, attackerSession);
+  }
+  {
+    const attackerSession = await consume(db, attackerCookie, config);
+    expect(attackerSession?.state).toEqual("CookieMissing");
+  }
+  {
+    const userSession = await consume(db, userCookie, config);
+    expect(userSession?.state).toEqual("SessionNotFound");
+  }
+});
+
+test("consume: state Forked after [10m, attacker, 10m, attacker, user]", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -496,7 +537,7 @@ test("consume: state Forked after used by attacker, attacker, user", async () =>
   }
 });
 
-test("consume: state Forked after used by attacker, user, attacker, user", async () => {
+test("consume: state Forked after [10m, attacker, 10m, user, attacker, user]", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -536,7 +577,7 @@ test("consume: state Forked after used by attacker, user, attacker, user", async
   }
 });
 
-test("consume: state Forked after used by user, attacker, user, attacker", async () => {
+test("consume: state Forked after [10m, user, 10m, attacker, user, attacker]", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;

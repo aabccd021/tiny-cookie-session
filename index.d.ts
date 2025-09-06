@@ -107,18 +107,8 @@ export type ConsumeResult =
     }
   | {
       readonly state: "Active";
-      readonly cookie: Cookie;
-      readonly action: UpdateSessionAction;
-    }
-  | {
-      readonly state: "Active";
-      readonly cookie: undefined;
-      readonly action: undefined;
-    }
-  | {
-      readonly state: "Active";
-      readonly cookie: undefined;
-      readonly action: DeleteTokenAction;
+      readonly cookie?: Cookie;
+      readonly action?: UpdateSessionAction | DeleteTokenAction;
     };
 
 export const consume: (arg: ConsumeArg) => Promise<ConsumeResult>;
