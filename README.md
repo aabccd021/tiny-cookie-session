@@ -13,7 +13,8 @@ You need to understand its limitations before using it in production.
 This library uses randomly generated session id and token to identify a session.
 The session id is a long-lived identifier for the session,
 while the token is a short-lived value that is rotated periodically.
-The session id and token are stored in a cookie in a format like this: `${sessionId}:${token}`.
+The session id and token are stored in a cookie on the client side and in a database on the server
+side.
 
 ### Detecting outdated cookies
 
@@ -28,9 +29,9 @@ We log out both parties because we cannot determine which party used the invalid
 | --------------------------------------------------------- | ------------------- | -------------------------------------------- |
 | Attacker steals old cookie (older than one)               | Yes                 | Never                                        |
 | Attacker steals cookie, user uses the session after that  | Yes                 | The user's next request after token rotation |
-| Attacker steals cookie, user never uses the session again | No                  | indefinitely                                 |
-| Attacker steals cookie, logs out legitimate user          | No                  | indefinitely                                 |
-| Persistent cookie theft (e.g., background malware)        | No                  | indefinitely                                 |
+| Attacker steals cookie, user never uses the session again | No                  | Indefinitely                                 |
+| Attacker steals cookie, logs out legitimate user          | No                  | Indefinitely                                 |
+| Persistent cookie theft (e.g., background malware)        | No                  | Indefinitely                                 |
 
 ### If the attacker steals an old cookie
 
@@ -47,21 +48,20 @@ the attacker can use the cookie until this library detects it as session forking
 For this library to detect session forking, two conditions must be met after the cookie is stolen:
 
 1. The token must be rotated.
-2. A party with outdated token must make a request after the rotation.
+2. A party with an outdated token must make a request after the rotation.
 
 This means there are two worst-case scenarios where we can't detect session forking:
 
 1. The attacker steals a cookie, and the legitimate user never uses the session again (inactive).
 2. The attacker steals a cookie, and somehow (forcefully) logs out the legitimate user.
 
-This cases cannot be solved unless the user has some way to prove their identity, like how it's
+These cases cannot be solved unless the user has some way to prove their identity, like how it's
 done in Device Bound Session Credentials (DBSC).
 
 ### Mitigate inactive user
 
-The best we can do is to set a short session expiration time (`sessionExpiresIn`),
-and also show a "Log out other devices" screen every time the user logs in.
-Setting a short session expiration time will limit the window of opportunity for the attacker,
+The best we can do is to set a short session expiration time (`sessionExpiresIn`).
+This will limit the window of opportunity for the attacker,
 but it will also inconvenience legitimate users by requiring them to log in more frequently.
 
 Another way is to implement "Don't remember me" functionality,
@@ -89,10 +89,10 @@ in again.
 If the cookie is stolen persistently (e.g., via malware running in the background),
 it can't be prevented by any cookie-based mechanism, including this library or even DBSC.
 
-The user is cooked at this point.
+The user is compromised at this point.
 The only solution is to log in from a clean device and log out all other devices.
 
-## Minor seurity considerations
+## Minor security considerations
 
 It doesn't have to be the actual outdated token to be detected as session forking.
 As long as it's paired with a valid session id (in the cookie), any token value,
@@ -102,7 +102,7 @@ This means theoretically, if the attacker can guess a valid session id,
 they can use any random token value to log out the legitimate user.
 But practically this is not a concern because we use 256 bits of entropy for session id generation,
 making it unguessable.
-Also the implication of this attack is just logging out the legitimate user,
+Also, the implication of this attack is just logging out the legitimate user,
 no sensitive information is leaked.
 
 ## Installation
