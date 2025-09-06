@@ -1,3 +1,4 @@
+import { test } from "bun:test";
 import * as tcs from ".";
 
 type Session = {
@@ -141,9 +142,7 @@ function setCookie(
   return session.cookie.value;
 }
 
-{
-  console.info("# login");
-
+test("login", async () => {
   let cookie: string | undefined;
   let date: string;
   const db: Map<string, Session> = new Map();
@@ -162,11 +161,9 @@ function setCookie(
     if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
-}
+});
 
-{
-  console.info("# logout");
-
+test("logout", async () => {
   let cookie: string | undefined;
   let date: string;
   const db: Map<string, Session> = new Map();
@@ -188,11 +185,9 @@ function setCookie(
     const session = await consume(db, cookie, config);
     if (session?.state !== "CookieMissing") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionActive after login");
-
+test("consume: state SessionActive after login", async () => {
   let cookie: string | undefined;
   let date: string;
   const db: Map<string, Session> = new Map();
@@ -209,11 +204,9 @@ function setCookie(
     if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionActive after 9 minutes");
-
+test("consume: state SessionActive after 9 minutes", async () => {
   let cookie: string | undefined;
   let date: string;
   const db: Map<string, Session> = new Map();
@@ -232,11 +225,9 @@ function setCookie(
     if (session.data?.exp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state TokenRotated after 11 minutes");
-
+test("consume: state TokenRotated after 11 minutes", async () => {
   let cookie: string | undefined;
   let date: string;
   const db: Map<string, Session> = new Map();
@@ -256,11 +247,9 @@ function setCookie(
     if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionActive after TokenRotated");
-
+test("consume: state SessionActive after TokenRotated", async () => {
   let cookie: string | undefined;
   let date: string;
   const db: Map<string, Session> = new Map();
@@ -283,11 +272,9 @@ function setCookie(
     if (session.data?.exp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
     if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state Expired after 6 hours");
-
+test("consume: state Expired after 6 hours", async () => {
   let cookie: string | undefined;
   let date: string;
   const db: Map<string, Session> = new Map();
@@ -310,11 +297,9 @@ function setCookie(
     const session = await consume(db, cookie, config);
     if (session?.state !== "CookieMissing") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionActive after TokenRotated twice");
-
+test("consume: state SessionActive after TokenRotated twice", async () => {
   let cookie: string | undefined;
   let date: string;
   const db: Map<string, Session> = new Map();
@@ -341,11 +326,9 @@ function setCookie(
     const session = await consume(db, cookie, config);
     if (session?.state !== "SessionActive") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionActive after re-login");
-
+test("consume: state SessionActive after re-login", async () => {
   let cookie: string | undefined;
   let date: string;
   const db: Map<string, Session> = new Map();
@@ -368,10 +351,9 @@ function setCookie(
     const session = await consume(db, cookie, config);
     if (session?.state !== "SessionActive") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionForked after used by user, user, attacker");
+test("consume: state SessionForked after used by user, user, attacker", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -411,10 +393,9 @@ function setCookie(
     const userSession = await consume(db, userCookie, config);
     if (userSession?.state !== "SessionNotFound") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionForked after used by attacker, attacker, user");
+test("consume: state SessionForked after used by attacker, attacker, user", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -447,10 +428,9 @@ function setCookie(
     const attackerSession = await consume(db, attackerCookie, config);
     if (attackerSession?.state !== "SessionNotFound") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionForked after used by attacker, user, attacker, user");
+test("consume: state SessionForked after used by attacker, user, attacker, user", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -488,10 +468,9 @@ function setCookie(
     const attackerSession = await consume(db, attackerCookie, config);
     if (attackerSession?.state !== "SessionNotFound") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionForked after used by user, attacker, user, attacker");
+test("consume: state SessionForked after used by user, attacker, user, attacker", async () => {
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -529,11 +508,9 @@ function setCookie(
     const userSession = await consume(db, userCookie, config);
     if (userSession?.state !== "SessionNotFound") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionActive with previous cookie (race condition)");
-
+test("consume: state SessionActive with previous cookie (race condition)", async () => {
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -560,11 +537,9 @@ function setCookie(
     const session = await consume(db, cookie, config);
     if (session?.state !== "SessionActive") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionActive with previous cookie after 2 rotations");
-
+test("consume: state SessionActive with previous cookie after 2 rotations", async () => {
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -598,11 +573,9 @@ function setCookie(
     const session = await consume(db, cookie, config);
     if (session?.state !== "SessionActive") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionActive with previous cookie after 3 rotations");
-
+test("consume: state SessionActive with previous cookie after 3 rotations", async () => {
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -643,11 +616,9 @@ function setCookie(
     const session = await consume(db, cookie, config);
     if (session?.state !== "SessionActive") throw new Error();
   }
-}
+});
 
-{
-  console.info("# consume: state SessionActive with previous cookie after 4 rotations");
-
+test("consume: state SessionActive with previous cookie after 4 rotations", async () => {
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -695,4 +666,4 @@ function setCookie(
     const session = await consume(db, cookie, config);
     if (session?.state !== "SessionActive") throw new Error();
   }
-}
+});

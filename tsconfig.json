@@ -4,7 +4,7 @@
     "module": "preserve",
     "lib": ["esnext", "webworker"],
     "target": "esnext",
-    "types": [],
+    "types": ["bun"],
 
     // Output
     "noEmit": true,
