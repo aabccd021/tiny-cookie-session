@@ -54,10 +54,10 @@ This means there are two worst-case scenarios where we can't detect session fork
 1. The attacker steals a cookie, and the legitimate user never uses the session again (inactive).
 2. The attacker steals a cookie, and somehow (forcefully) logs out the legitimate user.
 
-These cases cannot be solved unless the user has some way to prove their identity, like how it's
+These cases cannot be mitigated unless the user has some way to prove their identity, like how it's
 done in Device Bound Session Credentials (DBSC).
 
-### Mitigate inactive user
+### Mitigating inactive user
 
 The best we can do is to set a short session expiration time (`sessionExpiresIn`).
 This will limit the window of opportunity for the attacker,
@@ -69,7 +69,7 @@ This can be done easily by removing the `Expires` and `Max-Age` attributes from 
 In this case, the only way for the attacker to do harm is to steal "the last cookie used before
 closing the browser".
 
-### Mitigate forced logout
+### Mitigating forced logout
 
 To mitigate the risk of forced logout, we can implement "Log out other devices" functionality.
 This way when the user logs in again (after being logged out by the attacker),
