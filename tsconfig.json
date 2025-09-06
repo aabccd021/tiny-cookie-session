@@ -1,11 +1,19 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
+    // Environment Settings
     "module": "preserve",
     "lib": ["esnext", "webworker"],
     "target": "esnext",
+    "types": [],
+
+    // Output
     "noEmit": true,
+
+    // JS
+    "allowJs": true,
+    "checkJs": true,
+
+    // Strict
     "strict": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
@@ -13,7 +21,6 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
-    "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
     "noUncheckedSideEffectImports": true,
     "noUnusedLocals": true,
