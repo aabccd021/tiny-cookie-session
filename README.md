@@ -6,20 +6,20 @@ When session forking is detected, this library logs out both the attacker and th
 ## Important: Security limitations
 
 While this library detects session forking, it does not provide complete protection.
-You need to understand its limitations before using it in production.
+You should understand its limitations before using it in production.
 
 ### How session id and token are stored
 
-This library uses randomly generated session id and token to identify a session.
-The session id is a long-lived identifier for the session,
-while the token is a short-lived value that is rotated periodically.
-The session id and token are stored in a cookie.
+This library uses randomly generated session IDs and tokens to identify a session.
+The session ID is a long-lived identifier for the session, while the token is a short-lived value
+that is rotated periodically.
+Both the session ID and token are stored in a cookie.
 
 ### Detecting outdated cookies
 
 After a cookie is stolen and the token is rotated,
 either the attacker or the user will have an outdated token.
-When this outdated token is used, we will detect this as session forking and log out both parties.
+When this outdated token is used, it is detected as session forking and both parties are logged out.
 We log out both parties because we cannot determine which party used the invalid token.
 
 ### Attack Scenarios and Outcomes
@@ -36,8 +36,7 @@ We log out both parties because we cannot determine which party used the invalid
 
 If the attacker steals an old cookie (stolen before the latest rotation),
 both parties will be logged out when the attacker uses the cookie.
-In this case, no harm is done to the user, except the user will be logged out
-unexpectedly.
+In this case, no harm is done to the user, except that the user will be logged out unexpectedly.
 
 ### If the attacker steals a recent cookie
 
@@ -46,8 +45,7 @@ There are two worst-case scenarios where we can't detect session forking:
 1. The attacker steals a cookie, and the user never uses the session again (inactive).
 2. The attacker steals a cookie, and somehow (forcefully) logs out the user.
 
-These cases cannot be mitigated unless the user has some way to prove their identity, like how it's
-done in Device Bound Session Credentials (DBSC).
+These cases cannot be mitigated unless the user has some way to prove their identity, as is done with Device Bound Session Credentials (DBSC).
 
 #### If the user is inactive after the cookie is stolen
 
@@ -55,24 +53,24 @@ The best we can do is to set a short session expiration time (`sessionExpiresIn`
 This will limit the window of opportunity for the attacker,
 but it will also inconvenience users by requiring them to log in more frequently.
 
-A stricter way is to implement "Don't remember me" functionality, which deletes the cookie when the
+A stricter approach is to implement a "Don't remember me" option, which deletes the cookie when the
 browser is closed.
-This can be done easily by removing the `Expires` and `Max-Age` attributes from the session cookie.
-In this case, the only way for the attacker to do harm is to steal "the last cookie used before
-closing the browser".
+This can be done by removing the `Expires` and `Max-Age` attributes from the session cookie.
+In this case, the only way for the attacker to do harm is to steal the last cookie used before
+closing the browser.
 
 #### If the attacker forcefully logs out the user
 
-To mitigate the risk of forced logout, we can implement "Log out other devices" functionality.
-This way when the user logs in again (after being logged out by the attacker),
+To mitigate the risk of forced logout, you can implement a "Log out other devices" feature.
+This way, when the user logs in again (after being logged out by the attacker),
 they can log out all other devices, including the attacker.
 
-We can make it even safer by only allowing the user to have one active session at a time,
+You can make it even safer by only allowing the user to have one active session at a time,
 so that logging in again will automatically log out all other devices, including the attacker.
 This requires no human interaction (choosing devices to log out), making it safer than
 the previous approach.
 
-Although, none of these approaches prevents the attacker from using the session until the user logs
+However, none of these approaches prevents the attacker from using the session until the user logs
 in again.
 
 ### Persistent cookie theft
