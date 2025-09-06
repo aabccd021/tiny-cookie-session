@@ -129,11 +129,9 @@ db.query(`DELETE FROM session`).run();
 ## Path and SameSite attributes
 
 This library sets `SameSite=Strict` and does not set `Path` by default.
-
 This is the strictest setting for a cookie, which is a good default for a library.
 
 But practically, you usually want `Path=/` and `SameSite=Lax` for session cookies.
-
 To do that, you can override the default options returned by this library:
 
 ```ts
@@ -148,7 +146,6 @@ function serializeCookie(cookie: tcs.Cookie): string {
 ## Serializing and Parsing Cookies
 
 This library does not handle cookie serialization and parsing.
-
 You need to do it outside this library, by using your web framework's built-in functionality
 or a third-party library.
 
@@ -223,33 +220,21 @@ tcs.login({ config });
 
 The `sessionExpiresIn` value controls how long a session can remain active without user interaction,
 often referred to as "log out after X minutes of inactivity."
-Your choice for session expiration time should balance security and user experience.
-
-Set to 7 days by default.
 
 For example, with `sessionExpiresIn: 30 * 60 * 1000` (30 minutes),
 a user can remain logged in indefinitely by making requests at least every 29 minutes.
-
-When the user makes a request before the session expires,
-the session's expiration time will be extended both in the database's `exp` column and
-in the cookie's `Expires` attribute.
 
 ### Token Expiration Time
 
 The `tokenExpiresIn` value controls how frequently tokens are rotated when sessions are active.
 When a token expires but the session is still valid, the system generates a new token.
-
-Set to 2 minutes by default.
-
 The longer you set `tokenExpiresIn`,
 the longer an attacker can use a stolen token before session forking is detected.
-So you should set this to a value as short as possible,
-but still longer than the longest HTTP request time your users might experience.
 
-For example, if your app might need to upload a large file in a single request,
-and that upload could take up to 3 minutes on a slow connection,
+You should set this to a value as short as possible, but still longer than the longest HTTP request
+time your users might experience.
+For example, if your app might take up to 3 minutes (in a single request) for uploading large files,
 you should set `tokenExpiresIn` to 3 minutes.
-
 The only reason we don't rotate the token on every request is to handle a race condition
 where the user makes two requests at the same time.
 
