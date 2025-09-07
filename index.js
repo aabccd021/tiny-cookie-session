@@ -166,8 +166,8 @@ export async function consume(arg) {
       return { state: "Active" };
     }
 
-    // Hitting this point means the latest token is confirmed to be set on client side.
-    // So we will delete the second latest token, which is not needed anymore.
+    // Hitting this point means the latest token is confirmed to be set on client side, while the
+    // second latest token is still in database, so we will delete the second latest token.
     return {
       state: "Active",
       action: {
