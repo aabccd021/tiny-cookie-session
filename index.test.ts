@@ -69,7 +69,7 @@ async function consume(
   }
 
   return {
-    // You might want to log the session's state especially when it's `Forked`.
+    // You might want to log the session's state, especially when it's `Forked`.
     state: session.state,
 
     // Don't let the app to use session data when the state is not Active.
