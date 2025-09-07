@@ -14,6 +14,10 @@ export const logoutCookie = {
 const defaultSessionExpiresIn = 1000 * 60 * 60 * 24 * 7;
 const defaultTokenExpiresIn = 1000 * 60 * 2;
 
+// - OWASP - 64 bits - https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length
+// - Remix - 64 bits - https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L45
+// - Lucia's example - 160 bits - https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88
+// - Auth.js test- 256 bits - https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/test/actions/session.test.ts#L146
 /**
  * @returns {string}
  */
@@ -23,6 +27,8 @@ function generate256BitEntropyHex() {
   return value.toHex();
 }
 
+// Only store hashes in database so that if database is leaked, the attacker cannot impersonate
+// users without first cracking the hashes.
 /**
  * @param {string} token
  * @returns {Promise<string>}
@@ -115,6 +121,10 @@ export async function logout(arg) {
  */
 export async function consume(arg) {
   const requestTokenHash = await hash(arg.credential.token);
+
+  // No need to use `crypto.timingSafeEqual` here because we are comparing (SHA-256) hashes of high
+  // entropy values (256 bit).
+  // Reference: https://security.stackexchange.com/questions/237116/using-timingsafeequal#comment521092_237133
   const isToken1 = requestTokenHash === arg.sessionData.token1Hash;
   const isToken2 = requestTokenHash === arg.sessionData.token2Hash;
 

@@ -161,6 +161,12 @@ new Bun.Cookie("mysession", cookie.value, cookie.options).serialize();
 cookieLib.serialize("mysession", cookie.value, cookie.options);
 ```
 
+## CSRF
+
+This library focuses solely on session management and does not implement CSRF protection.
+You should implement CSRF protection for your entire application before using any functions from
+this library.
+
 ## Cookie Signing
 
 The main benefit of signed cookies is being able to detect tampered cookies without
@@ -232,57 +238,6 @@ For example, if your app might take up to 3 minutes (in a single request) for up
 you should set `tokenExpiresIn` to 3 minutes.
 The only reason we don't rotate the token on every request is to handle a race condition
 where the user makes two requests at the same time.
-
-### Different Expiration Times per User
-
-You can implement different expiration times for different users by passing custom configuration
-to each function call.
-
-```ts
-import * as tcs from "tiny-cookie-session";
-
-async function handleRequest(request: Request, securityType: "strict" | "lenient") {
-  const config =
-    securityType === "strict"
-      ? {
-          sessionExpiresIn: 30 * 60 * 1000, // 30 minutes
-          tokenExpiresIn: 2 * 60 * 1000, // 2 minutes
-        }
-      : {
-          sessionExpiresIn: 24 * 60 * 60 * 1000, // 24 hours
-          tokenExpiresIn: 10 * 60 * 1000, // 10 minutes
-        };
-
-  await tcs.consume({ config /* other params */ });
-}
-```
-
-## Session Id and Token Security
-
-This library uses 256 bits of entropy for session id and token generation,
-exceeding industry recommendations:
-
-- OWASP recommends at least 64 bits of entropy ([OWASP Guidelines](https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length))
-- Remix uses 64 bits of entropy ([Remix Source](https://github.com/remix-run/remix/blob/b7d280140b27507530bcd66f7b30abe3e9d76436/packages/remix-node/sessions/fileStorage.ts#L45))
-- Lucia uses 160 bits of entropy in their example ([Lucia Source](https://github.com/lucia-auth/lucia/blob/46b164f78dc7983d7a4c3fb184505a01a4939efd/pages/sessions/basic-api/sqlite.md?plain=1#L88))
-- Auth.js uses 256 bits of entropy in their tests ([Auth.js Source](https://github.com/nextauthjs/next-auth/blob/c5a70d383bb97b39f8edbbaf69c4c7620246e9a4/packages/core/test/actions/session.test.ts#L146))
-
-Since the session id and token are already random strings with high entropy
-(unlike a password), we don't need additional processing like salting or peppering.
-
-The session id and token are hashed using SHA-256 before being stored in the database.
-This way a database leak would not lead to session hijacking.
-Hashing the id and token on every request might seem expensive,
-but it's no more demanding than cookie signing, which is a common practice in web services.
-
-Also, [we don't have to use `crypto.timingSafeEqual` when comparing tokens because we are comparing
-hashes of high entropy values](https://security.stackexchange.com/questions/237116/using-timingsafeequal#comment521092_237133).
-
-## CSRF
-
-This library focuses solely on session management and does not implement CSRF protection.
-You should implement CSRF protection for your entire application before using any functions from
-this library.
 
 ## :warning: Important: Security limitations
 
