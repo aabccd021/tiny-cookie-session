@@ -144,7 +144,7 @@ export async function consume(arg) {
     };
   }
 
-  // Hitting this point means old token is used while new token is already issued,
+  // Hitting this point means old (second latest) token is used while new token is already issued,
   // which might happen when race condition happens (e.g. user sends multiple requests in parallel).
   const isLatestToken = arg.sessionData.isLatestTokenOdd ? isOddToken : isEvenToken;
   if (!isLatestToken) {
