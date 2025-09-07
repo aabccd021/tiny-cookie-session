@@ -125,9 +125,9 @@ function dbInit(): sqlite.Database {
     CREATE TABLE IF NOT EXISTS session (
       id_hash TEXT PRIMARY KEY,
       exp INTEGER NOT NULL,
+      token_exp INTEGER NOT NULL,
       token_1_hash TEXT NOT NULL,
-      token_2_hash TEXT,
-      token_exp INTEGER NOT NULL
+      token_2_hash TEXT
     )
   `);
   return db;
@@ -149,8 +149,8 @@ function dbSelectSession(db: sqlite.Database, idHash: string): tcs.SessionData |
 function dbSetSession(db: sqlite.Database, action: tcs.SetSessionAction): void {
   db.query(
     `
-    INSERT OR REPLACE INTO session (id_hash, exp, token_1_hash, token_2_hash, token_exp) 
-    VALUES (:idHash, :exp, :token1Hash, :token2Hash, :tokenExp)
+    INSERT OR REPLACE INTO session (id_hash, exp, token_exp, token_1_hash, token_2_hash)
+    VALUES (:idHash, :exp, :tokenExp, :token1Hash, :token2Hash)
   `,
   ).run({
     idHash: action.idHash,
