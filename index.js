@@ -141,9 +141,10 @@ export async function consume(arg) {
     };
   }
 
-  // Hitting this point means the second latest token is used while the latest token is already
-  // issued, which might happen on race condition (e.g. user sends multiple requests in parallel).
-  // This token is still considered active, but cannot be used to rotate token.
+  // Hitting this point means the second latest token is used in reqeust while the latest token is
+  // already issued.
+  // This might happen on a race condition where the client sends multiple requests simultaneously.
+  // This second latest token is still considered active, but cannot be used to rotate token.
   if (isToken2) {
     return { state: "Active" };
   }
@@ -167,6 +168,10 @@ export async function consume(arg) {
       },
     };
   }
+
+  // Hitting this point means the latest token is used and already expired.
+  // We will rotate the token.
+
   const nextToken = generate256BitEntropyHex();
   const nextTokenHash = await hash(nextToken);
 
