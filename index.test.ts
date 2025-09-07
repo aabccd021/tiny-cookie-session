@@ -58,7 +58,10 @@ async function consume(
   return {
     state: session.state,
     cookie: session.cookie,
+
+    // Usually does not need to return action, we return it to assert action reason in tests.
     action: session.action,
+
     // Don't let the app to use session data when the state is not Active.
     data: session.state === "Active" ? sessionData : undefined,
   };
