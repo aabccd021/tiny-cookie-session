@@ -3,79 +3,6 @@
 **tiny-cookie-session** is a cookie-based session management library that detects session forking.
 When session forking is detected, this library logs out both the attacker and the user.
 
-## :warning: Important: Security limitations
-
-While this library detects session forking, it does not provide complete protection.
-You should understand its limitations before using it in production.
-
-### How session ID and token are stored
-
-This library uses randomly generated session IDs and tokens to identify a session.
-The session ID is a long-lived identifier for the session, while the token is a short-lived value
-that is rotated periodically.
-Both the session ID and token are stored in a cookie.
-
-### Detecting outdated cookies
-
-After a cookie is stolen and the token is rotated,
-either the attacker or the user will have an outdated token.
-When this outdated token is used, it is detected as session forking and both parties are logged out.
-We log out both parties because we cannot determine which party used the invalid token.
-
-### If the attacker steals an old cookie
-
-If the attacker steals an old cookie (stolen before the latest rotation),
-both parties will be logged out when the attacker uses the cookie.
-In this case, no harm is done to the user, except that the user will be logged out unexpectedly.
-
-### If the attacker steals a recent cookie
-
-For most scenarios, session forking will be detected after the attacker uses the stolen cookie.
-In that case, the attacker can only use the session until the forking is detected.
-
-Although, there are two worst-case scenarios where we can't detect session forking,
-making the attacker able to use the session indefinitely:
-
-1. The attacker steals a cookie, and the user never uses the session again (inactive).
-2. The attacker steals a cookie, and somehow (forcefully) logs out the user.
-
-The only way to prevent these scenarios is to either use Device Bound Session Credentials (DBSC),
-or to identify attackers from other signals (e.g., IP address, User-Agent, geolocation, etc.).
-
-#### If the user is inactive after the cookie is stolen
-
-There are two possible approaches to mitigate this risk:
-
-1. Set a short session expiration time (`sessionExpiresIn`).
-2. Implement a "Don't remember me" option.
-
-The "Don't remember me" feature can be implemented by removing the `Expires` and `Max-Age`
-attributes from the session cookie.
-This way, the only way for the attacker to do harm is to steal the last cookie used before closing
-the browser.
-
-#### If the attacker forcefully logs out the user
-
-There are two possible approaches to mitigate this risk:
-
-1. Implement a "Log out other devices" feature.
-2. Allow only one active session at a time.
-
-The "Log out other devices" feature enables the user to log out the attacker's session on the next
-login. Allowing only one active session (the latest logged-in session) is safer since it's done
-automatically.
-
-However, none of these approaches prevents the attacker from using the session until the user logs
-in again.
-
-### Persistent cookie theft
-
-If the cookie is stolen persistently (e.g., via malware running in the background),
-it can't be prevented by any cookie-based mechanism, including this library or even DBSC.
-
-The user is cooked at this point :fire:. The only solution is to log in from a clean device and log out
-all other devices.
-
 ## Installation
 
 ```sh
@@ -356,6 +283,79 @@ hashes of high entropy values](https://security.stackexchange.com/questions/2371
 This library focuses solely on session management and does not implement CSRF protection.
 You should implement CSRF protection for your entire application before using any functions from
 this library.
+
+## :warning: Important: Security limitations
+
+While this library detects session forking, it does not provide complete protection.
+You should understand its limitations before using it in production.
+
+### How session ID and token are stored
+
+This library uses randomly generated session IDs and tokens to identify a session.
+The session ID is a long-lived identifier for the session, while the token is a short-lived value
+that is rotated periodically.
+Both the session ID and token are stored in a cookie.
+
+### Detecting outdated cookies
+
+After a cookie is stolen and the token is rotated,
+either the attacker or the user will have an outdated token.
+When this outdated token is used, it is detected as session forking and both parties are logged out.
+We log out both parties because we cannot determine which party used the invalid token.
+
+### If the attacker steals an old cookie
+
+If the attacker steals an old cookie (stolen before the latest rotation),
+both parties will be logged out when the attacker uses the cookie.
+In this case, no harm is done to the user, except that the user will be logged out unexpectedly.
+
+### If the attacker steals a recent cookie
+
+For most scenarios, session forking will be detected after the attacker uses the stolen cookie.
+In that case, the attacker can only use the session until the forking is detected.
+
+Although, there are two worst-case scenarios where we can't detect session forking,
+making the attacker able to use the session indefinitely:
+
+1. The attacker steals a cookie, and the user never uses the session again (inactive).
+2. The attacker steals a cookie, and somehow (forcefully) logs out the user.
+
+The only way to prevent these scenarios is to either use Device Bound Session Credentials (DBSC),
+or to identify attackers from other signals (e.g., IP address, User-Agent, geolocation, etc.).
+
+#### If the user is inactive after the cookie is stolen
+
+There are two possible approaches to mitigate this risk:
+
+1. Set a short session expiration time (`sessionExpiresIn`).
+2. Implement a "Don't remember me" option.
+
+The "Don't remember me" feature can be implemented by removing the `Expires` and `Max-Age`
+attributes from the session cookie.
+This way, the only way for the attacker to do harm is to steal the last cookie used before closing
+the browser.
+
+#### If the attacker forcefully logs out the user
+
+There are two possible approaches to mitigate this risk:
+
+1. Implement a "Log out other devices" feature.
+2. Allow only one active session at a time.
+
+The "Log out other devices" feature enables the user to log out the attacker's session on the next
+login. Allowing only one active session (the latest logged-in session) is safer since it's done
+automatically.
+
+However, none of these approaches prevents the attacker from using the session until the user logs
+in again.
+
+### Persistent cookie theft
+
+If the cookie is stolen persistently (e.g., via malware running in the background),
+it can't be prevented by any cookie-based mechanism, including this library or even DBSC.
+
+The user is cooked at this point :fire:. The only solution is to log in from a clean device and log out
+all other devices.
 
 ## LICENSE
 
