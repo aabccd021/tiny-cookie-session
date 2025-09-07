@@ -149,9 +149,9 @@ function dbSelectSession(db: sqlite.Database, idHash: string): tcs.SessionData |
 function dbSetSession(db: sqlite.Database, action: tcs.SetSessionAction): void {
   db.query(
     `
-    INSERT OR REPLACE INTO session (id_hash, exp, token_exp, token_1_hash, token_2_hash)
-    VALUES (:idHash, :exp, :tokenExp, :token1Hash, :token2Hash)
-  `,
+      INSERT OR REPLACE INTO session (id_hash, exp, token_exp, token_1_hash, token_2_hash)
+      VALUES (:idHash, :exp, :tokenExp, :token1Hash, :token2Hash)
+    `,
   ).run({
     idHash: action.idHash,
     exp: action.sessionData.sessionExp.getTime(),
