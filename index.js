@@ -169,7 +169,7 @@ export async function consume(arg) {
     };
   }
 
-  // Hitting this point means the latest token is used and already expired.
+  // Hitting this point means the latest token is used in request and already expired.
   // We will rotate the token.
 
   const nextToken = generate256BitEntropyHex();
