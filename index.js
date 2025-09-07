@@ -178,7 +178,6 @@ export async function consume(arg) {
               tokenExp: arg.sessionData.tokenExp,
             },
           };
-
     return { state: "Active", action };
   }
 
