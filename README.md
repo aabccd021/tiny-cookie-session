@@ -1,9 +1,9 @@
 # :cookie: tiny-cookie-session.js
 
 **tiny-cookie-session** is a cookie-based session management library that detects session forking.
-When session forking is detected, this library logs out both the attacker and the user.
+When session forking is detected, this library logs out both the attacker and the user. :no_entry_sign:
 
-## Important: Security limitations
+## Important: Security limitations :warning:
 
 While this library detects session forking, it does not provide complete protection.
 You should understand its limitations before using it in production.
@@ -13,7 +13,7 @@ You should understand its limitations before using it in production.
 This library uses randomly generated session IDs and tokens to identify a session.
 The session ID is a long-lived identifier for the session, while the token is a short-lived value
 that is rotated periodically.
-Both the session ID and token are stored in a cookie.
+Both the session ID and token are stored in a cookie. :lock:
 
 ### Detecting outdated cookies
 
@@ -26,7 +26,7 @@ We log out both parties because we cannot determine which party used the invalid
 
 If the attacker steals an old cookie (stolen before the latest rotation),
 both parties will be logged out when the attacker uses the cookie.
-In this case, no harm is done to the user, except that the user will be logged out unexpectedly.
+In this case, no harm is done to the user, except that the user will be logged out unexpectedly. :wave:
 
 ### If the attacker steals a recent cookie
 
@@ -40,14 +40,14 @@ making the attacker able to use the session indefinitely:
 2. The attacker steals a cookie, and somehow (forcefully) logs out the user.
 
 The only way to prevent these scenarios is to either use Device Bound Session Credentials (DBSC),
-or to identify attackers from other signals (e.g., IP address, User-Agent, geolocation, etc.).
+or to identify attackers from other signals (e.g., IP address, User-Agent, geolocation, etc.). :mag:
 
 #### If the user is inactive after the cookie is stolen
 
 There are two possible approaches to mitigate this risk:
 
 1. Set a short session expiration time (`sessionExpiresIn`).
-2. Implement a "Don't remember me" option.
+2. Implement a "Don't remember me" option. :zzz:
 
 The "Don't remember me" feature can be implemented by removing the `Expires` and `Max-Age`
 attributes from the session cookie.
@@ -73,7 +73,7 @@ in again.
 If the cookie is stolen persistently (e.g., via malware running in the background),
 it can't be prevented by any cookie-based mechanism, including this library or even DBSC.
 
-The user is cooked at this point. The only solution is to log in from a clean device and log out
+The user is cooked at this point. :fire: The only solution is to log in from a clean device and log out
 all other devices.
 
 ## Installation
@@ -112,7 +112,7 @@ async function login(db: unknown, arg: tcs.LoginArg): Promise<Response> {
 ```
 
 We strongly recommend reading the [index.test.ts](./index.test.ts) file for more detailed usage
-examples.
+examples. :bookmark_tabs:
 
 ## Bun SQLite storage example
 
@@ -166,7 +166,7 @@ function dbDeleteSession(db: sqlite.Database, action: tcs.DeleteSessionAction): 
 }
 ```
 
-## Garbage collection of expired sessions
+## Garbage collection of expired sessions :wastebasket:
 
 Since this library doesn't automatically delete expired sessions for inactive users,
 you'll need to implement your own garbage collection mechanism:
@@ -180,7 +180,7 @@ Doing or not doing garbage collection on expired sessions is always safe and has
 implications, since those sessions would be rejected as "SessionExpired" anyway if a user tried
 to use them.
 
-## Force logout session
+## Force logout session :door:
 
 This library allows you to immediately invalidate sessions by deleting them from the storage
 backend. Unlike JWT, the session logout is effective immediately when this is done.
@@ -199,7 +199,7 @@ db.query(`DELETE FROM session`).run();
 ## Path and SameSite attributes
 
 This library sets `SameSite=Strict` and does not set `Path` by default.
-This is the strictest setting for a cookie, which is a good default for a library.
+This is the strictest setting for a cookie, which is a good default for a library. :closed_lock_with_key:
 
 But practically, you usually want `Path=/` and `SameSite=Lax` for session cookies.
 To do that, you can override the default options returned by this library:
@@ -240,7 +240,7 @@ The main benefit of signed cookies is being able to detect tampered cookies with
 reaching the storage backend, but this isn't strictly required for this library to work or to
 provide security.
 
-You can implement cookie signing outside this library as an additional security layer.
+You can implement cookie signing outside this library as an additional security layer. :pencil2:
 
 ```ts
 import * as tcs from "tiny-cookie-session";
@@ -269,7 +269,7 @@ function parseAndUnsignCookie(request: Request): string | undefined {
 }
 ```
 
-## Configuring Expiration Times
+## Configuring Expiration Times :alarm_clock:
 
 You can use custom expiration times by passing configuration options to the functions:
 
@@ -355,7 +355,7 @@ hashes of high entropy values](https://security.stackexchange.com/questions/2371
 
 This library focuses solely on session management and does not implement CSRF protection.
 You should implement CSRF protection for your entire application before using any functions from
-this library.
+this library. :shield:
 
 ## LICENSE
 
