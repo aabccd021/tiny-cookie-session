@@ -13,8 +13,6 @@ async function login(db: Map<string, tcs.SessionData>, arg: tcs.LoginArg) {
 
   return {
     // Make sure the app returns the Set-Cookie header with this value.
-    // Not setting the cookie here does not introduce a security risk,
-    // but it may lead to undefined behavior.
     cookie: session.cookie,
   };
 }
@@ -36,8 +34,6 @@ async function logout(db: Map<string, tcs.SessionData>, cookie: string | undefin
 
   return {
     // Make sure the app returns the Set-Cookie header with this value.
-    // Not setting the cookie here does not introduce a security risk,
-    // but it may lead to undefined behavior.
     cookie: session.cookie,
   };
 }
@@ -53,8 +49,6 @@ async function consume(
 
   const credential = await tcs.credentialFromCookie({ cookie });
   if (credential === undefined) {
-    // Not setting `logoutCookie` here does not introduce a security risk,
-    // but usually we want to invalidate malformed cookies to avoid checking them again and again.
     return { state: "CookieMalformed", cookie: tcs.logoutCookie };
   }
 
@@ -64,9 +58,6 @@ async function consume(
     // - The session was manually deleted on the server (e.g. admin action).
     // - Someone is trying to login with random session ID (brute force attack).
     // - The session was forked and logged out (see test cases below with "NotFound" state).
-
-    // Not setting `logoutCookie` here does not introduce a security risk,
-    // but usually we want to invalidate expired cookies to avoid checking them again and again.
     return { state: "NotFound", cookie: tcs.logoutCookie };
   }
 
@@ -89,8 +80,6 @@ async function consume(
     data: session.state === "Active" ? sessionData : undefined,
 
     // Make sure the app returns the Set-Cookie header with this value.
-    // Not setting the cookie here does not introduce a security risk,
-    // but it may lead to undefined behavior.
     cookie: session.cookie,
 
     // We return action here to assert the `.reason` in tests, but it usually not needed by an app.
