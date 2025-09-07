@@ -125,7 +125,7 @@ function dbInit(): sqlite.Database {
     CREATE TABLE IF NOT EXISTS session (
       id_hash TEXT PRIMARY KEY,
       exp INTEGER NOT NULL,
-      token_1_hash TEXT,
+      token_1_hash TEXT NOT NULL,
       token_2_hash TEXT,
       token_exp INTEGER NOT NULL
     )

@@ -27,7 +27,7 @@ type Credential = {
 
 export type SessionData = {
   readonly sessionExp: Date;
-  readonly token1Hash: string | null;
+  readonly token1Hash: string;
   readonly token2Hash: string | null;
   readonly tokenExp: Date;
 };
