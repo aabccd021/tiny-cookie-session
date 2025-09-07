@@ -151,32 +151,35 @@ export async function consume(arg) {
     };
   }
 
-  // Hitting this point means the second latest token is used in reqeust while the latest token is
-  // already issued.
-  // This might happen on a race condition where the client sends multiple requests simultaneously.
-  // This second latest token is still considered active, but cannot be used to rotate token.
   if (isToken2) {
+    // Hitting this point means the second latest token is used in reqeust while the latest token is
+    // already issued.
+    // This might happen on a race condition where the client sends multiple requests
+    // simultaneously.
+    // This second latest token is still considered active, but cannot be used to rotate token.
     return { state: "Active" };
   }
 
-  // Hitting this point means the latest token is confirmed to be set on client side.
-  // So we will delete the second latest token we previously needed to handle race condition.
   const isTokenExpired = arg.sessionData.tokenExp.getTime() <= now.getTime();
   if (!isTokenExpired) {
-    return {
-      state: "Active",
-      action: {
-        type: "SetSession",
-        reason: "TokenDeleted",
-        idHash: arg.credential.idHash,
-        sessionData: {
-          token1Hash: arg.sessionData.token1Hash,
-          token2Hash: null,
-          sessionExp: arg.sessionData.sessionExp,
-          tokenExp: arg.sessionData.tokenExp,
-        },
-      },
-    };
+    // Hitting this point means the latest token is confirmed to be set on client side.
+    // So we will delete the second latest token (if exists), which is not needed anymore.
+    const action =
+      arg.sessionData.token2Hash === null
+        ? undefined
+        : {
+            type: "SetSession",
+            reason: "TokenDeleted",
+            idHash: arg.credential.idHash,
+            sessionData: {
+              token1Hash: arg.sessionData.token1Hash,
+              token2Hash: null,
+              sessionExp: arg.sessionData.sessionExp,
+              tokenExp: arg.sessionData.tokenExp,
+            },
+          };
+
+    return { state: "Active", action };
   }
 
   // Hitting this point means the latest token is used in request and already expired.
