@@ -7,8 +7,14 @@ const testConfig = {
 
 async function login(db: Map<string, tcs.SessionData>, arg: tcs.LoginArg) {
   const session = await tcs.login(arg);
+
+  // Handle action.
   db.set(session.action.idHash, session.action.sessionData);
-  return session;
+
+  return {
+    // Make sure the app returns the Set-Cookie header with this value.
+    cookie: session.cookie,
+  };
 }
 
 async function logout(db: Map<string, tcs.SessionData>, cookie: string | undefined) {
@@ -22,8 +28,14 @@ async function logout(db: Map<string, tcs.SessionData>, cookie: string | undefin
   }
 
   const session = await tcs.logout({ credential });
+
+  // Handle action.
   db.delete(credential.idHash);
-  return session;
+
+  return {
+    // Make sure the app returns the Set-Cookie header with this value.
+    cookie: session.cookie,
+  };
 }
 
 async function consume(
@@ -44,8 +56,10 @@ async function consume(
   if (sessionData === undefined) {
     return { state: "NotFound", cookie: tcs.logoutCookie };
   }
+
   const session = await tcs.consume({ credential, config, sessionData });
 
+  // Handle action.
   if (session.action?.type === "DeleteSession") {
     db.delete(credential.idHash);
   } else if (session.action?.type === "SetSession") {
