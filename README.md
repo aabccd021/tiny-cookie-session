@@ -86,8 +86,9 @@ bun install github:aabccd021/tiny-cookie-session
 
 ## Example usage
 
-This library can be used with any storage backend that can select, upsers, and delete key-value
-pairs. After implementing storage functions, you can use it to handle `Action` object returned by
+This library can be used with any storage backend that can select, set (upsert), and delete
+key-value pairs.
+After implementing storage functions, you can use it to handle `Action` object returned by
 functions in this library.
 
 We strongly recommend reading the [index.test.ts](./index.test.ts) file for more detailed usage

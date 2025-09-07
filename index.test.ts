@@ -5,24 +5,9 @@ const testConfig = {
   sessionExpiresIn: 5 * 60 * 60 * 1000,
 };
 
-function dbSelectSession(
-  db: Map<string, tcs.SessionData>,
-  idHash: string,
-): tcs.SessionData | undefined {
-  return db.get(idHash);
-}
-
-function dbSetSession(db: Map<string, tcs.SessionData>, action: tcs.SetSessionAction): void {
-  db.set(action.idHash, action.sessionData);
-}
-
-function dbDeleteSession(db: Map<string, tcs.SessionData>, action: tcs.DeleteSessionAction): void {
-  db.delete(action.idHash);
-}
-
 async function login(db: Map<string, tcs.SessionData>, arg: tcs.LoginArg) {
   const session = await tcs.login(arg);
-  dbSetSession(db, session.action);
+  db.set(session.action.idHash, session.action.sessionData);
   return session;
 }
 
@@ -37,7 +22,7 @@ async function logout(db: Map<string, tcs.SessionData>, cookie: string | undefin
   }
 
   const session = await tcs.logout({ credential });
-  dbDeleteSession(db, session.action);
+  db.delete(credential.idHash);
   return session;
 }
 
@@ -55,16 +40,16 @@ async function consume(
     return { state: "CookieMalformed", cookie: tcs.logoutCookie };
   }
 
-  const sessionData = dbSelectSession(db, credential.idHash);
+  const sessionData = db.get(credential.idHash);
   if (sessionData === undefined) {
     return { state: "NotFound", cookie: tcs.logoutCookie };
   }
   const session = await tcs.consume({ credential, config, sessionData });
 
   if (session.action?.type === "DeleteSession") {
-    dbDeleteSession(db, session.action);
+    db.delete(credential.idHash);
   } else if (session.action?.type === "SetSession") {
-    dbSetSession(db, session.action);
+    db.set(credential.idHash, session.action.sessionData);
   } else if (session.action !== undefined) {
     session.action satisfies never;
     throw new Error("Unreachable");
