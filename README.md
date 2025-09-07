@@ -86,15 +86,22 @@ bun install github:aabccd021/tiny-cookie-session
 
 ## Example usage
 
-You can use this library with any storage that can store key-value pairs of strings.
-After implementing storage functions, you can use it to handle `Action` object returned by
-functions in this library. See [index.test.ts](./index.test.ts) for a complete example.
+This library can be used with any storage backend that can select, upsers, and delete key-value
+pairs. After implementing storage functions, you can use it to handle `Action` object returned by
+functions in this library.
+
+We strongly recommend reading the [index.test.ts](./index.test.ts) file for more detailed usage
+examples.
 
 ```ts
-async function login(db: Map<string, tcs.SessionData>, arg: import("./index").LoginArg) {
+import * as tcs from "tiny-cookie-session";
+
+async function login(db, arg) {
   const session = await tcs.login(arg);
-  // TODO: implement dbUpsertSession
+
+  // TODO: implement storage functions
   dbUpsertSession(db, session.action);
+
   return session;
 }
 ```
@@ -157,26 +164,6 @@ function dbUpsertSession(db: sqlite.Database, action: tcs.UpsertSessionAction): 
 
 function dbDeleteSession(db: sqlite.Database, action: tcs.DeleteSessionAction): void {
   db.query("DELETE FROM session WHERE id_hash = :idHash").run({ idHash: action.idHash });
-}
-```
-
-## In-memory storage example
-
-```ts
-function dbInit(): Map<string, tcs.SessionData> {
-  return new Map<string, tcs.SessionData>();
-}
-
-function dbSelect(db: Map<string, tcs.SessionData>, idHash: string): tcs.SessionData | undefined {
-  return db.get(idHash);
-}
-
-function dbUpsertSession(db: Map<string, tcs.SessionData>, action: tcs.UpsertSessionAction): void {
-  db.set(action.idHash, action.sessionData);
-}
-
-function dbDeleteSession(db: Map<string, tcs.SessionData>, action: tcs.DeleteSessionAction): void {
-  db.delete(action.idHash);
 }
 ```
 

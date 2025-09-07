@@ -17,7 +17,7 @@ function dbDeleteSession(db: Map<string, tcs.SessionData>, action: tcs.DeleteSes
   db.delete(action.idHash);
 }
 
-async function login(db: Map<string, tcs.SessionData>, arg: import("./index").LoginArg) {
+async function login(db: Map<string, tcs.SessionData>, arg: tcs.LoginArg) {
   const session = await tcs.login(arg);
   dbUpsertSession(db, session.action);
   return session;
