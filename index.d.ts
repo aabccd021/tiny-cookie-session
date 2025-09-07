@@ -27,10 +27,9 @@ type Credential = {
 
 export type SessionData = {
   readonly sessionExp: Date;
-  readonly oddTokenHash: string | null;
-  readonly evenTokenHash: string | null;
+  readonly token1Hash: string | null;
+  readonly token2Hash: string | null;
   readonly tokenExp: Date;
-  readonly isLatestTokenOdd: boolean;
 };
 
 export type DeleteSessionAction = {

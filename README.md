@@ -125,11 +125,9 @@ function dbInit(): sqlite.Database {
     CREATE TABLE IF NOT EXISTS session (
       id_hash TEXT PRIMARY KEY,
       exp INTEGER NOT NULL,
-      odd_token_hash TEXT,
-      even_token_hash TEXT,
-      token_exp INTEGER NOT NULL,
-      is_latest_token_odd INTEGER NOT NULL,
-      CHECK (is_latest_token_odd IN (0, 1))
+      token_1_hash TEXT,
+      token_2_hash TEXT,
+      token_exp INTEGER NOT NULL
     )
   `);
   return db;
@@ -137,36 +135,29 @@ function dbInit(): sqlite.Database {
 
 function dbSelectSession(db: sqlite.Database, idHash: string): tcs.SessionData | undefined {
   const row = db.query("SELECT * FROM session WHERE id_hash = :idHash").get({ idHash });
-
   if (row === null) {
     return undefined;
   }
-
   return {
     sessionExp: new Date(row.exp),
-    oddTokenHash: row.odd_token_hash,
-    evenTokenHash: row.even_token_hash,
     tokenExp: new Date(row.token_exp),
-    isLatestTokenOdd: row.is_latest_token_odd === 1,
+    token1Hash: row.token_1_hash,
+    token2Hash: row.token_2_hash,
   };
 }
 
 function dbSetSession(db: sqlite.Database, action: tcs.SetSessionAction): void {
   db.query(
     `
-    INSERT OR REPLACE INTO session (
-      id_hash, exp, odd_token_hash, even_token_hash, token_exp, is_latest_token_odd
-    ) VALUES (
-      :idHash, :exp, :oddTokenHash, :evenTokenHash, :tokenExp, :isLatestTokenOdd
-    )
+    INSERT OR REPLACE INTO session (id_hash, exp, token_1_hash, token_2_hash, token_exp) 
+    VALUES (:idHash, :exp, :token1Hash, :token2Hash, :tokenExp)
   `,
   ).run({
     idHash: action.idHash,
     exp: action.sessionData.sessionExp.getTime(),
-    oddTokenHash: action.sessionData.oddTokenHash,
-    evenTokenHash: action.sessionData.evenTokenHash,
     tokenExp: action.sessionData.tokenExp.getTime(),
-    isLatestTokenOdd: action.sessionData.isLatestTokenOdd ? 1 : 0,
+    token1Hash: action.sessionData.token1Hash,
+    token2Hash: action.sessionData.token2Hash,
   });
 }
 

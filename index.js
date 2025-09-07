@@ -74,9 +74,8 @@ export async function login(arg) {
       reason: "SessionCreated",
       idHash,
       sessionData: {
-        isLatestTokenOdd: true,
-        oddTokenHash: tokenHash,
-        evenTokenHash: null,
+        token1Hash: tokenHash,
+        token2Hash: null,
         sessionExp: sessionExp,
         tokenExp: tokenExp,
       },
@@ -118,10 +117,10 @@ export async function logout(arg) {
  */
 export async function consume(arg) {
   const requestTokenHash = await hash(arg.credential.token);
-  const isOddToken = requestTokenHash === arg.sessionData.oddTokenHash;
-  const isEvenToken = requestTokenHash === arg.sessionData.evenTokenHash;
+  const isToken1 = requestTokenHash === arg.sessionData.token1Hash;
+  const isToken2 = requestTokenHash === arg.sessionData.token2Hash;
 
-  if (!isOddToken && !isEvenToken) {
+  if (!isToken1 && !isToken2) {
     return {
       state: "Forked",
       cookie: logoutCookie,
@@ -144,15 +143,15 @@ export async function consume(arg) {
     };
   }
 
-  // Hitting this point means old (second latest) token is used while new token is already issued,
-  // which might happen when race condition happens (e.g. user sends multiple requests in parallel).
-  const isLatestToken = arg.sessionData.isLatestTokenOdd ? isOddToken : isEvenToken;
-  if (!isLatestToken) {
+  // Hitting this point means the second latest token is used while the latest token is already
+  // issued, which might happen on race condition (e.g. user sends multiple requests in parallel).
+  // This token is still considered active, but cannot be used to rotate token.
+  if (isToken2) {
     return { state: "Active" };
   }
 
-  // Hitting this point means new token after rotation is confirmed to be set on client side.
-  // So we will delete the old (second latest) token we previously needed to handle race condition.
+  // Hitting this point means the latest token is confirmed to be set on client side.
+  // So we will delete the second latest token we previously needed to handle race condition.
   const isTokenExpired = arg.sessionData.tokenExp.getTime() <= now.getTime();
   if (!isTokenExpired) {
     return {
@@ -162,9 +161,8 @@ export async function consume(arg) {
         reason: "TokenDeleted",
         idHash: arg.credential.idHash,
         sessionData: {
-          isLatestTokenOdd: arg.sessionData.isLatestTokenOdd,
-          oddTokenHash: arg.sessionData.isLatestTokenOdd ? arg.sessionData.oddTokenHash : null,
-          evenTokenHash: arg.sessionData.isLatestTokenOdd ? null : arg.sessionData.evenTokenHash,
+          token1Hash: arg.sessionData.token1Hash,
+          token2Hash: null,
           sessionExp: arg.sessionData.sessionExp,
           tokenExp: arg.sessionData.tokenExp,
         },
@@ -179,8 +177,6 @@ export async function consume(arg) {
   const nextTokenExp = new Date(now.getTime() + tokenExpiresIn);
   const nextToken = generate256BitEntropyHex();
   const nextTokenHash = await hash(nextToken);
-
-  const isNextTokenOdd = !arg.sessionData.isLatestTokenOdd;
 
   /** @type {import("./index").Cookie} */
   const cookie = {
@@ -202,9 +198,8 @@ export async function consume(arg) {
       reason: "TokenRotated",
       idHash: arg.credential.idHash,
       sessionData: {
-        isLatestTokenOdd: isNextTokenOdd,
-        oddTokenHash: isNextTokenOdd ? nextTokenHash : arg.sessionData.oddTokenHash,
-        evenTokenHash: isNextTokenOdd ? arg.sessionData.evenTokenHash : nextTokenHash,
+        token1Hash: nextTokenHash,
+        token2Hash: arg.sessionData.token1Hash,
         sessionExp: nextSessionExp,
         tokenExp: nextTokenExp,
       },
