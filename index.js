@@ -162,23 +162,26 @@ export async function consume(arg) {
 
   const isTokenExpired = arg.sessionData.tokenExp.getTime() <= now.getTime();
   if (!isTokenExpired) {
+    if (arg.sessionData.token2Hash === null) {
+      return { state: "Active" };
+    }
+
     // Hitting this point means the latest token is confirmed to be set on client side.
-    // So we will delete the second latest token (if exists), which is not needed anymore.
-    const action =
-      arg.sessionData.token2Hash === null
-        ? undefined
-        : {
-            type: "SetSession",
-            reason: "TokenDeleted",
-            idHash: arg.credential.idHash,
-            sessionData: {
-              token1Hash: arg.sessionData.token1Hash,
-              token2Hash: null,
-              sessionExp: arg.sessionData.sessionExp,
-              tokenExp: arg.sessionData.tokenExp,
-            },
-          };
-    return { state: "Active", action };
+    // So we will delete the second latest token, which is not needed anymore.
+    return {
+      state: "Active",
+      action: {
+        type: "SetSession",
+        reason: "TokenDeleted",
+        idHash: arg.credential.idHash,
+        sessionData: {
+          token1Hash: arg.sessionData.token1Hash,
+          token2Hash: null,
+          sessionExp: arg.sessionData.sessionExp,
+          tokenExp: arg.sessionData.tokenExp,
+        },
+      },
+    };
   }
 
   // Hitting this point means the latest token is used in request and already expired.
