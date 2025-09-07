@@ -37,14 +37,14 @@ export type DeleteSessionAction = {
   readonly type: "DeleteSession";
   readonly idHash: string;
 };
-export type UpsertSessionAction = {
-  readonly type: "UpsertSession";
+export type SetSessionAction = {
+  readonly type: "SetSession";
   readonly idHash: string;
   readonly reason: "SessionCreated" | "TokenRotated" | "TokenDeleted";
   readonly sessionData: SessionData;
 };
 
-export type Action = UpsertSessionAction | DeleteSessionAction;
+export type Action = SetSessionAction | DeleteSessionAction;
 
 export const logoutCookie: Cookie;
 
@@ -65,7 +65,7 @@ type LoginArg = {
 
 type LoginResult = {
   readonly cookie: Cookie;
-  readonly action: UpsertSessionAction;
+  readonly action: SetSessionAction;
 };
 
 export const login: (arg?: LoginArg) => Promise<LoginResult>;
@@ -90,7 +90,7 @@ export type ConsumeResult =
   | {
       readonly state: "Active";
       readonly cookie?: Cookie;
-      readonly action?: UpsertSessionAction;
+      readonly action?: SetSessionAction;
     };
 
 export const consume: (arg: ConsumeArg) => Promise<ConsumeResult>;

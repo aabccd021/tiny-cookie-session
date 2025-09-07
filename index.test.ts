@@ -5,11 +5,14 @@ const testConfig = {
   sessionExpiresIn: 5 * 60 * 60 * 1000,
 };
 
-function dbSelect(db: Map<string, tcs.SessionData>, idHash: string): tcs.SessionData | undefined {
+function dbSelectSession(
+  db: Map<string, tcs.SessionData>,
+  idHash: string,
+): tcs.SessionData | undefined {
   return db.get(idHash);
 }
 
-function dbUpsertSession(db: Map<string, tcs.SessionData>, action: tcs.UpsertSessionAction): void {
+function dbSetSession(db: Map<string, tcs.SessionData>, action: tcs.SetSessionAction): void {
   db.set(action.idHash, action.sessionData);
 }
 
@@ -19,7 +22,7 @@ function dbDeleteSession(db: Map<string, tcs.SessionData>, action: tcs.DeleteSes
 
 async function login(db: Map<string, tcs.SessionData>, arg: tcs.LoginArg) {
   const session = await tcs.login(arg);
-  dbUpsertSession(db, session.action);
+  dbSetSession(db, session.action);
   return session;
 }
 
@@ -52,7 +55,7 @@ async function consume(
     return { state: "CookieMalformed", cookie: tcs.logoutCookie };
   }
 
-  const sessionData = dbSelect(db, credential.idHash);
+  const sessionData = dbSelectSession(db, credential.idHash);
   if (sessionData === undefined) {
     return { state: "NotFound", cookie: tcs.logoutCookie };
   }
@@ -60,8 +63,8 @@ async function consume(
 
   if (session.action?.type === "DeleteSession") {
     dbDeleteSession(db, session.action);
-  } else if (session.action?.type === "UpsertSession") {
-    dbUpsertSession(db, session.action);
+  } else if (session.action?.type === "SetSession") {
+    dbSetSession(db, session.action);
   } else if (session.action !== undefined) {
     session.action satisfies never;
     throw new Error("Unreachable");
@@ -494,7 +497,7 @@ function setCookie(
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
     if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
@@ -526,7 +529,7 @@ function setCookie(
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
     if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
@@ -535,7 +538,7 @@ function setCookie(
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
     if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
@@ -567,7 +570,7 @@ function setCookie(
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
     if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
@@ -576,7 +579,7 @@ function setCookie(
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
     if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
@@ -585,7 +588,7 @@ function setCookie(
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
     if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
@@ -617,7 +620,7 @@ function setCookie(
     date = "2023-10-01T00:11:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
     if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
@@ -626,7 +629,7 @@ function setCookie(
     date = "2023-10-01T00:22:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
     if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);
@@ -635,7 +638,7 @@ function setCookie(
     date = "2023-10-01T00:33:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session?.action?.type !== "UpsertSession") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
     if (session?.action?.reason !== "TokenRotated") throw new Error();
     prevCookie = cookie;
     cookie = setCookie(cookie, session);

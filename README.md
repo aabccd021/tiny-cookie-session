@@ -100,7 +100,7 @@ async function login(db, arg) {
   const session = await tcs.login(arg);
 
   // TODO: implement storage functions
-  dbUpsertSession(db, session.action);
+  dbSetSession(db, session.action);
 
   return session;
 }
@@ -127,7 +127,7 @@ function dbInit(): sqlite.Database {
   return db;
 }
 
-function dbSelect(db: sqlite.Database, idHash: string): tcs.SessionData | undefined {
+function dbSelectSession(db: sqlite.Database, idHash: string): tcs.SessionData | undefined {
   const row = db.query("SELECT * FROM session WHERE id_hash = :idHash").get({ idHash });
 
   if (row === null) {
@@ -143,7 +143,7 @@ function dbSelect(db: sqlite.Database, idHash: string): tcs.SessionData | undefi
   };
 }
 
-function dbUpsertSession(db: sqlite.Database, action: tcs.UpsertSessionAction): void {
+function dbSetSession(db: sqlite.Database, action: tcs.SetSessionAction): void {
   db.query(
     `
     INSERT OR REPLACE INTO session (

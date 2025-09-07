@@ -70,7 +70,7 @@ export async function login(arg) {
   return {
     cookie,
     action: {
-      type: "UpsertSession",
+      type: "SetSession",
       reason: "SessionCreated",
       idHash,
       sessionData: {
@@ -160,7 +160,7 @@ export async function consume(arg) {
     return {
       state: "Active",
       action: {
-        type: "UpsertSession",
+        type: "SetSession",
         reason: "TokenDeleted",
         idHash: arg.credential.idHash,
         sessionData: {
@@ -200,7 +200,7 @@ export async function consume(arg) {
     state: "Active",
     cookie,
     action: {
-      type: "UpsertSession",
+      type: "SetSession",
       reason: "TokenRotated",
       idHash: arg.credential.idHash,
       sessionData: {
