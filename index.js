@@ -172,7 +172,7 @@ export async function consume(arg) {
       state: "Active",
       action: {
         type: "SetSession",
-        reason: "TokenDeleted",
+        reason: "Token2Deleted",
         idHash: arg.credential.idHash,
         sessionData: {
           token1Hash: arg.sessionData.token1Hash,

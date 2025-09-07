@@ -39,7 +39,7 @@ export type DeleteSessionAction = {
 export type SetSessionAction = {
   readonly type: "SetSession";
   readonly idHash: string;
-  readonly reason: "SessionCreated" | "TokenRotated" | "TokenDeleted";
+  readonly reason: "SessionCreated" | "TokenRotated" | "Token2Deleted";
   readonly sessionData: SessionData;
 };
 

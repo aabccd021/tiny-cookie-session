@@ -351,7 +351,7 @@ function setCookie(
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
     if (session?.action?.type !== "SetSession") throw new Error();
-    if (session?.action?.reason !== "TokenDeleted") throw new Error();
+    if (session?.action?.reason !== "Token2Deleted") throw new Error();
   }
   {
     const session = await consume(db, cookie, config);
