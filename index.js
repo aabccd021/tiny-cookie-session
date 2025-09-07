@@ -148,9 +148,7 @@ export async function consume(arg) {
   // which might happen when race condition happens (e.g. user sends multiple requests in parallel).
   const isLatestToken = arg.sessionData.isLatestTokenOdd ? isOddToken : isEvenToken;
   if (!isLatestToken) {
-    return {
-      state: "Active",
-    };
+    return { state: "Active" };
   }
 
   // Hitting this point means new token after rotation is set on client side.
