@@ -99,7 +99,7 @@ function setCookie(
 }
 
 {
-  console.info("login");
+  console.info("# login");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -108,7 +108,6 @@ function setCookie(
   {
     date = "2023-10-01T00:00:00Z";
     const session = await login(db, { config });
-    console.log(session.cookie.options.expires?.toISOString());
     if (session.cookie.options.expires?.toISOString() !== "2023-10-01T05:00:00.000Z")
       throw new Error();
     cookie = setCookie(cookie, session);
@@ -126,7 +125,7 @@ function setCookie(
 }
 
 {
-  console.info("logout");
+  console.info("# logout");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -151,7 +150,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active after login");
+  console.info("# consume: state Active after login");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -171,7 +170,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active after 9 minutes");
+  console.info("# consume: state Active after 9 minutes");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -193,7 +192,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active after 11 minutes");
+  console.info("# consume: state Active after 11 minutes");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -220,7 +219,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active after Active");
+  console.info("# consume: state Active after Active");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -246,7 +245,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Expired after 6 hours");
+  console.info("# consume: state Expired after 6 hours");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -272,7 +271,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active after Active twice");
+  console.info("# consume: state Active after Active twice");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -302,7 +301,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active after re-login");
+  console.info("# consume: state Active after re-login");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -328,7 +327,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: action TokenDeleted only runs once");
+  console.info("# consume: action TokenDeleted only runs once");
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
@@ -361,7 +360,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Forked after used by user, user, attacker");
+  console.info("# consume: state Forked after used by user, user, attacker");
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -403,7 +402,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Forked after used by attacker, attacker, user");
+  console.info("# consume: state Forked after used by attacker, attacker, user");
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -438,7 +437,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Forked after used by attacker, user, attacker, user");
+  console.info("# consume: state Forked after used by attacker, user, attacker, user");
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -478,7 +477,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Forked after used by user, attacker, user, attacker");
+  console.info("# consume: state Forked after used by user, attacker, user, attacker");
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
   let date: string;
@@ -518,7 +517,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active with previous cookie (race condition)");
+  console.info("# consume: state Active with previous cookie (race condition)");
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -550,7 +549,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active with previous cookie after 2 rotations");
+  console.info("# consume: state Active with previous cookie after 2 rotations");
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -591,7 +590,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active with previous cookie after 3 rotations");
+  console.info("# consume: state Active with previous cookie after 3 rotations");
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;
@@ -641,7 +640,7 @@ function setCookie(
 }
 
 {
-  console.info("consume: state Active with previous cookie after 4 rotations");
+  console.info("# consume: state Active with previous cookie after 4 rotations");
   let cookie: string | undefined;
   let prevCookie: string | undefined;
   let date: string;

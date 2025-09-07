@@ -154,22 +154,56 @@ export async function consume(arg) {
   }
 
   if (isToken2) {
-    // Hitting this point means the second latest token is used in reqeust while the latest token is
-    // already issued.
-    // This might happen on a race condition where the client sends multiple requests
-    // simultaneously.
-    // This second latest token is still considered active, but cannot be used to rotate token.
+    // Hitting this point means the token2 is used in reqeust while the token1 is already issued.
+    // This can happen on a race condition where the client sends multiple requests simultaneously.
+    // Session that uses token2 is still considered active, but cannot be used to rotate token.
     return { state: "Active" };
   }
 
   const isTokenExpired = arg.sessionData.tokenExp.getTime() <= now.getTime();
-  if (!isTokenExpired) {
-    if (arg.sessionData.token2Hash === null) {
-      return { state: "Active" };
-    }
+  if (isTokenExpired) {
+    const nextToken = generate256BitEntropyHex();
+    const nextTokenHash = await hash(nextToken);
 
-    // Hitting this point means the latest token is confirmed to be set on client side, while the
-    // second latest token is still in database, so we will delete the second latest token.
+    const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
+    const nextSessionExp = new Date(now.getTime() + sessionExpiresIn);
+
+    const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
+    const nextTokenExp = new Date(now.getTime() + tokenExpiresIn);
+
+    /** @type {import("./index").Cookie} */
+    const cookie = {
+      value: `${arg.credential.id}:${nextToken}`,
+      options: {
+        httpOnly: true,
+        sameSite: "strict",
+        path: "/",
+        secure: true,
+        expires: nextSessionExp,
+      },
+    };
+
+    return {
+      state: "Active",
+      cookie,
+      action: {
+        type: "SetSession",
+        reason: "TokenRotated",
+        idHash: arg.credential.idHash,
+        sessionData: {
+          token1Hash: nextTokenHash,
+          token2Hash: arg.sessionData.token1Hash,
+          sessionExp: nextSessionExp,
+          tokenExp: nextTokenExp,
+        },
+      },
+    };
+  }
+
+  if (arg.sessionData.token2Hash !== null) {
+    // Hitting this point means the token1 is confirmed to be set on client side, which means there
+    // is no more possibility of race condition.
+    // So we will invalidate token2 which is no longer needed.
     return {
       state: "Active",
       action: {
@@ -186,43 +220,5 @@ export async function consume(arg) {
     };
   }
 
-  // Hitting this point means the latest token is used in request and already expired.
-  // We will rotate the token.
-
-  const nextToken = generate256BitEntropyHex();
-  const nextTokenHash = await hash(nextToken);
-
-  const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
-  const nextSessionExp = new Date(now.getTime() + sessionExpiresIn);
-
-  const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
-  const nextTokenExp = new Date(now.getTime() + tokenExpiresIn);
-
-  /** @type {import("./index").Cookie} */
-  const cookie = {
-    value: `${arg.credential.id}:${nextToken}`,
-    options: {
-      httpOnly: true,
-      sameSite: "strict",
-      path: "/",
-      secure: true,
-      expires: nextSessionExp,
-    },
-  };
-
-  return {
-    state: "Active",
-    cookie,
-    action: {
-      type: "SetSession",
-      reason: "TokenRotated",
-      idHash: arg.credential.idHash,
-      sessionData: {
-        token1Hash: nextTokenHash,
-        token2Hash: arg.sessionData.token1Hash,
-        sessionExp: nextSessionExp,
-        tokenExp: nextTokenExp,
-      },
-    },
-  };
+  return { state: "Active" };
 }
