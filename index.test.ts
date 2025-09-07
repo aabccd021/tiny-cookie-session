@@ -328,6 +328,39 @@ function setCookie(
 }
 
 {
+  console.info("consume: action TokenDeleted only runs once");
+  let cookie: string | undefined;
+  let date: string;
+  const db = new Map<string, tcs.SessionData>();
+  const config = { ...testConfig, dateNow: () => new Date(date) };
+
+  {
+    date = "2023-10-01T00:00:00Z";
+    const session = await login(db, { config });
+    cookie = setCookie(cookie, session);
+  }
+  {
+    date = "2023-10-01T00:11:00Z";
+    const session = await consume(db, cookie, config);
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
+    if (session?.action?.reason !== "TokenRotated") throw new Error();
+    cookie = setCookie(cookie, session);
+  }
+  {
+    const session = await consume(db, cookie, config);
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action?.type !== "SetSession") throw new Error();
+    if (session?.action?.reason !== "TokenDeleted") throw new Error();
+  }
+  {
+    const session = await consume(db, cookie, config);
+    if (session?.state !== "Active") throw new Error();
+    if (session?.action !== undefined) throw new Error();
+  }
+}
+
+{
   console.info("consume: state Forked after used by user, user, attacker");
   let userCookie: string | undefined;
   let attackerCookie: string | undefined;
