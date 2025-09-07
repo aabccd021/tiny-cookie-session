@@ -169,14 +169,14 @@ export async function consume(arg) {
       },
     };
   }
-
-  const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
-  const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
-
-  const nextSessionExp = new Date(now.getTime() + sessionExpiresIn);
-  const nextTokenExp = new Date(now.getTime() + tokenExpiresIn);
   const nextToken = generate256BitEntropyHex();
   const nextTokenHash = await hash(nextToken);
+
+  const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
+  const nextSessionExp = new Date(now.getTime() + sessionExpiresIn);
+
+  const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
+  const nextTokenExp = new Date(now.getTime() + tokenExpiresIn);
 
   /** @type {import("./index").Cookie} */
   const cookie = {
