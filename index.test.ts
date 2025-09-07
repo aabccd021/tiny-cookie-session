@@ -5,15 +5,15 @@ const testConfig = {
   sessionExpiresIn: 5 * 60 * 60 * 1000,
 };
 
-function dbSelect(db: Map<string, tcs.SessionData>, idHash: string) {
+function dbSelect(db: Map<string, tcs.SessionData>, idHash: string): tcs.SessionData | undefined {
   return db.get(idHash);
 }
 
-function dbUpsertSession(db: Map<string, tcs.SessionData>, action: tcs.UpsertSessionAction) {
+function dbUpsertSession(db: Map<string, tcs.SessionData>, action: tcs.UpsertSessionAction): void {
   db.set(action.idHash, action.sessionData);
 }
 
-function dbDeleteSession(db: Map<string, tcs.SessionData>, action: tcs.DeleteSessionAction) {
+function dbDeleteSession(db: Map<string, tcs.SessionData>, action: tcs.DeleteSessionAction): void {
   db.delete(action.idHash);
 }
 
@@ -42,36 +42,19 @@ async function consume(
   db: Map<string, tcs.SessionData>,
   cookie: string | undefined,
   config: import("./index").Config,
-): Promise<{
-  readonly state:
-    | "CookieMissing"
-    | "CookieMalformed"
-    | "NotFound"
-    | "Active"
-    | "Expired"
-    | "Forked";
-  readonly action?: tcs.Action;
-  readonly cookie?: tcs.Cookie;
-  readonly data?: tcs.SessionData;
-}> {
+) {
   if (cookie === undefined) {
     return { state: "CookieMissing" };
   }
 
   const credential = await tcs.credentialFromCookie({ cookie });
   if (credential === undefined) {
-    return {
-      state: "CookieMalformed",
-      cookie: tcs.logoutCookie,
-    };
+    return { state: "CookieMalformed", cookie: tcs.logoutCookie };
   }
 
   const sessionData = dbSelect(db, credential.idHash);
   if (sessionData === undefined) {
-    return {
-      state: "NotFound",
-      cookie: tcs.logoutCookie,
-    };
+    return { state: "NotFound", cookie: tcs.logoutCookie };
   }
   const session = await tcs.consume({ credential, config, sessionData });
 
@@ -88,8 +71,7 @@ async function consume(
     state: session.state,
     cookie: session.cookie,
     action: session.action,
-
-    // Only return session data if state is Active
+    // Don't let the app to use session data when the state is not Active.
     data: session.state === "Active" ? sessionData : undefined,
   };
 }

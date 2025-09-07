@@ -84,11 +84,101 @@ yarn add github:aabccd021/tiny-cookie-session
 bun install github:aabccd021/tiny-cookie-session
 ```
 
-## Example usage with Bun and SQLite
+## Example usage
 
-See [index.test.ts](./index.test.ts) for a complete example.
+You can use this library with any storage that can store key-value pairs of strings.
+After implementing storage functions, you can use it to handle `Action` object returned by
+functions in this library. See [index.test.ts](./index.test.ts) for a complete example.
 
-We will use above example as a reference for the code snippets below.
+```ts
+async function login(db: Map<string, tcs.SessionData>, arg: import("./index").LoginArg) {
+  const session = await tcs.login(arg);
+  // TODO: implement dbUpsertSession
+  dbUpsertSession(db, session.action);
+  return session;
+}
+```
+
+## Bun SQLite storage example
+
+```ts
+import * as sqlite from "bun:sqlite";
+
+function dbInit(): sqlite.Database {
+  const db = sqlite.open("sessions.db");
+  db.run(`
+    CREATE TABLE IF NOT EXISTS session (
+      id_hash TEXT PRIMARY KEY,
+      exp INTEGER NOT NULL,
+      odd_token_hash TEXT,
+      even_token_hash TEXT,
+      token_exp INTEGER NOT NULL,
+      is_latest_token_odd INTEGER NOT NULL,
+      CHECK (is_latest_token_odd IN (0, 1))
+    )
+  `);
+  return db;
+}
+
+function dbSelect(db: sqlite.Database, idHash: string): tcs.SessionData | undefined {
+  const row = db.query("SELECT * FROM session WHERE id_hash = :idHash").get({ idHash });
+
+  if (row === null) {
+    return undefined;
+  }
+
+  return {
+    sessionExp: new Date(row.exp),
+    oddTokenHash: row.odd_token_hash,
+    evenTokenHash: row.even_token_hash,
+    tokenExp: new Date(row.token_exp),
+    isLatestTokenOdd: row.is_latest_token_odd === 1,
+  };
+}
+
+function dbUpsertSession(db: sqlite.Database, action: tcs.UpsertSessionAction): void {
+  db.query(
+    `
+    INSERT OR REPLACE INTO session (
+      id_hash, exp, odd_token_hash, even_token_hash, token_exp, is_latest_token_odd
+    ) VALUES (
+      :idHash, :exp, :oddTokenHash, :evenTokenHash, :tokenExp, :isLatestTokenOdd
+    )
+  `,
+  ).run({
+    idHash: action.idHash,
+    exp: action.sessionData.sessionExp.getTime(),
+    oddTokenHash: action.sessionData.oddTokenHash,
+    evenTokenHash: action.sessionData.evenTokenHash,
+    tokenExp: action.sessionData.tokenExp.getTime(),
+    isLatestTokenOdd: action.sessionData.isLatestTokenOdd ? 1 : 0,
+  });
+}
+
+function dbDeleteSession(db: sqlite.Database, action: tcs.DeleteSessionAction): void {
+  db.query("DELETE FROM session WHERE id_hash = :idHash").run({ idHash: action.idHash });
+}
+```
+
+## In-memory storage example
+
+```ts
+function dbInit(): Map<string, tcs.SessionData> {
+  return new Map<string, tcs.SessionData>();
+}
+
+function dbSelect(db: Map<string, tcs.SessionData>, idHash: string): tcs.SessionData | undefined {
+  return db.get(idHash);
+}
+
+function dbUpsertSession(db: Map<string, tcs.SessionData>, action: tcs.UpsertSessionAction): void {
+  db.set(action.idHash, action.sessionData);
+}
+
+function dbDeleteSession(db: Map<string, tcs.SessionData>, action: tcs.DeleteSessionAction): void {
+  db.delete(action.idHash);
+}
+```
 
 ## Garbage collection of expired sessions
 
@@ -107,9 +197,7 @@ to use them.
 ## Force logout session
 
 This library allows you to immediately invalidate sessions by deleting them from the storage
-backend.
-
-Unlike JWT, the session logout is effective immediately when this is done.
+backend. Unlike JWT, the session logout is effective immediately when this is done.
 
 ```js
 // Force logout a specific session
