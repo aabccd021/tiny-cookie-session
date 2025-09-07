@@ -64,18 +64,18 @@ async function consume(
   };
 }
 
+// Emulate browser cookie storage.
 function setCookie(
-  cookie: string | undefined,
+  oldCookie: string | undefined,
   session: { cookie?: import("./index").Cookie },
 ): string | undefined {
-  if (session.cookie === undefined) {
-    return cookie;
-  }
+  // No Set-Cookie header, do nothing.
+  if (session.cookie === undefined) return oldCookie;
 
-  if (session.cookie.value === "") {
-    return undefined;
-  }
+  // Set-Cookie header with empty value, delete cookie.
+  if (session.cookie.value === "") return undefined;
 
+  // Set-Cookie header with value, set cookie.
   return session.cookie.value;
 }
 

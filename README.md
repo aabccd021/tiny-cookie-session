@@ -84,28 +84,35 @@ yarn add github:aabccd021/tiny-cookie-session
 bun install github:aabccd021/tiny-cookie-session
 ```
 
-## Example usage
+## Usage
 
 This library can be used with any storage backend that can select, set (upsert), and delete
 key-value pairs.
 After implementing storage functions, you can use it to handle `Action` object returned by
-functions in this library.
-
-We strongly recommend reading the [index.test.ts](./index.test.ts) file for more detailed usage
-examples.
+this library.
+You should also return a response with the cookie returned by this library.
 
 ```ts
 import * as tcs from "tiny-cookie-session";
 
-async function login(db, arg) {
+async function login(db: unknown, arg: tcs.LoginArg): Promise<Response> {
   const session = await tcs.login(arg);
 
-  // TODO: implement storage functions
+  // handle action
   dbSetSession(db, session.action);
 
-  return session;
+  // return response with cookie
+  const headers = new Headers();
+  if (session.cookie !== undefined) {
+    headers.append("Set-Cookie", serializeCookie(session.cookie));
+  }
+
+  return new Response("Logged in", { headers });
 }
 ```
+
+We strongly recommend reading the [index.test.ts](./index.test.ts) file for more detailed usage
+examples.
 
 ## Bun SQLite storage example
 
