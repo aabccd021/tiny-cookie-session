@@ -120,7 +120,7 @@ examples.
 import * as sqlite from "bun:sqlite";
 
 function dbInit(): sqlite.Database {
-  const db = sqlite.open("sessions.db");
+  const db = sqlite.open(":memory:");
   db.run(`
     CREATE TABLE IF NOT EXISTS session (
       id_hash TEXT PRIMARY KEY,
