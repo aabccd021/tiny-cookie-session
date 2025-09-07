@@ -52,18 +52,20 @@ async function consume(
     db.set(credential.idHash, session.action.sessionData);
   } else if (session.action !== undefined) {
     session.action satisfies never;
-    throw new Error("Unreachable");
   }
 
   return {
+    // You might want to log the session's state especially when it's `Forked`.
     state: session.state,
-    cookie: session.cookie,
-
-    // Usually does not need to return action, we return it to assert action reason in tests.
-    action: session.action,
 
     // Don't let the app to use session data when the state is not Active.
     data: session.state === "Active" ? sessionData : undefined,
+
+    // Make sure the app returns the Set-Cookie header with this value.
+    cookie: session.cookie,
+
+    // We return action here to assert the `.reason` in tests, but it usually not needed by an app.
+    action: session.action,
   };
 }
 
