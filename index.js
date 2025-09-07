@@ -151,8 +151,8 @@ export async function consume(arg) {
     return { state: "Active" };
   }
 
-  // Hitting this point means new token after rotation is set on client side.
-  // So we will delete the old token we previously needed to handle race condition.
+  // Hitting this point means new token after rotation is confirmed to be set on client side.
+  // So we will delete the old (second latest) token we previously needed to handle race condition.
   const isTokenExpired = arg.sessionData.tokenExp.getTime() <= now.getTime();
   if (!isTokenExpired) {
     return {
