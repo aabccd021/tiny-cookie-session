@@ -140,7 +140,8 @@ export async function consume(arg) {
   }
 
   const now = arg.config?.dateNow?.() ?? new Date();
-  if (arg.sessionData.sessionExp.getTime() <= now.getTime()) {
+  const isSessionExpired = arg.sessionData.sessionExp.getTime() <= now.getTime();
+  if (isSessionExpired) {
     return {
       state: "Expired",
       cookie: logoutCookie,
