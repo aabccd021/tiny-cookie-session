@@ -166,7 +166,7 @@ function dbDeleteSession(db: sqlite.Database, action: tcs.DeleteSessionAction): 
 }
 ```
 
-## :wastebasket: Garbage collection of expired sessions
+## Garbage collection of expired sessions
 
 Since this library doesn't automatically delete expired sessions for inactive users,
 you'll need to implement your own garbage collection mechanism:
@@ -180,7 +180,7 @@ Doing or not doing garbage collection on expired sessions is always safe and has
 implications, since those sessions would be rejected as "SessionExpired" anyway if a user tried
 to use them.
 
-## :door: Force logout session
+## Force logout session
 
 This library allows you to immediately invalidate sessions by deleting them from the storage
 backend. Unlike JWT, the session logout is effective immediately when this is done.
@@ -269,7 +269,7 @@ function parseAndUnsignCookie(request: Request): string | undefined {
 }
 ```
 
-## :alarm_clock: Configuring Expiration Times
+## Configuring Expiration Times
 
 You can use custom expiration times by passing configuration options to the functions:
 
