@@ -51,7 +51,7 @@ function dbInit(): sqlite.Database {
   db.run(`
     CREATE TABLE IF NOT EXISTS session (
       id_hash TEXT PRIMARY KEY,
-      exp INTEGER NOT NULL,
+      session_exp INTEGER NOT NULL,
       token_exp INTEGER NOT NULL,
       token_1_hash TEXT NOT NULL,
       token_2_hash TEXT
@@ -66,7 +66,7 @@ function dbSelectSession(db: sqlite.Database, idHash: string): tcs.SessionData |
     return undefined;
   }
   return {
-    sessionExp: new Date(row.exp),
+    sessionExp: new Date(row.session_exp),
     tokenExp: new Date(row.token_exp),
     token1Hash: row.token_1_hash,
     token2Hash: row.token_2_hash,
@@ -76,12 +76,12 @@ function dbSelectSession(db: sqlite.Database, idHash: string): tcs.SessionData |
 function dbSetSession(db: sqlite.Database, action: tcs.SetSessionAction): void {
   db.query(
     `
-      INSERT OR REPLACE INTO session (id_hash, exp, token_exp, token_1_hash, token_2_hash)
-      VALUES (:idHash, :exp, :tokenExp, :token1Hash, :token2Hash)
+      INSERT OR REPLACE INTO session (id_hash, session_exp, token_exp, token_1_hash, token_2_hash)
+      VALUES (:idHash, :sessionExp, :tokenExp, :token1Hash, :token2Hash)
     `,
   ).run({
     idHash: action.idHash,
-    exp: action.sessionData.sessionExp.getTime(),
+    sessionExp: action.sessionData.sessionExp.getTime(),
     tokenExp: action.sessionData.tokenExp.getTime(),
     token1Hash: action.sessionData.token1Hash,
     token2Hash: action.sessionData.token2Hash,
@@ -100,14 +100,12 @@ you'll need to implement your own garbage collection mechanism:
 
 ```js
 // Run this periodically
-db.query("DELETE FROM session WHERE exp < :now").run({ now: Date.now() });
+db.query("DELETE FROM session WHERE session_exp < :now").run({ now: Date.now() });
 ```
 
 Doing or not doing garbage collection on expired sessions is always safe and has no security
 implications, since those sessions would be rejected as "SessionExpired" anyway if a user tried
-to use them.
-
-## Force logout session
+to use them.## Force logout session
 
 This library allows you to immediately invalidate sessions by deleting them from the storage
 backend. Unlike JWT, the session logout is effective immediately when this is done.
