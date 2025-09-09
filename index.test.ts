@@ -41,7 +41,7 @@ async function logout(db: Map<string, tcs.SessionData>, cookie: string | undefin
 async function consume(
   db: Map<string, tcs.SessionData>,
   cookie: string | undefined,
-  config: import("./index").Config,
+  config: tcs.Config,
 ) {
   if (cookie === undefined) {
     return { state: "CookieMissing" };
@@ -90,7 +90,7 @@ async function consume(
 // Emulate browser cookie storage.
 function setCookie(
   oldCookie: string | undefined,
-  session: { cookie?: import("./index").Cookie },
+  session: { cookie?: tcs.Cookie },
 ): string | undefined {
   // No Set-Cookie header, do nothing.
   if (session.cookie === undefined) return oldCookie;
