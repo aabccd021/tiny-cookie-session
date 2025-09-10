@@ -51,8 +51,8 @@ function dbInit(): sqlite.Database {
   db.run(`
     CREATE TABLE IF NOT EXISTS session (
       id_hash TEXT PRIMARY KEY,
-      session_exp INTEGER NOT NULL,
-      token_exp INTEGER NOT NULL,
+      session_exp_epoch_ms INTEGER NOT NULL,
+      token_exp_epoch_ms INTEGER NOT NULL,
       token_1_hash TEXT NOT NULL,
       token_2_hash TEXT
     )
@@ -66,8 +66,8 @@ function dbSelectSession(db: sqlite.Database, idHash: string): tcs.SessionData |
     return undefined;
   }
   return {
-    sessionExp: new Date(row.session_exp),
-    tokenExp: new Date(row.token_exp),
+    sessionExpEpochMs: row.session_exp_epoch_ms,
+    tokenExpEpochMs: row.token_exp_epoch_ms,
     token1Hash: row.token_1_hash,
     token2Hash: row.token_2_hash,
   };
@@ -76,13 +76,13 @@ function dbSelectSession(db: sqlite.Database, idHash: string): tcs.SessionData |
 function dbSetSession(db: sqlite.Database, action: tcs.SetSessionAction): void {
   db.query(
     `
-      INSERT OR REPLACE INTO session (id_hash, session_exp, token_exp, token_1_hash, token_2_hash)
-      VALUES (:idHash, :sessionExp, :tokenExp, :token1Hash, :token2Hash)
+      INSERT OR REPLACE INTO session (id_hash, session_exp_epoch_ms, token_exp_epoch_ms, token_1_hash, token_2_hash)
+      VALUES (:idHash, :sessionExpEpochMs, :tokenExpEpochMs, :token1Hash, :token2Hash)
     `,
   ).run({
     idHash: action.idHash,
-    sessionExp: action.sessionData.sessionExp.getTime(),
-    tokenExp: action.sessionData.tokenExp.getTime(),
+    sessionExpEpochMs: action.sessionData.sessionExpEpochMs,
+    tokenExpEpochMs: action.sessionData.tokenExpEpochMs,
     token1Hash: action.sessionData.token1Hash,
     token2Hash: action.sessionData.token2Hash,
   });
@@ -208,8 +208,8 @@ You can use custom expiration times by passing configuration options to the func
 import * as tcs from "tiny-cookie-session";
 
 const config = {
-  sessionExpiresIn: 5 * 60 * 60 * 1000, // 5 hours
-  tokenExpiresIn: 10 * 60 * 1000, // 10 minutes
+  sessionExpiresInMs: 5 * 60 * 60 * 1000, // 5 hours
+  tokenExpiresInMs: 10 * 60 * 1000, // 10 minutes
 };
 
 tcs.consume({ config /* other params */ });
@@ -219,21 +219,21 @@ tcs.login({ config });
 
 ### Session Expiration Time
 
-The `sessionExpiresIn` value controls how long a session can remain active without user interaction,
+The `sessionExpiresInMs` value controls how long a session can remain active without user interaction,
 often referred to as "log out after X minutes of inactivity."
 
-For example, with `sessionExpiresIn: 30 * 60 * 1000` (30 minutes),
+For example, with `sessionExpiresInMs: 30 * 60 * 1000` (30 minutes),
 a user can remain logged in indefinitely by making requests at least every 29 minutes.
 
 ### Token Expiration Time
 
-The `tokenExpiresIn` value controls how often the token is rotated.
+The `tokenExpiresInMs` value controls how often the token is rotated.
 When a token expires but the session is still valid, the system generates a new token.
 
 You should set this to a value as short as possible, but still longer than the longest HTTP request
 time your users might experience.
 For example, if your app might take up to 3 minutes (in a single request) for uploading large files,
-you should set `tokenExpiresIn` to 3 minutes.
+you should set `tokenExpiresInMs` to 3 minutes.
 The only reason we don't rotate the token on every request is to handle a race condition
 where the user makes two requests at the same time.
 
@@ -280,7 +280,7 @@ or to identify attackers from other signals (e.g., IP address, User-Agent, geolo
 
 There are two possible approaches to mitigate this risk:
 
-1. Set a short session expiration time (`sessionExpiresIn`).
+1. Set a short session expiration time (`sessionExpiresInMs`).
 2. Implement a "Don't remember me" option.
 
 The "Don't remember me" feature can be implemented by removing the `Expires` and `Max-Age`

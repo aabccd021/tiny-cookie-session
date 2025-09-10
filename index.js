@@ -54,13 +54,13 @@ export async function login(arg) {
   const token = generate256BitEntropyHex();
   const tokenHash = await hash(token);
 
-  const now = arg?.config?.dateNow?.() ?? new Date();
+  const nowEpochMs = arg?.config?.nowEpochMs?.() ?? Date.now();
 
-  const sessionExpiresIn = arg?.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
-  const sessionExp = new Date(now.getTime() + sessionExpiresIn);
+  const sessionExpiresInMs = arg?.config?.sessionExpiresInMs ?? defaultSessionExpiresIn;
+  const sessionExpEpochMs = nowEpochMs + sessionExpiresInMs;
 
-  const tokenExpiresIn = arg?.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
-  const tokenExp = new Date(now.getTime() + tokenExpiresIn);
+  const tokenExpiresInMs = arg?.config?.tokenExpiresInMs ?? defaultTokenExpiresIn;
+  const tokenExpEpochMs = nowEpochMs + tokenExpiresInMs;
 
   /** @type {import("./index").Cookie} */
   const cookie = {
@@ -69,7 +69,7 @@ export async function login(arg) {
       httpOnly: true,
       sameSite: "strict",
       secure: true,
-      expires: sessionExp,
+      expires: new Date(sessionExpEpochMs),
     },
   };
 
@@ -82,8 +82,8 @@ export async function login(arg) {
       sessionData: {
         token1Hash: tokenHash,
         token2Hash: null,
-        sessionExp: sessionExp,
-        tokenExp: tokenExp,
+        sessionExpEpochMs,
+        tokenExpEpochMs,
       },
     },
   };
@@ -141,9 +141,9 @@ export async function consume(arg) {
     };
   }
 
-  const now = arg.config?.dateNow?.() ?? new Date();
+  const nowEpochMs = arg.config?.nowEpochMs?.() ?? Date.now();
 
-  const isSessionExpired = arg.sessionData.sessionExp.getTime() <= now.getTime();
+  const isSessionExpired = arg.sessionData.sessionExpEpochMs <= nowEpochMs;
   if (isSessionExpired) {
     return {
       state: "Expired",
@@ -162,16 +162,16 @@ export async function consume(arg) {
     return { state: "Active" };
   }
 
-  const isTokenExpired = arg.sessionData.tokenExp.getTime() <= now.getTime();
+  const isTokenExpired = arg.sessionData.tokenExpEpochMs <= nowEpochMs;
   if (isTokenExpired) {
     const nextToken = generate256BitEntropyHex();
     const nextTokenHash = await hash(nextToken);
 
-    const sessionExpiresIn = arg.config?.sessionExpiresIn ?? defaultSessionExpiresIn;
-    const nextSessionExp = new Date(now.getTime() + sessionExpiresIn);
+    const sessionExpiresInMs = arg.config?.sessionExpiresInMs ?? defaultSessionExpiresIn;
+    const nextSessionExpEpochMs = nowEpochMs + sessionExpiresInMs;
 
-    const tokenExpiresIn = arg.config?.tokenExpiresIn ?? defaultTokenExpiresIn;
-    const nextTokenExp = new Date(now.getTime() + tokenExpiresIn);
+    const tokenExpiresInMs = arg.config?.tokenExpiresInMs ?? defaultTokenExpiresIn;
+    const nextTokenExpEpochMs = nowEpochMs + tokenExpiresInMs;
 
     /** @type {import("./index").Cookie} */
     const cookie = {
@@ -181,7 +181,7 @@ export async function consume(arg) {
         sameSite: "strict",
         path: "/",
         secure: true,
-        expires: nextSessionExp,
+        expires: new Date(nextSessionExpEpochMs),
       },
     };
 
@@ -195,8 +195,8 @@ export async function consume(arg) {
         sessionData: {
           token1Hash: nextTokenHash,
           token2Hash: arg.sessionData.token1Hash,
-          sessionExp: nextSessionExp,
-          tokenExp: nextTokenExp,
+          sessionExpEpochMs: nextSessionExpEpochMs,
+          tokenExpEpochMs: nextTokenExpEpochMs,
         },
       },
     };
@@ -215,8 +215,8 @@ export async function consume(arg) {
         sessionData: {
           token1Hash: arg.sessionData.token1Hash,
           token2Hash: null,
-          sessionExp: arg.sessionData.sessionExp,
-          tokenExp: arg.sessionData.tokenExp,
+          sessionExpEpochMs: arg.sessionData.sessionExpEpochMs,
+          tokenExpEpochMs: arg.sessionData.tokenExpEpochMs,
         },
       },
     };

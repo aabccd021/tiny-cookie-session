@@ -1,8 +1,8 @@
 import * as tcs from ".";
 
-const testConfig = {
-  tokenExpiresIn: 10 * 60 * 1000,
-  sessionExpiresIn: 5 * 60 * 60 * 1000,
+const testConfig: tcs.Config = {
+  tokenExpiresInMs: 10 * 60 * 1000,
+  sessionExpiresInMs: 5 * 60 * 60 * 1000,
 };
 
 async function login(db: Map<string, tcs.SessionData>, arg: tcs.LoginArg) {
@@ -108,7 +108,7 @@ function setCookie(
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -124,8 +124,10 @@ function setCookie(
   {
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+    if (session.data?.sessionExpEpochMs !== new Date("2023-10-01T05:00:00.000Z").getTime())
+      throw new Error();
+    if (session.data?.tokenExpEpochMs !== new Date("2023-10-01T00:10:00.000Z").getTime())
+      throw new Error();
   }
 }
 
@@ -135,7 +137,7 @@ function setCookie(
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -161,7 +163,7 @@ function setCookie(
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -171,8 +173,10 @@ function setCookie(
   {
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+    if (session.data?.sessionExpEpochMs !== new Date("2023-10-01T05:00:00.000Z").getTime())
+      throw new Error();
+    if (session.data?.tokenExpEpochMs !== new Date("2023-10-01T00:10:00.000Z").getTime())
+      throw new Error();
   }
 }
 
@@ -183,7 +187,7 @@ function setCookie(
   let date: string;
   const db = new Map<string, tcs.SessionData>();
 
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -194,8 +198,10 @@ function setCookie(
     date = "2023-10-01T00:09:00Z";
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:00:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:10:00.000Z") throw new Error();
+    if (session.data?.sessionExpEpochMs !== new Date("2023-10-01T05:00:00.000Z").getTime())
+      throw new Error();
+    if (session.data?.tokenExpEpochMs !== new Date("2023-10-01T00:10:00.000Z").getTime())
+      throw new Error();
   }
 }
 
@@ -205,7 +211,7 @@ function setCookie(
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -222,8 +228,10 @@ function setCookie(
   {
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
+    if (session.data?.sessionExpEpochMs !== new Date("2023-10-01T05:11:00.000Z").getTime())
+      throw new Error();
+    if (session.data?.tokenExpEpochMs !== new Date("2023-10-01T00:21:00.000Z").getTime())
+      throw new Error();
   }
 }
 
@@ -233,7 +241,7 @@ function setCookie(
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -249,8 +257,10 @@ function setCookie(
   {
     const session = await consume(db, cookie, config);
     if (session?.state !== "Active") throw new Error();
-    if (session.data?.sessionExp.toISOString() !== "2023-10-01T05:11:00.000Z") throw new Error();
-    if (session.data?.tokenExp.toISOString() !== "2023-10-01T00:21:00.000Z") throw new Error();
+    if (session.data?.sessionExpEpochMs !== new Date("2023-10-01T05:11:00.000Z").getTime())
+      throw new Error();
+    if (session.data?.tokenExpEpochMs !== new Date("2023-10-01T00:21:00.000Z").getTime())
+      throw new Error();
   }
 }
 
@@ -260,7 +270,7 @@ function setCookie(
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -287,7 +297,7 @@ function setCookie(
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -318,7 +328,7 @@ function setCookie(
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -345,7 +355,7 @@ function setCookie(
   let cookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -380,7 +390,7 @@ function setCookie(
   let attackerCookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -423,7 +433,7 @@ function setCookie(
   let attackerCookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -459,7 +469,7 @@ function setCookie(
   let attackerCookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -500,7 +510,7 @@ function setCookie(
   let attackerCookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -541,7 +551,7 @@ function setCookie(
   let prevCookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -574,7 +584,7 @@ function setCookie(
   let prevCookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -616,7 +626,7 @@ function setCookie(
   let prevCookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";
@@ -667,7 +677,7 @@ function setCookie(
   let prevCookie: string | undefined;
   let date: string;
   const db = new Map<string, tcs.SessionData>();
-  const config = { ...testConfig, dateNow: () => new Date(date) };
+  const config = { ...testConfig, nowEpochMs: () => new Date(date).getTime() };
 
   {
     date = "2023-10-01T00:00:00Z";

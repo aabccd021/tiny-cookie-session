@@ -1,22 +1,22 @@
 export type CookieOptions = {
-  maxAge?: number;
-  expires?: Date;
-  domain?: string;
-  path?: string;
-  httpOnly?: boolean;
-  secure?: boolean;
-  sameSite?: "strict" | "lax" | "none";
+  readonly maxAge?: number;
+  readonly expires?: Date;
+  readonly domain?: string;
+  readonly path?: string;
+  readonly httpOnly?: boolean;
+  readonly secure?: boolean;
+  readonly sameSite?: "strict" | "lax" | "none";
 };
 
 export type Cookie = {
-  value: string;
-  options: CookieOptions;
+  readonly value: string;
+  readonly options: CookieOptions;
 };
 
 export type Config = {
-  readonly dateNow?: () => Date;
-  readonly sessionExpiresIn?: number;
-  readonly tokenExpiresIn?: number;
+  readonly nowEpochMs?: () => number;
+  readonly sessionExpiresInMs?: number;
+  readonly tokenExpiresInMs?: number;
 };
 
 type Credential = {
@@ -26,10 +26,10 @@ type Credential = {
 };
 
 export type SessionData = {
-  readonly sessionExp: Date;
+  readonly sessionExpEpochMs: number;
+  readonly tokenExpEpochMs: number;
   readonly token1Hash: string;
   readonly token2Hash: string | null;
-  readonly tokenExp: Date;
 };
 
 export type DeleteSessionAction = {
